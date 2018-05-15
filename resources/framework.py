@@ -4,6 +4,7 @@ from .settings import MODULE_DIR
 
 
 client = None
+loop = None
 
 
 def get_files(directory:str):
@@ -21,5 +22,7 @@ def register_modules():
 def connect(bot):
 	"""connects the main point of entry to the framework"""
 	global client
+	global loop
 	client = bot
+	loop = bot.loop
 	register_modules()
