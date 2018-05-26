@@ -5,6 +5,7 @@ from resources.modules.logger import log
 
 class Module:
 	def __init__(self, file_path, file_name):
+		if file_name[:1] == ".": return # avoid importing system and temp files
 		log(f'Initializing Module {file_name}')
 		self.path = file_path
 		self.name = file_name
