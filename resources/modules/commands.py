@@ -17,22 +17,21 @@ def new_command(name=None, **kwargs):
 
 	return wrapper
 
-async def get_args(message, content=None, args=None, command=None):
-	if not content:
-		content = message.content
-	if not args:
-		args = content.split(" ")
-		del args[0]
+async def get_args(message, content="", args=None, command=None):
+	if args:
+		skipable_args = content.split(" | ")
+	else:
+		args = []
+		skipable_args = []
 
 	new_args = Argument(message, args=args, command=command)
-	_, is_cancelled = await new_args.call_prompt()
+	_, is_cancelled = await new_args.call_prompt(skip_args=skipable_args)
 
 	return new_args, is_cancelled
 
 async def parse_message(message):
 	content = message.content
 	channel = message.channel
-	guild = message.guild
 	author = message.author
 
 	for prefix in prefix_list:
@@ -42,6 +41,7 @@ async def parse_message(message):
 			args = after.split(" ")
 			command_name = args[0]
 			del args[0]
+			after = " ".join(args)
 
 			if command_name:
 				command_name = command_name.lower()
