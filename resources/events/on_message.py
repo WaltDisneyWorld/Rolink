@@ -6,6 +6,5 @@ from resources.modules.commands import parse_message
 async def on_message(message):
 	if message.author.bot:
 		return
-		
-	await parse_message(message)
 
+	await parse_message(message)
