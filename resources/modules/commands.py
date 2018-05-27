@@ -1,5 +1,5 @@
 from resources.framework import get_files
-from resources.structures import Command, Response, Argument
+from resources.structures import Command, Response, Argument, parse_flags
 from resources.module import new_module
 from resources.settings import PREFIX as prefix_list
 from resources.modules.permissions import check_permissions
@@ -24,8 +24,12 @@ async def get_args(message, content="", args=None, command=None):
 		args = []
 		skipable_args = []
 
+	flags, flag_str = parse_flags(content)
+
 	new_args = Argument(message, args=args, command=command)
-	_, is_cancelled = await new_args.call_prompt(skip_args=skipable_args)
+	_, is_cancelled = await new_args.call_prompt(flag_str=flag_str, skip_args=skipable_args)
+
+	new_args.flags = flags
 
 	return new_args, is_cancelled
 
@@ -53,12 +57,13 @@ async def parse_message(message):
 
 					if permission_success:
 						args, is_cancelled = await get_args(message, after, args, command)
+						
 						if not is_cancelled:
 							try:
 								await command.func(message, response, args)
 							except Exception as e:
-								await response.error(f':exclamation: This command has **failed execution**!\n'
-								f'**Error:** ``{e}``')
+								await response.error(":exclamation: This command has **failed execution**!\n" \
+									f'**Error:** ``{e}``')
 					else:
 						await response.error(":exclamation: You don't satisfy the required permissions: "
 						f'``{permission_error}``')

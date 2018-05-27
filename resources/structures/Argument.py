@@ -1,11 +1,14 @@
 import asyncio
+import re
 from resources.modules.resolver import resolver_map
+
 
 def check_prompt(self):
 	def wrapper(message):
 		return message.author.id == self.message.author.id \
 			and message.channel.id == self.channel.id
 	return wrapper
+
 
 class Argument:
 	def __init__(self, message, args, command):
@@ -17,7 +20,7 @@ class Argument:
 		self.parsed_args = {}
 		self.command = command
 
-	async def call_prompt(self, args=None, skip_args=None):
+	async def call_prompt(self, args=None, flag_str=None, skip_args=None):
 		from resources.framework import client
 
 		using_args = args or self.command.arguments
@@ -35,7 +38,7 @@ class Argument:
 				pass
 
 			if skipped_arg:
-				resolved, _ = await validate_prompt(self.message, arg, skipped_arg=skipped_arg)
+				resolved, _ = await validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg)
 				if resolved:
 					ctr += 1
 					parsed_args[arg["name"]] = resolved
@@ -82,11 +85,13 @@ class Argument:
 
 		return parsed_args, None
 
-async def validate_prompt(message, arg, skipped_arg=None):
+async def validate_prompt(message, arg, skipped_arg=None, flag_str=None):
 	if skipped_arg:
+		if skipped_arg.endswith(flag_str):
+			skipped_arg = skipped_arg.rstrip(flag_str).strip()
 		resolved = resolver_map.get(arg.get("type", "string"))(message, content=skipped_arg, arg=arg)
 	else:
-		content = message.content
+		content = message.content.rstrip(flag_str).strip()
 
 		if content.lower() == "cancel":
 			return False, True
@@ -106,3 +111,20 @@ async def validate_prompt(message, arg, skipped_arg=None):
 		"Try again or say **cancel** to cancel.")
 
 	return (success and resolved), False
+
+
+def parse_flags(content):
+	# https://stackoverflow.com/questions/50554698/easy-way-to-extract-flags-from-a-string
+	flags = {m.group(1): m.group(2) or True for m in re.finditer(r"--?(\w+)(?: ([^-]*)|$)", content)}
+
+	if flags:
+		try:
+			content = content[content.index("--"):]
+		except ValueError:
+			try:
+				content = content[content.index("-"):]
+			except ValueError:
+				return {}, None
+	
+	return flags, flags and content
+
