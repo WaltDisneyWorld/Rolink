@@ -1,22 +1,17 @@
-def setup(client, command):
-	@command(name="ping", flags=["test"], arguments=[
-		{
-			"name": "name1",
-			"prompt": "say test1!",
-			"type": "string",
-			"check": lambda m, c: c == "test1",
+import time
 
-		},
-		{
-			"name": "name2",
-			"prompt": "say test2!",
-			"type": "string",
-			"check": lambda m, c: c == "test2",
+async def setup(client, command, r):
 
-		},
-	])
+	@command(name="ping", flags=["test"])
 	async def ping(message, response, args):
 		"""measures the latency of the bot"""
 
-		await message.channel.send("args: " + str(args.parsed_args))
-		await message.channel.send("flags: " + str(args.flags))
+		t_1 = time.perf_counter()
+
+		await message.channel.trigger_typing()
+
+		t_2 = time.perf_counter()
+
+		time_delta = round((t_2-t_1)*1000)
+
+		await message.channel.send(f'Pong! ``{time_delta}ms``')
