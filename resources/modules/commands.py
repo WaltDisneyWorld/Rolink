@@ -1,8 +1,9 @@
-from resources.framework import get_files
+from resources.framework import get_files, loop
 from resources.structures import Command, Response, Argument, parse_flags
 from resources.module import new_module
 from resources.settings import PREFIX as prefix_list
 from resources.modules.permissions import check_permissions
+import asyncio
 
 
 commands = dict()
@@ -70,4 +71,4 @@ async def parse_message(message):
 
 
 for command_name in [f.replace(".py", "") for f in get_files("commands/")]:
-	new_module("commands", command_name)
+	loop.create_task(new_module("commands", command_name))

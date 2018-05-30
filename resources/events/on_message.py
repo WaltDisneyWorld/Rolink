@@ -2,8 +2,8 @@ from resources.modules.commands import parse_message
 
 
 
-def setup(client, *args, **kwargs):
-	
+async def setup(client, *args, **kwargs):
+
 	@client.event
 	async def on_message(message):
 		if message.author.bot:

@@ -8,15 +8,14 @@ loop = None
 
 
 def get_files(directory:str):
-	"""gets all files in a directory"""
-	return [name for name in listdir(directory) if name != "__init__.py" and name != "__pycache__"]
-
-def register_modules():
+	return [name for name in listdir(directory) if name[:1] != "." and name[:2] != "__"]
+	
+async def register_modules():
 	"""registers and runs all modules found in specific folders"""
 	for directory in MODULE_DIR:
 		files = get_files(directory)
 		for filename in [f.replace(".py", "") for f in files]:
-			new_module(directory, filename)
+			await new_module(directory, filename)
 
 
 def connect(bot):
@@ -25,4 +24,4 @@ def connect(bot):
 	global loop
 	client = bot
 	loop = bot.loop
-	register_modules()
+	loop.create_task(register_modules())

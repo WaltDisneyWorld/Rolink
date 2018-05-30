@@ -1,7 +1,8 @@
 from discord import Game, Status
 
 
-def setup(client, *args, **kwargs):
+async def setup(client, *args, **kwargs):
+
 	@client.event
 	async def on_ready():
 		print(f'Logged in as {client.user}', flush=True)
