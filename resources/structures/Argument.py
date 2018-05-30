@@ -125,6 +125,5 @@ def parse_flags(content):
 				content = content[content.index("-"):]
 			except ValueError:
 				return {}, None
-	
-	return flags, flags and content
 
+	return flags, flags and content

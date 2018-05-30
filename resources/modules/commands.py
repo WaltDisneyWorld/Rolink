@@ -57,7 +57,7 @@ async def parse_message(message):
 
 					if permission_success:
 						args, is_cancelled = await get_args(message, after, args, command)
-						
+
 						if not is_cancelled:
 							try:
 								await command.func(message, response, args)
