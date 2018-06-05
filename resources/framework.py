@@ -9,7 +9,7 @@ loop = None
 
 def get_files(directory:str):
 	return [name for name in listdir(directory) if name[:1] != "." and name[:2] != "__"]
-	
+
 async def register_modules():
 	"""registers and runs all modules found in specific folders"""
 	for directory in MODULE_DIR:
