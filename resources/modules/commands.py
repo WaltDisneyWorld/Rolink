@@ -3,7 +3,7 @@ from resources.structures import Command, Response, Argument, parse_flags
 from resources.module import new_module
 from resources.settings import PREFIX as prefix_list
 from resources.modules.permissions import check_permissions
-import asyncio
+import traceback
 
 
 commands = dict()
@@ -63,10 +63,11 @@ async def parse_message(message):
 							try:
 								await command.func(message, response, args)
 							except Exception as e:
-								await response.error(":exclamation: This command has **failed execution**!\n" \
+								await response.error("This command has **failed execution**!\n" \
 									f'**Error:** ``{e}``')
+								traceback.print_exc()
 					else:
-						await response.error(":exclamation: You don't satisfy the required permissions: "
+						await response.error("You don't satisfy the required permissions: "
 						f'``{permission_error}``')
 
 
