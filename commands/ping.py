@@ -1,8 +1,8 @@
 import time
 
-async def setup(client, command, r):
+async def setup(client, command, r, *args, **kwargs):
 
-	@command(name="ping", flags=["test"])
+	@command(name="ping")
 	async def ping(message, response, args):
 		"""measures the latency of the bot"""
 
