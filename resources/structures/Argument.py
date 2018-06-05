@@ -18,6 +18,7 @@ class Argument:
 
 		self.args = args
 		self.parsed_args = {}
+		self.checked_args = {}
 		self.command = command
 
 	async def call_prompt(self, args=None, flag_str=None, skip_args=None):
@@ -32,23 +33,26 @@ class Argument:
 			skipped_arg = None
 			arg = using_args[ctr]
 
-			try:
-				skipped_arg = skip_args[ctr]
-			except IndexError:
-				pass
+			if skip_args:
+				try:
+					skipped_arg = skip_args[ctr]
+				except IndexError:
+					pass
 
 			if skipped_arg:
-				resolved, _ = await validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg)
+				resolved, _ = await validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self)
 				if resolved:
 					ctr += 1
 					parsed_args[arg["name"]] = resolved
 				else:
 					success = False
 					while not success:
-						await self.channel.send(f'{arg["prompt"]}\nSay **cancel** to cancel.')
+						await self.channel.send(arg["prompt"].format(
+							**parsed_args
+						) + "\nSay **cancel** to cancel.")
 						try:
 							msg = await client.wait_for("message", check=check_prompt(self), timeout=200.0)
-							resolved, is_cancelled = await validate_prompt(msg, arg)
+							resolved, is_cancelled = await validate_prompt(msg, arg, argument_class=self)
 
 							if resolved:
 								ctr += 1
@@ -63,10 +67,12 @@ class Argument:
 							await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
 							return None, "timeout reached"
 			else:
-				await self.channel.send(f'{arg["prompt"]}\nSay **cancel** to cancel.')
+				await self.channel.send(arg["prompt"].format(
+					**parsed_args
+				) + "\nSay **cancel** to cancel.")
 				try:
 					msg = await client.wait_for("message", check=check_prompt(self), timeout=200.0)
-					resolved, is_cancelled = await validate_prompt(msg, arg)
+					resolved, is_cancelled = await validate_prompt(msg, arg, argument_class=self)
 
 					if resolved:
 						ctr += 1
@@ -85,30 +91,39 @@ class Argument:
 
 		return parsed_args, None
 
-async def validate_prompt(message, arg, skipped_arg=None, flag_str=None):
+async def validate_prompt(message, arg, skipped_arg=None, flag_str=None, argument_class=None):
+	err_msg = None
+
 	if skipped_arg:
 		if skipped_arg.endswith(flag_str):
 			skipped_arg = skipped_arg.rstrip(flag_str).strip()
-		resolved = resolver_map.get(arg.get("type", "string"))(message, content=skipped_arg, arg=arg)
+		resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
+			(message, arg=arg, content=skipped_arg)
 	else:
 		content = message.content.rstrip(flag_str).strip()
 
 		if content.lower() == "cancel":
 			return False, True
 
-		resolved = resolver_map.get(arg.get("type", "string"))(message, content=content, arg=arg)
+		resolved, err_msg = resolver_map.get(arg.get("type", "string"))(message, arg=arg, content=content)
 
 	if resolved:
 		if arg.get("check"):
-			success = arg["check"](message, resolved)
+			success, err_msg = await arg["check"](message, resolved)
+			if argument_class:
+				argument_class.checked_args[arg["name"]] = success
 		else:
 			success = True
 	else:
 		success = False
 
 	if not success:
-		await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument. '
-		"Try again or say **cancel** to cancel.")
+		if err_msg:
+			await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.`` ' \
+				"Try again or say **cancel** to cancel.")
+		else:
+			await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument. ' \
+				"Try again or say **cancel** to cancel.")
 
 	return (success and resolved), False
 
