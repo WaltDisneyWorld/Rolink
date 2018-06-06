@@ -1,8 +1,8 @@
 from discord import Game, Status
 from asyncio import sleep
-from resources.settings import GAME as game_list
+from resources.framework import config
 
-
+game_list = config.GAME
 
 async def setup(client, *args, **kwargs):
 

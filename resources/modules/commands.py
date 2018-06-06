@@ -1,10 +1,11 @@
 from resources.framework import get_files, loop
 from resources.structures import Command, Response, Argument, parse_flags
 from resources.module import new_module
-from resources.settings import PREFIX as prefix_list
+from resources.framework import config
 from resources.modules.permissions import check_permissions
 import traceback
 
+prefix_list = config.PREFIX
 
 commands = dict()
 

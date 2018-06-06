@@ -1,0 +1,20 @@
+TOKEN = "abc123"
+RETHINKDB = {
+	"PASSWORD": "",
+	"PORT": 28015,
+	"DB": "bloxlink",
+	"HOST": "rethinkdb-stable"
+}
+PREFIX = ["!"]
+MODULE_DIR = [
+	"resources/events",
+	"resources/modules"
+]
+GAME = ["!help | !invite", "{guilds} servers", "{users} total users"]
+WORD = [
+	"bus",
+	"duck",
+	"roblox",
+	"book",
+	"key
+]

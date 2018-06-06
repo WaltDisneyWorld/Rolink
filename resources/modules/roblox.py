@@ -1,8 +1,10 @@
 import json
 import aiohttp
 from resources.structures import RobloxUser
-from resources.settings import WORD as word_list
+from resources.framework import config
 from random import choice
+
+word_list = config.WORD
 
 
 r = None
@@ -74,7 +76,6 @@ async def get_username_from_api(id):
 			roblox_cache["roblox_ids_to_usernames"][id] = username
 			return username, response.get("Id")
 	return None, None
-
 
 async def check_username(username, return_class_object=True):
 	user_cache = roblox_cache["users"].get(username)
