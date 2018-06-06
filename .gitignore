@@ -110,3 +110,4 @@ logs.txt
 config.py
 .DS_Store
 .gitattributes
+assets/
