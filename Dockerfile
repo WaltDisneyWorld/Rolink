@@ -9,5 +9,7 @@ ADD . /usr/src/bloxlink
 
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 
+ENV config config.py
 
-CMD ["python3", "bot.py"]
+
+CMD ["sh", "-c", "python3 bot.py ${config}"]
