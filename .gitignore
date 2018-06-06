@@ -107,6 +107,6 @@ bot-env/
 # bloxlink specific stuff
 logs.txt
 .vscode
-resources/settings.py
+config.py
 .DS_Store
 .gitattributes
