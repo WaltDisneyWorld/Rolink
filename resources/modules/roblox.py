@@ -20,11 +20,13 @@ roblox_cache = {
 
 }
 
-base_url = "https://api.roblox.com/"
+api_url = "https://api.roblox.com/"
+base_url = "https://roblox.com"
+
 
 async def fetch(session, url):
-    async with session.get(url) as response:
-        return await response.text()
+	async with session.get(url) as response:
+		return await response.text(), response
 
 async def generate_code():
 	words = []
@@ -41,6 +43,7 @@ async def validate_code(username, code):
 	if id:
 		async with aiohttp.ClientSession() as session:
 			response = await fetch(session, f'https://www.roblox.com/users/{id}/profile')
+			response = response[0]
 			return code in response
 
 	return False
@@ -50,8 +53,9 @@ async def get_id_from_api(username):
 		return username, roblox_cache["usernames_to_roblox_ids"][username]
 
 	async with aiohttp.ClientSession() as session:
-		response = await fetch(session, base_url + "/users/get-by-username/" \
+		response = await fetch(session, api_url + "/users/get-by-username/" \
 			"?username=" + username)
+		response = response[0]
 		try:
 			response = json.loads(response)
 		except json.decoder.JSONDecodeError:
@@ -66,7 +70,8 @@ async def get_username_from_api(id):
 		return roblox_cache["roblox_ids_to_usernames"][id], id
 
 	async with aiohttp.ClientSession() as session:
-		response = await fetch(session, base_url + "/users/" + id)
+		response = await fetch(session, api_url + "/users/" + id)
+		response = response[0]
 		try:
 			response = json.loads(response)
 		except json.decoder.JSONDecodeError:
@@ -112,10 +117,12 @@ async def get_details(username=None, id=None, complete=False):
 			"avatar": None,
 			"groups": {},
 			"membership": None,
-			"presence": None
+			"presence": None,
+			"badges": []
 		}
 
 	}
+
 	user = None
 	if username:
 		user = roblox_cache["users"].get(username)
@@ -137,6 +144,8 @@ async def get_details(username=None, id=None, complete=False):
 				user_data["extras"]["membership"] = user.membership
 			if user.presence:
 				user_data["extras"]["presence"] = user.presence
+			if user.badges:
+				user_data["extras"]["badges"] = user.badges
 
 	roblox_name = user_data.get("username") or username
 	roblox_id = user_data.get("id") or id
@@ -151,9 +160,65 @@ async def get_details(username=None, id=None, complete=False):
 		name, id = await get_id_from_api(roblox_name)
 		user_data["id"] = id
 		user_data["username"] = name
+	elif roblox_id and roblox_name:
+		name, id = await get_id_from_api(roblox_name)
+		if name and id:
+			user_data["id"] = id
+			user_data["username"] = name
+	else:
+		return user_data
 
-	if complete:
-		pass #TODO
+	if complete and user_data["id"]:
+		async with aiohttp.ClientSession() as session:
+			icon_url = await fetch(session, base_url + "/bust-thumbnail/json?userId=" \
+				+ str(user_data["id"]) + "&height=180&width=180")
+			icon_url = icon_url[0]
+			try:
+				icon_url = json.loads(icon_url)
+				user_data["extras"]["avatar"] = icon_url.get("Url")
+			except json.decoder.JSONDecodeError:
+				pass
+
+			presence_url = await fetch(session, base_url + "/presence/user?userId=" \
+				+ str(user_data["id"]))
+			presence_url = presence_url[0]
+			try:
+				presence_url = json.loads(presence_url)
+				presence = presence_url.get("LastLocation")
+
+				if presence == "Playing":
+					presence = "playing a game"
+				elif presence == "Offline":
+					presence = "offline"
+				elif presence == "Online" or presence == "Website":
+					presence = "browsing the website"
+				elif presence == "Creating":
+					presence = "in studio"
+
+				user_data["extras"]["presence"] = presence
+
+			except json.decoder.JSONDecodeError:
+				pass
+
+			badges_url = await fetch(session, base_url + "/badges/roblox?userId="+str(user_data["id"]))
+			badges_url = badges_url[0]
+
+			try:
+				badges = json.loads(badges_url)
+				if badges.get("RobloxBadges"):
+					for badge in badges["RobloxBadges"]:
+						if badge["Name"] == "Outrageous Builders Club":
+							user_data["extras"]["membership"] = "OBC"
+						elif badge["Name"] == "Turbo Builders Club":
+							user_data["extras"]["membership"] = "TBC"
+						elif badge["Name"] == "Builders Club":
+							user_data["extras"]["membership"] = "BC"
+						else:
+							user_data["extras"]["badges"].append(badge["Name"])
+							user_data["extras"]["membership"] = "NBC"
+
+			except json.decoder.JSONDecodeError:
+				pass
 
 	return user_data
 
