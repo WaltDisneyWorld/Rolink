@@ -1,5 +1,5 @@
 from resources.modules.roblox import generate_code, check_username, \
-	validate_code, verify_member, unverify_member, get_user, mass_filter
+	validate_code, verify_member, get_user, mass_filter
 
 
 async def validate_username(message, username):
@@ -43,9 +43,9 @@ async def roblox_prompts(message, response, args, r):
 
 async def setup(client, command, r, *args, **kwargs):
 
-	@command(name="verify", flags=["force"])
+	@command(name="verify", flags=["force"], category="Account")
 	async def verify(message, response, command_args):
-		"""links your ROBLOX account to your Discord account"""
+		"""links your Roblox account to your Discord account"""
 
 		author = message.author
 		guild = message.guild
