@@ -11,7 +11,6 @@ commands = dict()
 
 
 
-
 def new_command(name=None, **kwargs):
 	def wrapper(func):
 		command = Command(func, name, **kwargs)
@@ -40,6 +39,8 @@ async def parse_message(message):
 	channel = message.channel
 	author = message.author
 
+	if Argument.is_in_prompt(author): return
+
 	for prefix in prefix_list:
 		if content[:len(prefix)].lower() == prefix.lower():
 
@@ -52,24 +53,26 @@ async def parse_message(message):
 			if command_name:
 				command_name = command_name.lower()
 
-				if commands.get(command_name):
-					command = commands.get(command_name)
-					response = Response(message, command_name)
-					permission_success, permission_error = check_permissions(command, channel, author)
+				for index, command in commands.items():
 
-					if permission_success:
-						args, is_cancelled = await get_args(message, after, args, command)
+					if index == command_name or command_name in command.aliases:
 
-						if not is_cancelled:
-							try:
-								await command.func(message, response, args)
-							except Exception as e:
-								await response.error("This command has **failed execution**!\n" \
-									f'**Error:** ``{e}``')
-								traceback.print_exc()
-					else:
-						await response.error("You don't satisfy the required permissions: "
-						f'``{permission_error}``')
+						response = Response(message, command_name)
+						permission_success, permission_error = check_permissions(command, channel, author)
+
+						if permission_success:
+							args, is_cancelled = await get_args(message, after, args, command)
+
+							if not is_cancelled:
+								try:
+									await command.func(message, response, args)
+								except Exception as e:
+									await response.error("This command has **failed execution**!\n" \
+										f'**Error:** ``{e}``')
+									traceback.print_exc()
+						else:
+							await response.error("You don't satisfy the required permissions: "
+							f'``{permission_error}``')
 
 
 for command_name in [f.replace(".py", "") for f in get_files("commands/")]:
