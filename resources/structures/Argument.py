@@ -2,6 +2,7 @@ import asyncio
 import re
 from resources.modules.resolver import resolver_map
 
+in_prompts = {}
 
 def check_prompt(self):
 	def wrapper(message):
@@ -39,6 +40,8 @@ class Argument:
 				except IndexError:
 					pass
 
+			in_prompts[self.author.id] = True
+
 			if skipped_arg:
 				resolved, _ = await validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self)
 				if resolved:
@@ -67,6 +70,9 @@ class Argument:
 							await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
 							return None, "timeout reached"
 			else:
+				if arg.get("optional"):
+					ctr += 1
+					continue
 				await self.channel.send(arg["prompt"].format(
 					**parsed_args
 				) + "\nSay **cancel** to cancel.")
@@ -79,22 +85,32 @@ class Argument:
 						parsed_args[arg["name"]] = resolved
 
 					elif is_cancelled:
+						in_prompts[self.author.id] = None
 						await self.channel.send("**Cancelled prompt.**")
 						return None, "user cancellation"
 
 				except asyncio.TimeoutError:
 					await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
+					in_prompts[self.author.id] = None
 					return None, "timeout reached"
 
 		if not args:
 			self.parsed_args = parsed_args
 
+		in_prompts[self.author.id] = None
+
 		return parsed_args, None
+
+	@staticmethod
+	def is_in_prompt(author):
+		if in_prompts.get(author.id):
+			return True
 
 async def validate_prompt(message, arg, skipped_arg=None, flag_str=None, argument_class=None):
 	err_msg = None
 
 	if skipped_arg:
+		print(flag_str, flush=True)
 		if skipped_arg.endswith(flag_str):
 			skipped_arg = skipped_arg.rstrip(flag_str).strip()
 		resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
@@ -139,6 +155,6 @@ def parse_flags(content):
 			try:
 				content = content[content.index("-"):]
 			except ValueError:
-				return {}, None
+				return {}, ""
 
-	return flags, flags and content
+	return flags, flags and content or ""
