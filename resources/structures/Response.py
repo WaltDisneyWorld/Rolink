@@ -6,17 +6,20 @@ class Response:
 		self.channel = message.channel
 		self.author = message.author
 		self.command = command
+		self.guild = message.guild
 	async def send(self, content=None, embed=None, on_error=None, dm=False):
 		channel = dm and self.author or self.channel
+		if embed and hasattr(self.guild.me, "color"):
+			embed.color = self.guild.me.color
 		try:
 			await channel.send(embed=embed, content=content)
+			if dm:
+				await self.channel.send("**Check your DMs!**")
 		except Forbidden:
-			# try to send on_error
-			# if that fails, try to post in opposite channel that it couldn't send a msg
+			channel = dm and self.channel or self.author # opposite channel
 			try:
-				await channel.send(content=on_error or content)
+				await channel.send(content=on_error or content, embed=embed)
 			except Forbidden:
-				channel = dm and self.channel or self.author # opposite channel
 				try:
 					if dm:
 						await self.channel.send(content=str(self.author) + ", I was unable to DM you. "
