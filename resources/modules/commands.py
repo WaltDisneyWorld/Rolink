@@ -1,9 +1,10 @@
+import traceback
 from resources.framework import get_files, loop
-from resources.structures import Command, Response, Argument, parse_flags
+from resources.structures import Command, Response, Argument
 from resources.module import new_module
 from resources.framework import config
 from resources.modules.permissions import check_permissions
-import traceback
+
 
 prefix_list = config.PREFIX
 
@@ -26,7 +27,7 @@ async def get_args(message, content="", args=None, command=None):
 		args = []
 		skipable_args = []
 
-	flags, flag_str = parse_flags(content)
+	flags, flag_str = Argument.parse_flags(content)
 
 	new_args = Argument(message, args=args, command=command)
 	_, is_cancelled = await new_args.call_prompt(flag_str=flag_str, skip_args=skipable_args)
