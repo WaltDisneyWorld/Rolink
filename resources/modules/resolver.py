@@ -1,3 +1,5 @@
+from discord.utils import find
+
 def string_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
@@ -38,8 +40,33 @@ def user_resolver(message, arg, content=None):
 
 	return False, "Invalid user"
 
+def channel_resolver(message, arg, content=None):
+	if not content:
+		content = message.content
+
+	guild = message.guild
+
+	if message.channel_mentions:
+		return message.channel_mentions[0], None
+	else:
+		is_int, is_id = None, None
+
+		try:
+			is_int = int(content)
+			is_id = is_int > 15
+		except ValueError:
+			pass
+
+		if is_id:
+			return guild.get_channel(is_int), None
+		else:
+			return find(lambda c: c.name == content, guild.text_channels), None
+
+	return False, "Invalid channel"
+
 resolver_map = {
 	"string": string_resolver,
 	"choice": choice_resolver,
-	"user": user_resolver
+	"user": user_resolver,
+	"channel": channel_resolver
 }
