@@ -1,5 +1,5 @@
-from discord import Game, Status
 from asyncio import sleep
+from discord import Game, Status
 from resources.framework import config
 
 game_list = config.GAME
