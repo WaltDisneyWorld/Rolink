@@ -24,5 +24,5 @@ async def setup(client, command, r, *args, **kwargs):
 	async def help_command(message, response, args):
 		"""shows command usage and general help"""
 
-		await response.send(embed=embed, dm=True)
+		await response.send(embed=embed, dm=True, dm_post=True)
 		
