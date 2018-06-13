@@ -13,9 +13,10 @@ async def setup(client, command, r, *args, **kwargs):
 		description=config.HELP
 	)
 	for i,v in commands.items():
-		category = categories.get(v.category, [])
-		category.append(v.name + " ➜ " + v.description)
-		categories[v.category] = category
+		if not v.hidden and not v.category.lower() == "developer":
+			category = categories.get(v.category, [])
+			category.append(v.name + " ➜ " + v.description)
+			categories[v.category] = category
 
 	for i,v in categories.items():
 		embed.add_field(name=i, value="\n".join(v))

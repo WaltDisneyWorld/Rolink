@@ -7,6 +7,7 @@ class Command:
 		self.permissions = kwargs.get("permissions", dict())
 		self.arguments = kwargs.get("arguments") or kwargs.get("args") or list()
 		self.category = kwargs.get("category", "Miscellaneous")
+		self.hidden = kwargs.get("hidden", False)
 		self.flags = kwargs.get("flags", dict())
 		self.is_subcommand = is_subcommand
 		self.func = func
