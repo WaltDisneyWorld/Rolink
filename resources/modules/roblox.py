@@ -1,8 +1,11 @@
 import json
 import aiohttp
-from resources.structures import RobloxUser
+from discord.utils import find
+from discord.errors import Forbidden
+from resources.structures import RobloxUser, Group
 from resources.framework import config
 from random import choice
+
 
 word_list = config.WORD
 
@@ -16,7 +19,8 @@ roblox_cache = {
 	"roblox_ids_to_usernames": {},
 	"discord_ids_to_roblox_ids": {},
 	"author_users": {},
-	"users": {}
+	"users": {},
+	"groups": {}
 
 }
 
@@ -268,7 +272,86 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 		else:
 			return None, []
 
+async def get_user_groups(author, roblox_user=None):
+	groups = {}
 
+	roblox_user = roblox_user or get_user(author=author)
+
+	if roblox_user.groups:
+		return roblox_user.groups
+
+	if not roblox_user.id:
+		roblox_user.fill_missing_details()
+
+	if not roblox_user.is_verified:
+		return {}
+
+	roblox_id = str(roblox_user.id)
+
+	async with aiohttp.ClientSession() as session:
+		response = await fetch(session, api_url + "/users/" + roblox_id + \
+			"/groups")
+		response = response[0]
+
+		try:
+			response = json.loads(response)
+			for group_json in response:
+				group = Group(group_json["Id"], **group_json)
+				roblox_user.add_group(group)
+				groups[group.id] = group
+
+		except json.decoder.JSONDecodeError:
+			return {}
+
+	return groups
+
+
+
+async def get_roles(author, guild=None, get_group_roles=True):
+	remove_roles = []
+	add_roles = []
+	errors = []
+
+	guild = guild or author.guild
+	user, _ = await get_user(author=author)
+
+	unverified_role = None
+
+	if guild:
+
+		if not user:
+			unverified_role = find(lambda r: r.name == "Unverified", guild.roles)
+
+			if unverified_role:
+				return [unverified_role]
+			else:
+				return [], [], ["User not verified"]
+
+		guild_id = str(guild.id)
+
+		guild_data = await r.table("guilds").get(guild_id).run() or {}
+
+		verified_role_name = guild_data.get("verifiedRoleName", "Verified")
+		verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
+
+		if not verified_role:
+			try:
+				verified_role = await guild.create_role(name=verified_role_name,
+													reason="Verified Role"
+													)
+			except Forbidden:
+				errors.append("Unable to create Verified Role: please drag my role above"
+				"the other roles and ensure I have the Manage Roles permission.")
+
+		if verified_role:
+			add_roles.append(verified_role)
+
+		user_groups = await get_user_groups(author=author, roblox_user=user)
+
+
+
+
+	return add_roles, remove_roles, errors
 
 async def mass_filter(accounts=[], isIDs=True, isUsernames=False):
 	parsed_accounts = []
@@ -340,6 +423,27 @@ async def unverify_member(author, roblox):
 		conflict="update"
 	).run()
 	return success
+
+
+async def get_group(group_id):
+	group_id = str(group_id)
+	if roblox_cache["groups"].get(group_id):
+		return roblox_cache["groups"].get(group_id)
+	else:
+		async with aiohttp.ClientSession() as session:
+			response = await fetch(session, api_url + "/groups/" + group_id)
+			response = response[0]
+
+			try:
+				response = json.loads(response)
+
+				if response.get("Id"):
+					group = Group(id=response["Id"], **response)
+					roblox_cache["groups"][group_id] = group
+					return group
+
+			except json.decoder.JSONDecodeError:
+				return {}
 
 
 async def setup(client, command, rethinkdb, *args, **kwargs):

@@ -13,6 +13,7 @@ class RobloxUser:
 		self.membership = kwargs.get("membership")
 		self.presence = kwargs.get("presence")
 		self.badges = kwargs.get("badges", [])
+		self.groups = kwargs.get("groups", {})
 
 	async def fill_missing_details(self, complete=False):
 		global get_details
@@ -32,9 +33,11 @@ class RobloxUser:
 				self.is_verified = True
 
 		if not self.is_complete and complete:
-			self.groups = data["extras"].get("groups")
 			self.avatar = data["extras"].get("avatar")
 			self.membership = data["extras"].get("membership")
 			self.presence = data["extras"].get("presence")
 			self.badges = data["extras"].get("badges")
 			self.is_complete = True
+	def add_group(self, group):
+		if not self.groups.get(group.name):
+			self.groups[group.name] = group
