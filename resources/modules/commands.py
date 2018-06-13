@@ -8,6 +8,7 @@ import traceback
 prefix_list = config.PREFIX
 
 commands = dict()
+commands_list = get_files("commands/")
 
 
 
@@ -39,7 +40,11 @@ async def parse_message(message):
 	channel = message.channel
 	author = message.author
 
-	if Argument.is_in_prompt(author): return
+	if Argument.is_in_prompt(author):
+		return
+	if len(commands) != len(commands_list):
+		await channel.send(":exclamation: Bot is booting up. Please wait.")
+		return
 
 	for prefix in prefix_list:
 		if content[:len(prefix)].lower() == prefix.lower():
@@ -75,5 +80,5 @@ async def parse_message(message):
 							f'``{permission_error}``')
 
 
-for command_name in [f.replace(".py", "") for f in get_files("commands/")]:
+for command_name in [f.replace(".py", "") for f in commands_list]:
 	loop.create_task(new_module("commands", command_name))
