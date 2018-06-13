@@ -1,14 +1,19 @@
 from discord.utils import find
+from resources.framework import config
 
 
 def check_permissions(command, channel, author):
-	if author.id == 84117866944663552: return True, None
-	if not author.guild: return False, "Error: Member not loaded."
+	if author.id == config.OWNER:
+		return True, None
+
+	if not author.guild:
+		return False, "Error: Member not loaded."
 
 	permissions = command.permissions
 
 	if permissions.get("owner_only"):
-		if author.id != 84117866944663552: return False, "This command is reserved for the bot developer."
+		if author.id != config.OWNER:
+			return False, "This command is reserved for the bot developer."
 
 	roles = permissions.get("roles") or permissions.get("role")
 	if roles:
