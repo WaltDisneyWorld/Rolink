@@ -110,7 +110,6 @@ async def validate_prompt(message, arg, skipped_arg=None, flag_str=None, argumen
 	err_msg = None
 
 	if skipped_arg:
-		print(flag_str, flush=True)
 		if skipped_arg.endswith(flag_str):
 			skipped_arg = skipped_arg.rstrip(flag_str).strip()
 		resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
