@@ -9,7 +9,7 @@ class Response:
 		self.guild = message.guild
 	async def send(self, content=None, embed=None, on_error=None, dm=False, dm_post=False, strict_post=False):
 		channel = dm and self.author or self.channel
-		if embed and not dm:
+		if embed and not dm and not embed.color:
 			embed.color = self.guild.me.color
 		try:
 			await channel.send(embed=embed, content=content)
@@ -36,7 +36,7 @@ class Response:
 		if embed and not dm:
 			embed.color = embed_color
 		return await self.send(":exclamation: " + error, embed=embed, dm=dm)
-	async def success(self, success, embed=None, embed_color=0x3CE754, dm=False):
+	async def success(self, success, embed=None, embed_color=0x2ECC71, dm=False):
 		if embed and not dm:
 			embed.color = embed_color
 		return await self.send(":thumbsup: " + success, embed=embed, dm=dm)
