@@ -26,6 +26,9 @@ def validate_choices(*choices):
 			return True, "Choice must be of either: ``{}``".format(choices)
 	return wrapper
 
+def nickname_validation(nick):
+	return len(nick) > 32, "Nickname must be 32 characters or less."
+
 prompts = [
 	{
 		"prompt": "Thank you for choosing Bloxlink! In a few simple prompts, we'll "  \
@@ -83,7 +86,7 @@ prompts = [
 			"{group-rank} --> changes to their current rank in the linked group```" \
 			"\n\nPlease say the nickname template that you would like to use. You can " \
 			"use multiple.\n",
-		"validation": None,
+		"validation": nickname_validation,
 		"default": "{roblox-name}",
 		"name": "NicknameTemplate"
 	},
@@ -96,15 +99,17 @@ def check(author, dm=False):
 	return wrapper
 
 
-async def setup(client, command, r, *args, **kwargs):
+async def setup(**kwargs):
+	command = kwargs.get("command")
+	client = kwargs.get("client")
+	r = kwargs.get("r")
 
-	@command(name="setup", permissions={
+	@command(name="setup", category="Administration", permissions={
 		"raw": "manage_guild"
 	})
 	async def setup_command(message, response, args):
 		"""configures your server with Bloxlink"""
 
-		channel = message.channel
 		author = message.author
 		guild = message.guild
 
@@ -229,7 +234,7 @@ async def setup(client, command, r, *args, **kwargs):
 											try:
 												await role.delete(reason="Replace option during setup")
 											except Forbidden:
-												pass
+												continue
 
 								for rank in sorted_roles:
 									role = find(lambda r: r.name == rank["Name"], guild.roles)
@@ -256,10 +261,10 @@ async def setup(client, command, r, *args, **kwargs):
 						"verifiedRoleName": (verified_role[1] != "skipped" and verified_role[0]) or \
 							guild_settings.get("verifiedRoleName") or verified_role[0],
 						"groupID": (group_id[1] != "skipped" and group_id[0]) or \
-							guild_settings.get("groupID") or group_id[0]						
+							guild_settings.get("groupID") or None						
 
 					}, conflict="update").run()
-					await response.send("Your server is now configured with Bloxlink!", dm=True)
+					await response.send(":thumbsup: Your server is now configured with Bloxlink!", dm=True)
 	
 
 				else:
