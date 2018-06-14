@@ -7,7 +7,7 @@ async def validate_username(message, username):
 	return username_check, not username_check and "Username not found"
 
 
-async def roblox_prompts(message, response, args, r):
+async def roblox_prompts(message, response, args):
 	author = message.author
 	code = await generate_code()
 	parsed_args, is_cancelled = await args.call_prompt([
@@ -41,19 +41,20 @@ async def roblox_prompts(message, response, args, r):
 				"again and try again.")
 
 
-async def setup(client, command, r, *args, **kwargs):
+async def setup(**kwargs):
+	command = kwargs.get("command")
 
 	@command(name="verify", flags=["force"], category="Account")
-	async def verify(message, response, command_args):
+	async def verify(message, response, args):
 		"""links your Roblox account to your Discord account"""
 
 		author = message.author
 		guild = message.guild
 
-		force_flag = command_args.flags.get("force")
+		force_flag = args.flags.get("force")
 
 		if force_flag:
-			await roblox_prompts(message, response, command_args, r)
+			await roblox_prompts(message, response, args)
 		else:
 			user, accounts = await get_user(author=author)
 			if user:
@@ -63,7 +64,7 @@ async def setup(client, command, r, *args, **kwargs):
 				parsed_accounts, parsed_users = await mass_filter(accounts)
 				if parsed_accounts:
 					parsed_accounts_text = ", ".join(parsed_accounts) + "\n"
-					args, is_cancelled = await command_args.call_prompt([
+					args, is_cancelled = await args.call_prompt([
 						{
 							"name": "chosen_account",
 							"type": "choice",
@@ -83,6 +84,6 @@ async def setup(client, command, r, *args, **kwargs):
 						await verify_member(author, parsed_users[parsed_accounts.index(chosen)], primary_account=args["default"] == "yes")
 						await response.success("Welcome to " + guild.name + ", **" + chosen + "!**")
 				else:
-					await roblox_prompts(message, response, command_args, r)
+					await roblox_prompts(message, response, args)
 			else:
-				await roblox_prompts(message, response, command_args, r)
+				await roblox_prompts(message, response, args)

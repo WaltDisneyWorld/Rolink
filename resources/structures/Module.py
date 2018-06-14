@@ -25,7 +25,7 @@ class Module:
 
 				await get_connection()
 
-				await getattr(module, "setup")(client, command, r)
+				await getattr(module, "setup")(client=client, command=command, r=r)
 		except (ModuleNotFoundError, ImportError) as e:
 			log(e)
 			traceback.print_exc()

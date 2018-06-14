@@ -2,8 +2,8 @@ from resources.modules.commands import parse_message
 
 
 
-async def setup(client, command, r, *args, **kwargs):
-	
+async def setup(**kwargs):
+	command = kwargs.get("command")
 
 	@command(name="sudo", category="Developer", permissions={
 		"owner_only": True

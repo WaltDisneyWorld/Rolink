@@ -6,7 +6,9 @@ from resources.modules.commands import commands
 
 
 
-async def setup(client, command, r, *args, **kwargs):
+async def setup(**kwargs):
+	command = kwargs.get("command")
+
 	categories = {}
 	await sleep(5)
 	embed = Embed(

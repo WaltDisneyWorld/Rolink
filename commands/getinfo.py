@@ -1,8 +1,9 @@
-from resources.modules.roblox import get_user, mass_filter
 from discord import Embed
+from resources.modules.roblox import get_user, mass_filter
 
 
-async def setup(client, command, r, *args, **kwargs):
+async def setup(**kwargs):
+	command = kwargs.get("command")
 
 	@command(name="getinfo", alias=["whois"], args = [
 		{
