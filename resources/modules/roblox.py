@@ -25,7 +25,7 @@ roblox_cache = {
 }
 
 api_url = "https://api.roblox.com/"
-base_url = "https://roblox.com"
+base_url = "https://roblox.com/"
 
 
 async def fetch(session, url):
@@ -174,7 +174,7 @@ async def get_details(username=None, id=None, complete=False):
 
 	if complete and user_data["id"]:
 		async with aiohttp.ClientSession() as session:
-			icon_url = await fetch(session, base_url + "/bust-thumbnail/json?userId=" \
+			icon_url = await fetch(session, base_url + "bust-thumbnail/json?userId=" \
 				+ str(user_data["id"]) + "&height=180&width=180")
 			icon_url = icon_url[0]
 			try:
@@ -183,7 +183,7 @@ async def get_details(username=None, id=None, complete=False):
 			except json.decoder.JSONDecodeError:
 				pass
 
-			presence_url = await fetch(session, base_url + "/presence/user?userId=" \
+			presence_url = await fetch(session, base_url + "presence/user?userId=" \
 				+ str(user_data["id"]))
 			presence_url = presence_url[0]
 			try:
@@ -204,7 +204,7 @@ async def get_details(username=None, id=None, complete=False):
 			except json.decoder.JSONDecodeError:
 				pass
 
-			badges_url = await fetch(session, base_url + "/badges/roblox?userId="+str(user_data["id"]))
+			badges_url = await fetch(session, base_url + "badges/roblox?userId="+str(user_data["id"]))
 			badges_url = badges_url[0]
 
 			try:
@@ -306,11 +306,30 @@ async def get_user_groups(author, roblox_user=None):
 	return groups
 
 
+async def get_rank(roblox_user, group=None, group_id=None):
+	if not group and group_id:
+		group_id = str(group_id)
+		group = roblox_cache["groups"].get(group_id) or Group(id=group_id)
+		if not roblox_cache["groups"].get(group_id):
+			roblox_cache["groups"][group_id] = group
+	elif group and not group_id:
+		group_id = group.id
 
-async def get_roles(author, guild=None, get_group_roles=True):
+	if not group_id:
+		return
+
+	async with aiohttp.ClientSession() as session:
+		response = await fetch(session, base_url + "Game/LuaWebService/HandleSocialRequest.ashx?" \
+			f'method=GetGroupRole&playerid={roblox_user.id}&groupid={group_id}')
+		response = response[0]
+
+		return response != "Guest" and response.strip()
+
+async def get_roles(author, guild=None):
 	remove_roles = []
 	add_roles = []
 	errors = []
+	error_num = 0
 
 	guild = guild or author.guild
 	user, _ = await get_user(author=author)
@@ -325,7 +344,7 @@ async def get_roles(author, guild=None, get_group_roles=True):
 			if unverified_role:
 				return [unverified_role]
 			else:
-				return [], [], ["User not verified"]
+				return [], [], ["1) not verified"]
 
 		guild_id = str(guild.id)
 
@@ -336,11 +355,13 @@ async def get_roles(author, guild=None, get_group_roles=True):
 
 		if not verified_role:
 			try:
-				verified_role = await guild.create_role(name=verified_role_name,
-													reason="Verified Role"
-													)
+				verified_role = await guild.create_role(
+					name=verified_role_name,
+					reason="Verified Role"
+				)
 			except Forbidden:
-				errors.append("Unable to create Verified Role: please drag my role above"
+				error_num += 1
+				errors.append(str(error_num) + ") Unable to create Verified Role: please drag my role above"
 				"the other roles and ensure I have the Manage Roles permission.")
 
 		if verified_role:
@@ -348,8 +369,56 @@ async def get_roles(author, guild=None, get_group_roles=True):
 
 		user_groups = await get_user_groups(author=author, roblox_user=user)
 
+		role_binds = guild_data.get("roleBinds")
+		group_id = guild_data.get("groupID")
+
+		if role_binds:
+
+			for group_id_, data in role_binds.items():
+
+				if user_groups.get(group_id_):
+
+					group = user_groups.get(group_id_)
+
+					for rank, role_id in data.items():
+
+						try:
+							num = int(rank)
+						except ValueError:
+							pass
+
+						user_rank = group.user_rank
+
+						role = find(lambda r: r.id == int(role_id), guild.roles)
+
+						if role:
+							if rank == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
+								if not role in author.roles:
+									add_roles.append(role)
+							else:
+								if role in author.roles:
+									remove_roles.append(role)
+		if group_id and group_id != "0":
+			rank = await get_rank(user, group_id=group_id)
+			role = find(lambda r: r.name == rank, guild.roles)
+
+			if not role:
+				try:
+					await guild.create_role(name=rank, reason="Adding missing group role")
+				except Forbidden:
+					error_num += 1
+					errors.append(str(error_num)+") failed to create missing group role " \
+						+ rank)
+
+			if role:
+				add_roles.append(role)
+			else:
+				error_num += 1
+				errors.append(str(error_num)+") not in the linked group")
 
 
+
+	remove_roles = [x for x in remove_roles if not x in add_roles]
 
 	return add_roles, remove_roles, errors
 
@@ -446,6 +515,6 @@ async def get_group(group_id):
 				return {}
 
 
-async def setup(client, command, rethinkdb, *args, **kwargs):
+async def setup(**kwargs):
 	global r
-	r = rethinkdb
+	r = kwargs.get("r")
