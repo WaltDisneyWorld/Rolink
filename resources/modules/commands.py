@@ -43,9 +43,6 @@ async def parse_message(message):
 
 	if Argument.is_in_prompt(author):
 		return
-	if len(commands) != len(commands_list):
-		await channel.send(":exclamation: Bot is booting up. Please wait.")
-		return
 
 	for prefix in prefix_list:
 		if content[:len(prefix)].lower() == prefix.lower():
@@ -59,7 +56,7 @@ async def parse_message(message):
 			if command_name:
 				command_name = command_name.lower()
 
-				for index, command in commands.items():
+				for index, command in dict(commands).items():
 
 					if index == command_name or command_name in command.aliases:
 
