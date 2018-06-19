@@ -1,5 +1,7 @@
 from resources.modules.roblox import generate_code, check_username, \
 	validate_code, verify_member, get_user, mass_filter
+from resources.modules.utils import get_nickname
+from discord.errors import Forbidden
 
 
 async def validate_username(message, username):
@@ -59,7 +61,15 @@ async def setup(**kwargs):
 			user, accounts = await get_user(author=author)
 			if user:
 				await user.fill_missing_details()
-				await response.success("Welcome to " + guild.name + ", **" + user.username + "!**")
+				msg = await response.success("Welcome to " + guild.name + ", **" + user.username + "!**")
+				nickname = await get_nickname(author, roblox_user=user)
+				if nickname:
+					if author.nick != nickname:
+						try:
+							await author.edit(nick=nickname)
+						except Forbidden:
+							if msg:
+								await msg.edit(content=msg.content + "\n**Error:** I was unable to edit your nickname.")
 			elif accounts:
 				parsed_accounts, parsed_users = await mass_filter(accounts)
 				if parsed_accounts:
