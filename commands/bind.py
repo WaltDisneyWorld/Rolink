@@ -33,7 +33,7 @@ async def setup(**kwargs):
 		}
 	])
 	async def setup_command(message, response, args):
-		"""creates a new server bind"""
+		"""creates a new group bind"""
 
 		group_id = str(args.parsed_args["group"])
 		role = args.parsed_args["role"]
@@ -45,19 +45,15 @@ async def setup(**kwargs):
 
 		for x in ranks:
 			if x.isdigit():
-				print("1", flush=True)
 				new_ranks.append(str(x))
 				continue
 			elif x == "all":
-				print("2", flush=True)
 				new_ranks.append("all")
 				continue
 			elif x[:1] == "-":
-				print(x, flush=True)
 				try:
 					int(x)
 					new_ranks.append(x)
-					print("4", flush=True)
 				except ValueError:
 					pass
 				continue
