@@ -111,3 +111,5 @@ config.py
 .DS_Store
 .gitattributes
 assets/
+docker-compose.yml
+.env
