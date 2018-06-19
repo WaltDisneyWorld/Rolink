@@ -1,7 +1,6 @@
+from config import RETHINKDB as rethinkdb
 import rethinkdb as r
-from resources.framework import config
 
-rethinkdb = config.RETHINKDB
 
 r.set_loop_type("asyncio")
 

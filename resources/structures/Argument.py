@@ -1,6 +1,7 @@
 import asyncio
 import re
 from resources.modules.resolver import resolver_map
+from bot import client
 
 in_prompts = {}
 
@@ -81,7 +82,6 @@ class Argument:
 		return wrapper
 
 	async def call_prompt(self, args=None, flag_str=None, skip_args=None):
-		from resources.framework import client
 
 		using_args = args or self.command.arguments
 		parsed_args = {}

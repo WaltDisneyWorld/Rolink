@@ -8,7 +8,7 @@ async def new_module(file_path, file_name, *args, **kwargs):
 	if module:
 		return module
 	else:
-		module = Module(file_path, file_name, *args, **kwargs)
+		module = Module.Module(file_path, file_name, *args, **kwargs)
 		loaded_modules[file_path+file_name] = module
 		await module.execute()
 		return module

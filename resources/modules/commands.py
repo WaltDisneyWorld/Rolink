@@ -1,12 +1,19 @@
 import traceback
-from resources.framework import get_files, loop
-from resources.structures import Command, Response, Argument
+from config import PREFIX as prefix_list
+from asyncio import get_event_loop
+from resources.modules.utils import get_files
 from resources.module import new_module
-from resources.framework import config
 from resources.modules.permissions import check_permissions
 
+from resources.structures.Command import Command
+from resources.structures.Argument import Argument
+from resources.structures.Response import Response
 
-prefix_list = config.PREFIX
+
+#loop = get_event_loop()
+from bot import client
+loop = client.loop
+
 
 commands = dict()
 commands_list = get_files("commands/")

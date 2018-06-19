@@ -1,13 +1,12 @@
 import json
 import aiohttp
+from config import WORD as word_list
 from discord.utils import find
 from discord.errors import Forbidden
-from resources.structures import RobloxUser, Group
-from resources.framework import config
+from resources.structures.RobloxUser import RobloxUser
+from resources.structures.Group import Group
 from random import choice
 
-
-word_list = config.WORD
 
 
 r = None
@@ -151,6 +150,7 @@ async def get_details(username=None, id=None, complete=False):
 			if user.badges:
 				user_data["extras"]["badges"] = user.badges
 
+
 	roblox_name = user_data.get("username") or username
 	roblox_id = user_data.get("id") or id
 
@@ -272,10 +272,29 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 		else:
 			return None, []
 
-async def get_user_groups(author, roblox_user=None):
+async def get_user_groups(author=None, roblox_user=None, roblox_id=None):
 	groups = {}
 
-	roblox_user = roblox_user or get_user(author=author)
+	if roblox_id:
+		async with aiohttp.ClientSession() as session:
+			response = await fetch(session, api_url + "/users/" + roblox_id + \
+				"/groups")
+			response = response[0]
+
+			try:
+				response = json.loads(response)
+				for group_json in response:
+					group = Group(group_json["Id"], **group_json)
+					groups[group.id] = group
+
+				return groups
+
+			except json.decoder.JSONDecodeError:
+				return {}
+
+	roblox_user = roblox_user or await get_user(author=author)
+	if isinstance(roblox_user, tuple):
+		roblox_user = roblox_user[0]
 
 	if roblox_user.groups:
 		return roblox_user.groups

@@ -1,6 +1,6 @@
 import traceback
-from importlib import import_module
 import rethinkdb as r
+from importlib import import_module
 from resources.modules.logger import log
 
 
@@ -19,7 +19,7 @@ class Module:
 			module = import_module(import_name)
 			self.module = module
 			if hasattr(module, "setup"):
-				from resources.framework import client
+				from bot import client
 				from resources.modules.commands import new_command as command
 				from resources.modules.database import get_connection
 

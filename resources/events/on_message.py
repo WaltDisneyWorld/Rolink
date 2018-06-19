@@ -2,7 +2,8 @@ from resources.modules.commands import parse_message
 
 
 
-async def setup(client, *args, **kwargs):
+async def setup(**kwargs):
+	client = kwargs.get("client")
 
 	@client.event
 	async def on_message(message):

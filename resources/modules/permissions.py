@@ -1,9 +1,9 @@
+from config import OWNER
 from discord.utils import find
-from resources.framework import config
 
 
 def check_permissions(command, channel, author):
-	if author.id == config.OWNER:
+	if author.id == OWNER:
 		return True, None
 
 	if not author.guild:
@@ -12,7 +12,7 @@ def check_permissions(command, channel, author):
 	permissions = command.permissions
 
 	if permissions.get("owner_only"):
-		if author.id != config.OWNER:
+		if author.id != OWNER:
 			return False, "This command is reserved for the bot developer."
 
 	roles = permissions.get("roles") or permissions.get("role")

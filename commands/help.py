@@ -1,7 +1,7 @@
 from asyncio import sleep
 from discord import Embed
 
-from resources.framework import config
+from config import HELP
 from resources.modules.commands import commands
 
 
@@ -12,7 +12,7 @@ async def setup(**kwargs):
 	categories = {}
 	await sleep(5)
 	embed = Embed(
-		description=config.HELP
+		description=HELP
 	)
 	for i,v in commands.items():
 		if not v.hidden and not v.category.lower() == "developer":

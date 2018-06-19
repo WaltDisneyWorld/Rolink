@@ -1,21 +1,32 @@
-import importlib.util
-from os import environ as env
 from discord import AutoShardedClient
-from resources.framework import connect
+from os import environ as env
+from resources.modules.utils import get_files
+from resources.module import new_module
+import config
+import resources.modules.storage as storage
 
 
-config = env.get("config", "config.py")
+if hasattr(storage, "client") and storage.client:
+	client = storage.client
+	loop = client.loop
+else:
+	client = AutoShardedClient(fetch_offline_members=False)
+	storage.load(client=client)
 
-spec = importlib.util.spec_from_file_location("config", config)
-config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(config)
-
-
-
-
-
-client = AutoShardedClient(fetch_offline_members=False)
+loop = client.loop
 
 
-connect(client, config)
-client.run(config.TOKEN)
+
+async def register_modules():
+	for directory in config.MODULE_DIR:
+		files = get_files(directory)
+		for filename in [f.replace(".py", "") for f in files]:
+			await new_module(directory, filename)
+
+
+if __name__ == "__main__":
+	token = (env.get("token")) or (getattr(config, "TOKEN"))
+
+	loop.create_task(register_modules())
+
+	client.run(token)
