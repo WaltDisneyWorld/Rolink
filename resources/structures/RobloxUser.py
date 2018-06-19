@@ -1,9 +1,10 @@
 get_details = None
+get_user_groups = None
 
 class RobloxUser:
 	def __init__(self, username=None, id=None, **kwargs):
 		self.username = username
-		self.id = id
+		self.id = str(id)
 
 		self.is_complete = False
 		self.is_verified = False
@@ -17,8 +18,9 @@ class RobloxUser:
 
 	async def fill_missing_details(self, complete=False):
 		global get_details
+		global get_user_groups
 		if not get_details:
-			from resources.modules.roblox import get_details
+			from resources.modules.roblox import get_details, get_user_groups
 
 		if not self.is_verified or (complete and not self.is_complete):
 			data = await get_details(
@@ -29,8 +31,9 @@ class RobloxUser:
 
 			if data["username"] and data["id"]:
 				self.username = data["username"]
-				self.id = data["id"]
+				self.id = str(data["id"])
 				self.is_verified = True
+				self.add_groups(await get_user_groups(roblox_id=self.id))
 
 		if not self.is_complete and complete:
 			self.avatar = data["extras"].get("avatar")
@@ -41,3 +44,5 @@ class RobloxUser:
 	def add_group(self, group):
 		if not self.groups.get(group.name):
 			self.groups[group.name] = group
+	def add_groups(self, groups):
+		self.groups = groups
