@@ -12,13 +12,13 @@ class Response:
 		if embed and not dm and not embed.color:
 			embed.color = self.guild.me.color
 		try:
-			await channel.send(embed=embed, content=content)
+			return await channel.send(embed=embed, content=content)
 			if dm_post:
 				await self.channel.send(self.author.mention + ", **check your DMs!**")
 		except Forbidden:
 			channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
 			try:
-				await channel.send(content=on_error or content, embed=embed)
+				return await channel.send(content=on_error or content, embed=embed)
 			except Forbidden:
 				try:
 					if dm:
