@@ -212,7 +212,7 @@ async def setup(**kwargs):
 					verified_role = setup_args.get("VerifiedRole", ("Verified", "skipped"))
 					donate = setup_args.get("Donate", ("yes", "skipped"))
 
-					if donate[0] == "yes":
+					if donate[1] == "yes":
 						embed = Embed(title="Premium Features", description="**Donating allows you to unlock " \
 							"more features on the bot, such as automatically verifying " \
 							"users when they enter the server, or to lock your server to " \
