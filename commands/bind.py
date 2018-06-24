@@ -61,17 +61,17 @@ async def setup(**kwargs):
 			x = x.split("-")
 
 			if not len(x) == 2:
-				return await response.error("**Bind error:** sequences must contain 2 numbers.")
+				return await response.error("Sequences must contain 2 numbers.")
 
 			x1, x2 = x[0].isdigit() and int(x[0]), x[1].isdigit() and int(x[1])
 
 			if not x1:
-				return await response.error("**Bind error:** {} is not a number.".format(x[0]))
+				return await response.error("{} is not a number.".format(x[0]))
 			elif not x2:
-				return await response.error("**Bind error:** {} is not a number.".format(x[1]))
+				return await response.error("{} is not a number.".format(x[1]))
 
 			if x2-x1 > 10:
-				return await response.error("**Bind error:** too many numbers in range.")
+				return await response.error("Too many numbers in range.")
 
 			for y in range(x1, x2+1):
 				new_ranks.append(str(y))
@@ -84,9 +84,9 @@ async def setup(**kwargs):
 			role_binds[group_id][x] = str(role.id)
 
 		if len(role_binds) > 10:
-			return await response.error("**Bind error:** No more than 10 bounded groups are allowed.")
+			return await response.error("No more than 10 bounded groups are allowed.")
 		elif len(role_binds[group_id]) > 30:
-			return await response.error("**Bind error:** Too many binds for group **{}**.".format(
+			return await response.error("**Too many binds** for group ``{}``.".format(
 				group_id
 			))
 
@@ -95,7 +95,7 @@ async def setup(**kwargs):
 			"roleBinds": role_binds
 		}, conflict="update").run()
 
-		await response.success("Successfully bounded rank ID(s): ``{}`` with discord role **{}!**".format(
+		await response.success("Successfully **bounded** rank ID(s): ``{}`` with discord role **{}!**".format(
 			", ".join(new_ranks),
 			role.name
 

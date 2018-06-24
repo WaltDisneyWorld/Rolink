@@ -77,8 +77,7 @@ async def parse_message(message):
 								try:
 									await command.func(message, response, args)
 								except Exception as e:
-									await response.error("This command has **failed execution**!\n" \
-										f'**Error:** ``{e}``')
+									await response.error("Oops! Something went wrong while executing the command.")
 									traceback.print_exc()
 						else:
 							await response.error("You don't satisfy the required permissions: "

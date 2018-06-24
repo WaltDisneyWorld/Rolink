@@ -15,7 +15,7 @@ async def setup(**kwargs):
 		description=HELP
 	)
 	for i,v in commands.items():
-		if not v.hidden and not v.category.lower() == "developer":
+		if not v.hidden and v.category.lower() != "developer":
 			category = categories.get(v.category, [])
 			category.append(v.name + " ➜ " + v.description)
 			categories[v.category] = category

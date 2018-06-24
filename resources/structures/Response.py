@@ -35,11 +35,11 @@ class Response:
 	async def error(self, error, embed=None, embed_color=0xE74C3C, dm=False):
 		if embed and not dm:
 			embed.color = embed_color
-		return await self.send(":exclamation: " + error, embed=embed, dm=dm)
+		return await self.send(":anguished: " + error, embed=embed, dm=dm)
 	async def success(self, success, embed=None, embed_color=0x2ECC71, dm=False):
 		if embed and not dm:
 			embed.color = embed_color
-		return await self.send(":thumbsup: " + success, embed=embed, dm=dm)
+		return await self.send(":ok_hand: " + success, embed=embed, dm=dm)
 	async def text(self, text, dm=False):
 		return await self.send(text, dm=dm)
   

@@ -13,9 +13,9 @@ async def setup(**kwargs):
 			"min": 1,
 			"max": 10
 		}
-	])
+	], category="Account")
 	async def on_clan_tag(message, response, args):
-		"""assignes a clan tag for the server"""
+		"""assigns a clan tag for the server"""
 
 		author = message.author
 		guild = message.guild

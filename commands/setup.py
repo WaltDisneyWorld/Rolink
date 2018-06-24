@@ -155,7 +155,7 @@ async def setup(**kwargs):
 					await response.send("**Cancelled setup.**", dm=True)
 					in_prompt[author.id] = None
 					break
-				elif content == "skip" or content == "next" or content == "no":
+				elif content in ("skip", "next", "no", "continue"):
 					x += 1
 					if not prompt.get("information") and prompt.get("default"):
 						setup_args[prompt["name"]] = [prompt["default"], "skipped"]

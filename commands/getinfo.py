@@ -56,5 +56,5 @@ async def setup(**kwargs):
 
 		else:
 
-			await response.error("**"+user.name+"#"+user.discriminator+"** is not linked with Bloxlink.")
+			await response.error(str(user) + " is **not linked** with Bloxlink.")
 
