@@ -2,7 +2,7 @@
     <img src="https://cdn.discordapp.com/attachments/412792774581026828/453797898170269698/bloxlink.svg" height="200" width="200">
     <h2>Bloxlink</h2>
     <p align="center">
-        <p>A free seamless ROBLOX integration and management service for Discord.</p>
+        <p>Bloxlink— a free seamless ROBLOX integration and management service for Discord.</p>
         <a href="https://blox.link">
             <b>View website »</b>
         </a>
@@ -26,23 +26,21 @@
 ------------------
 #### Packages
 Bloxlink relies on the following dependencies and frameworks:
-* [Docker](https://www.docker.com/)
+* [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 * [discord.py](https://github.com/Rapptz/discord.py)
 * [rethinkdb](https://rethinkdb.com)
 
 ------------------
 #### Configuration
-Bloxlink relies on a [configuration file](https://github.com/Tigerism/bloxlink/blob/master/config.py.example) in order to load the appropriate settings. You need to rename the file to ``config.py`` and put in the necessary settings. You can place this configuration file in the project directory for it to be automatically loaded, or you can load it with the ``config`` Docker environmental variable.
+Bloxlink relies on a [configuration file](https://github.com/Tigerism/bloxlink/blob/master/config.py.example) in order to load the appropriate settings. You need to rename the file to ``config.py`` and put in the necessary settings. There is also a docker-compose file that must be changed.  You need to rename the file to ``docker-compose.yml``.
 
 ------------------
 #### Basic Installation
+Note: the application can be ran in numerous ways. Here is one way:
 ```
 $ git clone https://github.com/Tigerism/bloxlink
 $ cd bloxlink
-$ docker network create rethinknet
-$ docker run -it -d --net rethinknet --name rethinkdb-stable -P -p 8080:8080 -p 28015:28015 -v $PWD/rethinkdata:/data rethinkdb:latest
-$ docker build -t bloxlink .
-$ docker run -it -d -e config=config.py --net rethinknet --name bloxlink bloxlink
+$ docker-compose up --build
 ```
 
 ------------------
