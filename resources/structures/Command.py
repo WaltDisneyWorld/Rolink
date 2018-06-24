@@ -9,6 +9,7 @@ class Command:
 		self.category = kwargs.get("category", "Miscellaneous")
 		self.hidden = kwargs.get("hidden", False)
 		self.flags = kwargs.get("flags", dict())
+		self.free_to_use = kwargs.get("free_to_use", False)
 		self.is_subcommand = is_subcommand
 		self.func = func
 	def add_subcommand(self, command):

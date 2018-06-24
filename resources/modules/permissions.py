@@ -1,5 +1,6 @@
 from config import OWNER
 from discord.utils import find
+from resources.modules.utils import is_premium
 
 
 def check_permissions(command, channel, author):
@@ -11,9 +12,15 @@ def check_permissions(command, channel, author):
 
 	permissions = command.permissions
 
-	if permissions.get("owner_only"):
+	if permissions.get("owner_only") or command.category == "Developer":
 		if author.id != OWNER:
 			return False, "This command is reserved for the bot developer."
+
+	if command.category == "Premium":
+		is_p, _, _ = is_premium(guild=channel.guild)
+		if not command.free_to_use and not is_p:
+			return False, "This command is reserved for donators. Run !donate " \
+				"for instructions on donating."
 
 	roles = permissions.get("roles") or permissions.get("role")
 	if roles:
