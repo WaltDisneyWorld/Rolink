@@ -419,25 +419,26 @@ async def get_roles(author, guild=None):
 									remove_roles.append(role)
 		if group_id and group_id != "0":
 			rank = await get_rank(user, group_id=group_id)
-			role = find(lambda r: r.name == rank, guild.roles)
+			if rank:
+				role = find(lambda r: r.name == rank, guild.roles)
 
-			if not role:
-				try:
-					await guild.create_role(name=rank, reason="Adding missing group role")
-				except Forbidden:
+				if not role:
+					try:
+						await guild.create_role(name=rank, reason="Adding missing group role")
+					except Forbidden:
+						error_num += 1
+						errors.append(str(error_num)+") failed to create missing group role " \
+							+ rank)
+
+				if role:
+					add_roles.append(role)
+				else:
 					error_num += 1
-					errors.append(str(error_num)+") failed to create missing group role " \
-						+ rank)
-
-			if role:
-				add_roles.append(role)
-			else:
-				error_num += 1
-				errors.append(str(error_num)+") not in the linked group")
+					errors.append(str(error_num)+") not in the linked group")
 
 
 
-	remove_roles = [x for x in remove_roles if not x in add_roles]
+	remove_roles = not guild_data.get("allowOldRoles") and [x for x in remove_roles if not x in add_roles] or []
 
 	return add_roles, remove_roles, errors
 

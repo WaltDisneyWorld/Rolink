@@ -4,7 +4,7 @@ from resources.modules.utils import get_nickname
 from discord.errors import Forbidden
 
 
-async def validate_username(message, username):
+async def validate_username(message, username, previous_args):
 	username_check = await check_username(username)
 	return username_check, not username_check and "Username not found"
 

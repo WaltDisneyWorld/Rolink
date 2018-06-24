@@ -39,16 +39,28 @@ class Argument:
 		return flags, flags and content or ""
 
 	@staticmethod
-	async def validate_prompt(message, arg, skipped_arg=None, flag_str=None, argument_class=None):
+	async def validate_prompt(message, arg, argument_class, parsed_args, skipped_arg=None, flag_str=None):
 		err_msg = None
 
 		if skipped_arg:
+			if arg.get("arg_len"):
+				args = skipped_arg.split(" ")
+				skipped_arg = args[0:arg["arg_len"]]
+				skipped_arg = " ".join(skipped_arg)
 			if skipped_arg.endswith(flag_str):
 				skipped_arg = skipped_arg.rstrip(flag_str).strip()
 			resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
 				(message, arg=arg, content=skipped_arg)
 		else:
 			content = message.content.rstrip(flag_str).strip()
+
+			if arg.get("arg_len"):
+				args = content.split(" ")
+				content = args[0:arg["arg_len"]]
+				content = " ".join(content)
+				if argument_class:
+					for arg1 in args:
+						argument_class.args.append(arg1)
 
 			if content.lower() == "cancel":
 				return False, True
@@ -57,9 +69,8 @@ class Argument:
 
 		if resolved:
 			if arg.get("check"):
-				success, err_msg = await arg["check"](message, resolved)
-				if argument_class:
-					argument_class.checked_args[arg["name"]] = success
+				success, err_msg = await arg["check"](message, resolved, parsed_args)
+				argument_class.checked_args[arg["name"]] = success
 			else:
 				success = True
 		else:
@@ -98,48 +109,53 @@ class Argument:
 				except IndexError:
 					pass
 
-			in_prompts[self.author.id] = True
-
 			if skipped_arg:
-				resolved, _ = await Argument.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self)
+				resolved, _ = await Argument.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self, parsed_args=parsed_args)
 				if resolved:
 					ctr += 1
 					parsed_args[arg["name"]] = resolved
 				else:
 					success = False
 					while not success:
+						in_prompts[self.author.id] = True
 						await self.channel.send(arg["prompt"].format(
 							**parsed_args
 						) + "\nSay **cancel** to cancel.")
 						try:
 							msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
-							resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self)
+							resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
 							if resolved:
 								ctr += 1
 								success = True
 								parsed_args[arg["name"]] = resolved
+								in_prompts[self.author.id] = None
 
 							elif is_cancelled:
+								in_prompts[self.author.id] = None
 								await self.channel.send("**Cancelled prompt.**")
 								return None, "user cancellation"
 
 						except asyncio.TimeoutError:
+							in_prompts[self.author.id] = None
 							await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
 							return None, "timeout reached"
 			else:
 				if arg.get("optional"):
 					ctr += 1
+					in_prompts[self.author.id] = None
 					continue
+				in_prompts[self.author.id] = True
 				await self.channel.send(arg["prompt"].format(
 					**parsed_args
 				) + "\nSay **cancel** to cancel.")
 				try:
 					msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
-					resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self)
+					resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
 					if resolved:
 						ctr += 1
+						in_prompts[self.author.id] = None
 						parsed_args[arg["name"]] = resolved
 
 					elif is_cancelled:
