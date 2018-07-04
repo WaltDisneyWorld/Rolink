@@ -29,10 +29,10 @@ class Argument:
 
 		if flags:
 			try:
-				content = content[content.index(" --"):]
+				content = content[content.index("--"):]
 			except ValueError:
 				try:
-					content = content[content.index(" -"):]
+					content = content[content.index("-"):]
 				except ValueError:
 					return {}, ""
 
