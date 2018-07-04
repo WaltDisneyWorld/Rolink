@@ -1,22 +1,23 @@
 import traceback
-from config import PREFIX as prefix_list
+from config import PREFIX as default_prefix
 from asyncio import get_event_loop
 from resources.modules.utils import get_files
 from resources.module import new_module
 from resources.modules.permissions import check_permissions
+from resources.modules.utils import get_prefix
 
 from resources.structures.Command import Command
 from resources.structures.Argument import Argument
 from resources.structures.Response import Response
 
 
-#loop = get_event_loop()
 from bot import client
 loop = client.loop
 
 
 commands = dict()
 commands_list = get_files("commands/")
+processed_messages = []
 
 
 
@@ -47,41 +48,52 @@ async def parse_message(message):
 	content = message.content
 	channel = message.channel
 	author = message.author
+	guild = message.guild
 
 	if Argument.is_in_prompt(author):
 		return
 
-	for prefix in prefix_list:
-		if content[:len(prefix)].lower() == prefix.lower():
+	guild_prefix = await get_prefix(guild)
+	prefix = guild_prefix or default_prefix
 
-			after = content[len(prefix):]
-			args = after.split(" ")
-			command_name = args[0]
-			del args[0]
-			after = " ".join(args)
+	check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or \
+		content[:len(client.user.mention)] == client.user.mention and client.user.mention
 
-			if command_name:
-				command_name = command_name.lower()
+	if check:
 
-				for index, command in dict(commands).items():
+		after = content[len(check):].strip()
+		args = after.split(" ")
+		command_name = args[0]
+		del args[0]
+		after = " ".join(args)
 
-					if index == command_name or command_name in command.aliases:
+		if command_name:
+			command_name = command_name.lower()
 
-						response = Response(message, command_name)
-						permission_success, permission_error = check_permissions(command, channel, author)
+			for index, command in dict(commands).items():
 
-						if permission_success:
-							args, is_cancelled = await get_args(message, after, args, command)
+				if index == command_name or command_name in command.aliases:
 
-							if not is_cancelled:
-								try:
-									await command.func(message, response, args)
-								except Exception as e:
-									await response.error("Oops! Something went wrong while executing the command.")
-									traceback.print_exc()
-						else:
-							await response.error("You don't satisfy the required permissions: "
-							f'``{permission_error}``')
+					if len(processed_messages) > 5000:
+						processed_messages.clear()
+
+					processed_messages.append(message.id)
+
+					response = Response(message, command_name)
+					permission_success, permission_error = check_permissions(command, channel, author)
+
+					if permission_success:
+						args, is_cancelled = await get_args(message, after, args, command)
+
+						if not is_cancelled:
+							try:
+								await command.func(message, response, args)
+							except Exception as e:
+								await response.error("Oops! Something went wrong while executing the command.")
+								traceback.print_exc()
+					else:
+						await response.error("You don't satisfy the required permissions: "
+						f'``{permission_error}``')
 
 
 for command_name in [f.replace(".py", "") for f in commands_list]:
