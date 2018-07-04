@@ -5,6 +5,7 @@ from discord.utils import find
 from discord.errors import Forbidden
 from resources.structures.RobloxUser import RobloxUser
 from resources.structures.Group import Group
+from resources.modules.utils import post_event
 from random import choice
 
 
@@ -261,6 +262,11 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 					else:
 						return None, accounts
 				else:
+					if user_data.get("robloxID"):
+						user = RobloxUser(id=user_data.get("robloxID"))
+						await user.fill_missing_details()
+						if user.is_verified:
+							return user, accounts
 					return None, accounts
 			else:
 				return None, accounts
@@ -344,11 +350,10 @@ async def get_rank(roblox_user, group=None, group_id=None):
 
 		return response != "Guest" and response.strip()
 
-async def get_roles(author, guild=None):
+async def get_roles(author, guild=None, complete=True):
 	remove_roles = []
 	add_roles = []
 	errors = []
-	error_num = 0
 
 	guild = guild or author.guild
 	user, _ = await get_user(author=author)
@@ -361,9 +366,9 @@ async def get_roles(author, guild=None):
 			unverified_role = find(lambda r: r.name == "Unverified", guild.roles)
 
 			if unverified_role:
-				return [unverified_role]
+				return [unverified_role], [], []
 			else:
-				return [], [], ["1) not verified"]
+				return [], [], []
 
 		guild_id = str(guild.id)
 
@@ -379,68 +384,168 @@ async def get_roles(author, guild=None):
 					reason="Verified Role"
 				)
 			except Forbidden:
-				error_num += 1
-				errors.append(str(error_num) + ") Unable to create Verified Role: please drag my role above"
+				errors.append("Unable to create Verified Role: please drag my role above "
 				"the other roles and ensure I have the Manage Roles permission.")
 
 		if verified_role:
 			add_roles.append(verified_role)
+		
+		if complete:
 
-		user_groups = await get_user_groups(author=author, roblox_user=user)
+			user_groups = await get_user_groups(author=author, roblox_user=user)
 
-		role_binds = guild_data.get("roleBinds")
-		group_id = guild_data.get("groupID")
+			role_binds = guild_data.get("roleBinds")
+			group_id = guild_data.get("groupID")
 
-		if role_binds:
+			if role_binds:
+				if isinstance(role_binds, list):
+					role_binds = role_binds[0]
 
-			for group_id_, data in role_binds.items():
+				for group_id_, data in role_binds.items():
 
-				if user_groups.get(group_id_):
+					if user_groups.get(group_id_):
 
-					group = user_groups.get(group_id_)
+						group = user_groups.get(group_id_)
 
-					for rank, role_id in data.items():
+						for rank, role_id in data.items():
 
+							try:
+								num = int(rank)
+							except ValueError:
+								pass
+
+							user_rank = group.user_rank
+
+							role = find(lambda r: r.id == int(role_id), guild.roles)
+
+							if role:
+								if rank == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
+									if not role in author.roles:
+										add_roles.append(role)
+								else:
+									if role in author.roles:
+										remove_roles.append(role)
+			if group_id and group_id != "0":
+				rank = await get_rank(user, group_id=group_id)
+				if rank:
+					role = find(lambda r: r.name == rank, guild.roles)
+
+					if not role:
 						try:
-							num = int(rank)
-						except ValueError:
-							pass
+							await guild.create_role(name=rank, reason="Adding missing group role")
+						except Forbidden:
+							errors.append("failed to create missing group role " \
+								+ rank)
 
-						user_rank = group.user_rank
-
-						role = find(lambda r: r.id == int(role_id), guild.roles)
-
-						if role:
-							if rank == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
-								if not role in author.roles:
-									add_roles.append(role)
-							else:
-								if role in author.roles:
-									remove_roles.append(role)
-		if group_id and group_id != "0":
-			rank = await get_rank(user, group_id=group_id)
-			if rank:
-				role = find(lambda r: r.name == rank, guild.roles)
-
-				if not role:
-					try:
-						await guild.create_role(name=rank, reason="Adding missing group role")
-					except Forbidden:
-						error_num += 1
-						errors.append(str(error_num)+") failed to create missing group role " \
-							+ rank)
-
-				if role:
-					add_roles.append(role)
-				else:
-					error_num += 1
-					errors.append(str(error_num)+") not in the linked group")
-
-
+					if role:
+						add_roles.append(role)
 
 	remove_roles = not guild_data.get("allowOldRoles") and [x for x in remove_roles if not x in add_roles] or []
 
 	return add_roles, remove_roles, errors
+
+async def get_nickname(author, guild=None, roblox_user=None, guild_data=None):
+	guild = guild or author.guild
+	roblox_user = roblox_user or await get_user(author=author)
+	if isinstance(roblox_user, tuple):
+		roblox_user = roblox_user[0]
+
+	if roblox_user:
+		await roblox_user.fill_missing_details()
+		if roblox_user.is_verified:
+			guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
+			template = guild_data.get("nicknameTemplate") or "{roblox-name}"
+
+			group_rank, clan_tag = "Guest", ""
+
+			if "{group-rank}" in template:
+				group = roblox_user.groups.get(str(guild_data.get("groupID","0")))
+				if group:
+					group_rank = group.user_role
+
+			if "{clan-tag}" in template:
+				user_data = await r.table("users").get(str(author.id)).run() or {}
+				clan_tags = user_data.get("clanTags", {})
+				clan_tag = clan_tags.get(str(guild.id), "")
+
+			return ("​" + template.replace(
+				"{roblox-name}", roblox_user.username
+			).replace(
+				"{roblox-id}", roblox_user.id
+			).replace(
+				"{discord-name}", author.name
+			).replace(
+				"{discord-nick}", author.display_name
+			).replace(
+				"{group-rank}", group_rank
+			).replace(
+				"{clan-tag}", f'[{clan_tag.upper()}]'
+			))[0:31]
+
+
+async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None):
+	guild = guild or author.guild
+	roblox_user = roblox_user or await get_user(author=author)
+	await roblox_user.fill_missing_details()
+
+	nickname = await get_nickname(author, roblox_user=roblox_user)
+	add_roles, remove_roles, errors = await get_roles(author, complete=complete)
+	failed = []
+	added, removed = [], []
+
+	if errors:
+		for error in errors:
+			await post_event(
+				"errored",
+				error,
+				guild=guild,
+				color=0xE74C3C
+			)
+
+	if nickname:
+		if author.nick != nickname:
+			try:
+				await author.edit(nick=nickname)
+			except Forbidden:
+				await post_event(
+					"errored",
+					f"Failed to update {author.mention}'s nickname. Please ensure I " \
+						"have the ``Manage Nickname`` permission, and drag my role above the other roles.",
+					guild=guild,
+					color=0xE74C3C
+				)
+
+	if remove_roles:
+		try:
+			await author.remove_roles(*remove_roles, reason="Removing old group roles")
+			for role in remove_roles:
+				removed.append(role.name)
+		except Forbidden:
+			await post_event(
+				"errored",
+					f"Failed to remove {author.mention}'s role(s). Please ensure I " \
+						"have the ``Manage Roles`` permission, and drag my role above the other roles.",
+				guild=guild,
+				color=0xE74C3C
+			)
+	if add_roles:
+		try:
+			await author.add_roles(*add_roles, reason="Adding group roles")
+			for role in add_roles:
+				added.append(role.name)
+		except Forbidden:
+			await post_event(
+				"errored",
+					f"Failed to add role(s) to {author.mention}. Please ensure I " \
+						"have the ``Manage Roles`` permission, and drag my role above the other roles.",
+				guild=guild,
+				color=0xE74C3C
+			)
+			errors.append("Failed to add group role. Please ensure I have the ``Manage Roles`` " \
+			"permission, and drag my role above the other roles.")
+	
+	return added, removed, errors
+
 
 async def mass_filter(accounts=[], isIDs=True, isUsernames=False):
 	parsed_accounts = []
@@ -458,7 +563,7 @@ async def mass_filter(accounts=[], isIDs=True, isUsernames=False):
 
 	return parsed_accounts, users
 
-async def verify_member(author, roblox, guild=None, primary_account=None):
+async def verify_member(author, roblox, guild=None, primary_account=False):
 	author_id = str(author.id)
 	guild = guild or (hasattr(author, "guild") and author.guild)
 	if isinstance(roblox, RobloxUser):
