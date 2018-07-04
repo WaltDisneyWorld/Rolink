@@ -2,7 +2,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="bind", category="Administration", permissions={
+	@command(name="bind", category="Binds", permissions={
 		"raw": "manage_guild"
 	}, arguments=[
 		{
@@ -33,7 +33,7 @@ async def setup(**kwargs):
 		}
 	])
 	async def setup_command(message, response, args):
-		"""creates a new group bind"""
+		"""create a new group bind"""
 
 		group_id = str(args.parsed_args["group"])
 		role = args.parsed_args["role"]
@@ -77,6 +77,9 @@ async def setup(**kwargs):
 				new_ranks.append(str(y))
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
+
+		if isinstance(role_binds, list):
+			role_binds = role_binds[0]
 
 		role_binds[group_id] = role_binds.get(group_id) or {}
 
