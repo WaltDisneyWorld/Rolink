@@ -15,7 +15,7 @@ async def setup(**kwargs):
 		}
 	])
 	async def getinfo(message, response, args):
-		"""retrieves the user's Roblox information"""
+		"""retrieve the user's Roblox information"""
 
 		user = args.parsed_args.get("user", message.author)
 		primary_account, accounts = await get_user(author=user)

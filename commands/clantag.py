@@ -1,4 +1,4 @@
-from resources.modules.utils import get_nickname
+from resources.modules.roblox import get_nickname
 from discord.errors import Forbidden
 
 async def setup(**kwargs):
@@ -15,7 +15,7 @@ async def setup(**kwargs):
 		}
 	], category="Account")
 	async def on_clan_tag(message, response, args):
-		"""assigns a clan tag for the server"""
+		"""assign a clan tag for the server"""
 
 		author = message.author
 		guild = message.guild

@@ -1,5 +1,5 @@
 from discord import Embed
-from resources.modules.utils import is_premium
+from resources.modules.utils import is_premium, post_event
 
 settings = {
 	"prefix": "change the prefix",
@@ -84,7 +84,7 @@ async def setup(**kwargs):
 						"name": "change_with",
 						"check": resolve_change_with,
 						"min": 1,
-						"max": 20
+						"max": 50
 					}
 				])
 			finally:
@@ -107,6 +107,8 @@ async def setup(**kwargs):
 						"id": str(guild.id),
 						to_change: change_with
 					}, conflict="update").run()
+
+					await post_event("setup", f"{author.mention} changed the Bloxlink settings.", guild=guild, color=0xD9E212)
 
 					await response.success("Saved!")
 

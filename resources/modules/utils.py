@@ -2,48 +2,20 @@ from os import listdir
 from random import choice, randint
 from time import time
 from math import ceil
-from resources.modules.roblox import get_user
+from discord import Embed
+from discord.utils import find
+from discord.errors import Forbidden
 
 r = None
 
 
-async def get_nickname(author, guild=None, roblox_user=None, guild_data=None):
-	guild = guild or author.guild
-	roblox_user = roblox_user or await get_user(author=author)
-	if isinstance(roblox_user, tuple):
-		roblox_user = roblox_user[0]
+async def get_prefix(guild):
+	guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
 
-	if roblox_user:
-		await roblox_user.fill_missing_details()
-		if roblox_user.is_verified:
-			guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
-			template = guild_data.get("nicknameTemplate") or "{roblox-name}"
+	prefix = guild_data.get("prefix")
+	if prefix and prefix != "!":
+		return prefix
 
-			group_rank, clan_tag = "Guest", ""
-
-			if "{group-rank}" in template:
-				group = roblox_user.groups.get(str(guild_data.get("groupID","0")))
-				if group:
-					group_rank = group.user_role
-
-			if "{clan-tag}" in template:
-				user_data = await r.table("users").get(str(author.id)).run() or {}
-				clan_tags = user_data.get("clanTags", {})
-				clan_tag = clan_tags.get(str(guild.id), "")
-
-			return ("​" + template.replace(
-				"{roblox-name}", roblox_user.username
-			).replace(
-				"{roblox-id}", roblox_user.id
-			).replace(
-				"{discord-name}", author.name
-			).replace(
-				"{discord-nick}", author.display_name
-			).replace(
-				"{group-rank}", group_rank
-			).replace(
-				"{clan-tag}", f'[{clan_tag.upper()}]'
-			))[0:32]
 
 def get_files(directory:str):
 	return [name for name in listdir(directory) if name[:1] != "." and name[:2] != "__"]
@@ -162,8 +134,44 @@ async def redeem_code(author, code):
 	else:
 		return (None, None)
 
+async def post_event(event_name, text, guild=None, guild_data=None, channel=None, color=None):
+	event_name_post = f"Bloxlink {event_name[0].upper()+event_name[1:]} Event"
+
+	if not channel:
+
+		if not guild_data:
+			if guild:
+				guild_data = await r.table("guilds").get(str(guild.id)).run()
+
+		if guild_data and not guild:
+			guild = find(lambda g: g.id == int(guild_data.get("id")), client.guilds)
+
+		if guild and guild_data:
+			log_channels = guild_data.get("logChannels")
+			if log_channels:
+				channel_id = log_channels.get(event_name)
+				if channel_id:
+					channel_id = int(channel_id)
+					channel = find(lambda c: c.id == channel_id, guild.text_channels)
+
+	if channel:
+		if color:
+			embed = Embed(title=event_name_post, description=text, color=color)
+		else:
+			embed = Embed(title=event_name_post, description=text)
+
+		try:
+			await channel.send(embed=embed)
+		except Forbidden:
+
+			try:
+				await channel.send(f"**{event_name_post}** ➜ {text}")
+			except Forbidden:
+				pass
 
 
 async def setup(**kwargs):
 	global r
+	global client
 	r = kwargs.get("r")
+	client = kwargs.get("client")

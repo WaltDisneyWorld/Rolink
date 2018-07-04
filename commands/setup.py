@@ -3,6 +3,7 @@ from discord import Embed
 from discord.errors import Forbidden
 from discord.utils import find
 from resources.modules.roblox import get_group
+from resources.modules.utils import post_event
 
 
 in_prompt = {}
@@ -83,7 +84,8 @@ prompts = [
 			"templates: ```\n{roblox-name} --> changes to their ROBLOX Username\n{discord-name} " \
 			"--> changes to their Discord username\n{discord-nick} --> changes to their " \
 			"server display name\n{roblox-id} --> changes to their ROBLOX ID\n" \
-			"{group-rank} --> changes to their current rank in the linked group```" \
+			"{group-rank} --> changes to their current rank in the linked group\n{clan-tag} --> " \
+			"allows the user to specify a clan-tag with !clantag```" \
 			"\n\nPlease say the nickname template that you would like to use. You can " \
 			"use multiple.\n",
 		"validation": nickname_validation,
@@ -108,7 +110,7 @@ async def setup(**kwargs):
 		"raw": "manage_guild"
 	})
 	async def setup_command(message, response, args):
-		"""configures your server with Bloxlink"""
+		"""configure your server with Bloxlink"""
 
 		author = message.author
 		guild = message.guild
@@ -265,6 +267,8 @@ async def setup(**kwargs):
 
 					}, conflict="update").run()
 					await response.send(":thumbsup: Your server is now configured with Bloxlink!", dm=True)
+
+					await post_event("setup", f"{author.mention} changed the Bloxlink settings.", guild=guild, color=0xD9E212)
 	
 
 				else:
