@@ -7,10 +7,27 @@ class Command:
 		self.permissions = kwargs.get("permissions", dict())
 		self.arguments = kwargs.get("arguments") or kwargs.get("args") or list()
 		self.category = kwargs.get("category", "Miscellaneous")
-		self.hidden = kwargs.get("hidden", False)
+		self.examples = kwargs.get("examples", list())
+		self.hidden = kwargs.get("hidden") or self.category == "Developer"
 		self.flags = kwargs.get("flags", dict())
 		self.free_to_use = kwargs.get("free_to_use", False)
 		self.is_subcommand = is_subcommand
 		self.func = func
+
+		self.usage = []
+		command_args = kwargs.get("arguments")
+
+		if command_args:
+			for arg in command_args:
+				if arg.get("optional"):
+					if arg.get("default"):
+						self.usage.append(f'[{arg.get("name")}={arg.get("default")}]')
+					else:
+						self.usage.append(f'[{arg.get("name")}]')
+				else:
+					self.usage.append(f'<{arg.get("name")}>')
+
+		self.usage = " ".join(self.usage) if self.usage else ""
+
 	def add_subcommand(self, command):
 		self.subcommands[command.name] = command
