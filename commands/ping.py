@@ -10,7 +10,7 @@ async def setup(**kwargs):
 		t_1 = time.perf_counter()
 
 		await message.channel.trigger_typing()
-		
+
 		t_2 = time.perf_counter()
 		time_delta = round((t_2-t_1)*1000)
 
