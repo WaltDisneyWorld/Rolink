@@ -12,5 +12,7 @@ RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 ENV RELEASE 0 
 ENV TOKEN 0
 
+EXPOSE 8000
+
 
 CMD ["sh", "-c", "python3 bot.py ${RELEASE} ${TOKEN}"]

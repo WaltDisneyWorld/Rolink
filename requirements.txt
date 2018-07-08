@@ -3,3 +3,4 @@ yarl<1.2
 rethinkdb
 aiodns
 cchardet
+sanic
