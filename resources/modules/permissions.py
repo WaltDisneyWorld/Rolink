@@ -3,7 +3,7 @@ from discord.utils import find
 from resources.modules.utils import is_premium
 
 
-def check_permissions(command, channel, author):
+async def check_permissions(command, channel, author):
 	if author.id == OWNER:
 		return True, None
 
@@ -17,7 +17,7 @@ def check_permissions(command, channel, author):
 			return False, "This command is reserved for the bot developer."
 
 	if command.category == "Premium":
-		is_p, _, _ = is_premium(guild=channel.guild)
+		is_p, _, _ = await is_premium(guild=channel.guild)
 		if not command.free_to_use and not is_p:
 			return False, "This command is reserved for donators. Run !donate " \
 				"for instructions on donating."

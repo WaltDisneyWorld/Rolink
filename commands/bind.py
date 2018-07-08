@@ -6,22 +6,22 @@ async def setup(**kwargs):
 		"raw": "manage_guild"
 	}, arguments=[
 		{
-			"prompt": "Which group would you like to apply this bind to?\n" \
-				"Please specify the group ID.",
+			"prompt": "Which **group** would you like to apply this bind to?\n" \
+				"Please specify the **group ID.**",
 			"type": "number",
 			"min": 1,
 			"max": 13,
 			"name": "group"
 		},
 		{
-			"prompt": "Please specify either the name or ID of a role in your server " \
+			"prompt": "Please specify either the **name or ID** of a **role** in your server " \
 				"that you would like to use for this bind.",
 			"type": "role",
 			"name": "role"
 		},
 		{
-			"prompt": "What rank would you like to receive role **{role.name}**? Please specify a sequence " \
-				"of ranks as such: ``1,2,3,4,5-7``, with each number corresponding to a rank ID or a " \
+			"prompt": "What rank would you like to receive role **{role.name}**? Please specify a **sequence " \
+				"of ranks** as such: ``1,2,3,4,5-7``, with each number corresponding to a rank ID or a " \
 				"sequence of ranks. Use - to denote a range, example: ``5-7`` means ranks 5, 6, and 7.\n" \
 				"You can specify ``all`` to include ``everyone`` in the group, and you can negate the number " \
 				"to catch everyone with that rank number _and above._ Example: -10 means everyone with rank " \
@@ -31,7 +31,7 @@ async def setup(**kwargs):
 			"min": 1,
 			"max": 20
 		}
-	])
+	], aliases=["newbind"])
 	async def setup_command(message, response, args):
 		"""create a new group bind"""
 
@@ -43,38 +43,38 @@ async def setup(**kwargs):
 
 		new_ranks = []
 
-		for x in ranks:
-			if x.isdigit():
-				new_ranks.append(str(x))
-				continue
-			elif x == "all":
-				new_ranks.append("all")
-				continue
-			elif x[:1] == "-":
-				try:
-					int(x)
-					new_ranks.append(x)
-				except ValueError:
-					pass
-				continue
+		if len(ranks) == 1 and not "-" in ranks[0]:
+			new_ranks.append(ranks[0])
+		else:
+			for x in ranks:
+				if x.isdigit():
+					new_ranks.append(str(x))
+				elif x == "all":
+					new_ranks.append("all")
+				elif x[:1] == "-":
+					try:
+						int(x)
+						new_ranks.append(x)
+					except ValueError:
+						pass
 
-			x = x.split("-")
+				x = x.split("-")
 
-			if not len(x) == 2:
-				return await response.error("Sequences must contain 2 numbers.")
+				if not len(x) == 2:
+					return await response.error("Sequences must contain 2 numbers.")
 
-			x1, x2 = x[0].isdigit() and int(x[0]), x[1].isdigit() and int(x[1])
+				x1, x2 = x[0].isdigit() and int(x[0]), x[1].isdigit() and int(x[1])
 
-			if not x1:
-				return await response.error("{} is not a number.".format(x[0]))
-			elif not x2:
-				return await response.error("{} is not a number.".format(x[1]))
+				if not x1:
+					return await response.error("{} is not a number.".format(x[0]))
+				elif not x2:
+					return await response.error("{} is not a number.".format(x[1]))
 
-			if x2-x1 > 10:
-				return await response.error("Too many numbers in range.")
+				if x2-x1 > 10:
+					return await response.error("Too many numbers in range.")
 
-			for y in range(x1, x2+1):
-				new_ranks.append(str(y))
+				for y in range(x1, x2+1):
+					new_ranks.append(str(y))
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
 

@@ -1,10 +1,10 @@
 import traceback
+import re
 from config import PREFIX as default_prefix
 from asyncio import get_event_loop
-from resources.modules.utils import get_files
+from resources.modules.utils import get_files, get_prefix, log_error
 from resources.module import new_module
 from resources.modules.permissions import check_permissions
-from resources.modules.utils import get_prefix
 
 from resources.structures.Command import Command
 from resources.structures.Argument import Argument
@@ -28,6 +28,7 @@ def new_command(name=None, **kwargs):
 
 	return wrapper
 
+
 async def get_args(message, content="", args=None, command=None):
 	if args:
 		skipable_args = content.split(" | ")
@@ -35,7 +36,10 @@ async def get_args(message, content="", args=None, command=None):
 		args = []
 		skipable_args = []
 
-	flags, flag_str = Argument.parse_flags(content)
+	flags, flag_str = None, None
+
+	if command.flags_enabled:
+		flags, flag_str = Argument.parse_flags(content)
 
 	new_args = Argument(message, args=args, command=command)
 	_, is_cancelled = await new_args.call_prompt(flag_str=flag_str, skip_args=skipable_args)
@@ -48,16 +52,20 @@ async def parse_message(message):
 	content = message.content
 	channel = message.channel
 	author = message.author
-	guild = message.guild
+	guild = message.guild or (author and author.guild)
 
 	if Argument.is_in_prompt(author):
+		return
+
+	if not guild or not author or not channel:
 		return
 
 	guild_prefix = await get_prefix(guild)
 	prefix = guild_prefix or default_prefix
 
-	check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or \
-		content[:len(client.user.mention)] == client.user.mention and client.user.mention
+	client_match = re.search(f"<@!?{client.user.id}>", content)
+
+	check = client_match and client_match.group(0) or (content[:len(prefix)].lower() == prefix.lower() and prefix)
 
 	if check:
 
@@ -80,7 +88,7 @@ async def parse_message(message):
 					processed_messages.append(message.id)
 
 					response = Response(message, command_name)
-					permission_success, permission_error = check_permissions(command, channel, author)
+					permission_success, permission_error = await check_permissions(command, channel, author)
 
 					if permission_success:
 						args, is_cancelled = await get_args(message, after, args, command)
@@ -90,6 +98,10 @@ async def parse_message(message):
 								await command.func(message, response, args)
 							except Exception as e:
 								await response.error("Oops! Something went wrong while executing the command.")
+								
+								error = traceback.format_exc()
+								await log_error(error, f'{e.__class__.__name__} from {command_name}')
+								
 								traceback.print_exc()
 					else:
 						await response.error("You don't satisfy the required permissions: "

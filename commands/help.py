@@ -11,8 +11,6 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	client = kwargs.get("client")
 
-	categories = {}
-
 	commands_count = len(get_files("commands"))
 
 	while commands_count-1 != len(commands):
@@ -52,6 +50,7 @@ async def setup(**kwargs):
 
 		else:
 			embed = Embed(description=HELP)
+			categories = {}
 
 			for i,v in commands.items():
 				if (v.hidden and message.author.id == OWNER) or not v.hidden:

@@ -1,5 +1,5 @@
-from resources.modules.utils import get_nickname, is_premium
-from resources.modules.roblox import get_user, get_roles
+from resources.modules.utils import is_premium
+from resources.modules.roblox import get_user, get_roles, get_nickname
 from discord.errors import Forbidden
 from discord.utils import find
 
@@ -22,7 +22,8 @@ async def setup(**kwargs):
 			if guild_data.get("autoVerification"):
 				nickname = await get_nickname(author=member, roblox_user=roblox_user, guild_data=guild_data)
 				verified_role_name = guild_data.get("verifiedRoleName", "Verified")
-				verified_role = find(lambda r: r.name == verified_role_name,
+				verified_role = find(
+					lambda r: r.name == verified_role_name,
 					guild.roles
 				) or await guild.create_role(name=verified_role_name, reason="Missing Verified Role")
 				unverified_role = find(lambda r: r.name == "Unverified", guild.roles)
@@ -43,7 +44,7 @@ async def setup(**kwargs):
 
 		if await is_premium(guild=guild):
 			if guild_data.get("autoRoles"):
-				add_r, _ = await get_roles(author=member, guild=guild)
+				add_r, _, _ = await get_roles(author=member, guild=guild)
 				if add_r:
 					roles_add = roles_add + add_r
 			if guild_data.get("groupLocked"):

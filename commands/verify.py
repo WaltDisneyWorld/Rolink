@@ -33,7 +33,7 @@ async def roblox_prompts(message, response, args, guild=None):
 		}
 	])
 
-	user = await get_user(author=author)
+	user, _ = await get_user(author=author)
 
 	if not is_cancelled:
 		success = await validate_code(parsed_args["name"], code)
@@ -54,14 +54,15 @@ async def verified(author, roblox_user, guild=None):
 async def setup(**kwargs):
 	command = kwargs.get("command")
 
-	@command(name="verify", flags=["force"], category="Account")
+	@command(name="verify", flags=["force"], category="Account", flags_enabled=True)
 	async def verify(message, response, args):
 		"""link your Roblox account to your Discord account"""
 
 		author = message.author
 		guild = message.guild
 
-		force_flag = args.flags.get("force")
+		force_flag = args.flags.get("force") or args.flags.get("f") or args.flags.get("new") \
+			or args.flags.get("add")
 
 		if force_flag:
 			await roblox_prompts(message, response, args, guild)

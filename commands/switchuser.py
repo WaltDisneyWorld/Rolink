@@ -14,7 +14,7 @@ async def setup(**kwargs):
 		guild = message.guild
 		roblox_user, accounts = await get_user(author=author)
 
-		if accounts:
+		if roblox_user or accounts:
 			buffer = []
 			if roblox_user:
 				await roblox_user.fill_missing_details()
@@ -64,3 +64,7 @@ async def setup(**kwargs):
 						await post_event("verified", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
 
 						await response.success("You're now verified as **"+new_user.username+"!**")
+			else:
+				await response.error("You only have **one account** linked! Run ``!verify --force`` to link another.")
+		else:
+			await response.error("You're **not linked** with Bloxlink! Run ``!verify`` to verify.")

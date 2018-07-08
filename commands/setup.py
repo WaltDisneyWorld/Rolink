@@ -140,7 +140,7 @@ async def setup(**kwargs):
 
 			embed = Embed(title="Setup Prompt", description="".join(buffer))
 
-			success = await response.send(embed=embed, dm=True, strict_post=True)
+			success = await response.send(embed=embed, dm=True, no_dm_post=True, strict_post=True)
 
 			if success and not already_posted:
 				await response.text(author.mention + ", **check your DMs!**")
@@ -154,7 +154,7 @@ async def setup(**kwargs):
 				content = msg.content.lower()
 
 				if msg.content == "cancel":
-					await response.send("**Cancelled setup.**", dm=True)
+					await response.send("**Cancelled setup.**", dm=True, no_dm_post=True)
 					in_prompt[author.id] = None
 					break
 				elif content in ("skip", "next", "no", "continue"):
@@ -171,7 +171,7 @@ async def setup(**kwargs):
 							await response.error("Your content failed validation.\n**Error**: " + err, dm=True)
 					else:
 						if prompt.get("information"):
-							await response.send("**Cancelled setup.**", dm=True)
+							await response.send("**Cancelled setup.**", dm=True, no_dm_post=True)
 							in_prompt[author.id] = None
 							break
 						else:
@@ -179,7 +179,7 @@ async def setup(**kwargs):
 							setup_args[prompt["name"]] = [msg.content, msg.content]
 
 			except asyncio.TimeoutError:
-				await response.send("**Cancelled setup: timeout reached (200s)**", dm=True)
+				await response.send("**Cancelled setup: timeout reached (200s)**", dm=True, no_dm_post=True)
 				in_prompt[author.id] = None
 				break
 
@@ -199,7 +199,7 @@ async def setup(**kwargs):
 				msg = await client.wait_for("message", check=lambda m: m.author == author and not m.guild, timeout=200.0)
 				content = msg.content.lower()
 			except asyncio.TimeoutError:
-				await response.send("**Cancelled setup: timeout reached (200s)**", dm=True)
+				await response.send("**Cancelled setup: timeout reached (200s)**", dm=True, no_dm_post=True)
 			else:
 				if content == "done":
 
@@ -272,7 +272,7 @@ async def setup(**kwargs):
 	
 
 				else:
-					await response.send("**Cancelled setup.**", dm=True)
+					await response.send("**Cancelled setup.**", dm=True, no_dm_post=True)
 
 			finally:
 				in_prompt[author.id] = None
