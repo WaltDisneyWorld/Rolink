@@ -9,5 +9,7 @@ async def setup(**kwargs):
 	async def on_message(message):
 		if message.author.bot:
 			return
+		if not message.guild:
+			return
 
 		await parse_message(message)
