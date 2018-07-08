@@ -47,7 +47,7 @@ class Argument:
 				args = skipped_arg.split(" ")
 				skipped_arg = args[0:arg["arg_len"]]
 				skipped_arg = " ".join(skipped_arg)
-			if skipped_arg.endswith(flag_str):
+			if flag_str and skipped_arg.endswith(flag_str):
 				skipped_arg = skipped_arg.rstrip(flag_str).strip()
 			resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
 				(message, arg=arg, content=skipped_arg)
@@ -59,6 +59,7 @@ class Argument:
 				content = args[0:arg["arg_len"]]
 				content = " ".join(content)
 				if argument_class:
+					argument_class.args = []
 					for arg1 in args:
 						argument_class.args.append(arg1)
 

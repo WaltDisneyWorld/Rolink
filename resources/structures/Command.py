@@ -11,6 +11,7 @@ class Command:
 		self.hidden = kwargs.get("hidden") or self.category == "Developer"
 		self.flags = kwargs.get("flags", dict())
 		self.free_to_use = kwargs.get("free_to_use", False)
+		self.flags_enabled = kwargs.get("flags_enabled") or kwargs.get("flags") or False
 		self.is_subcommand = is_subcommand
 		self.func = func
 
@@ -27,7 +28,7 @@ class Command:
 				else:
 					self.usage.append(f'<{arg.get("name")}>')
 
-		self.usage = " ".join(self.usage) if self.usage else ""
+		self.usage = " | ".join(self.usage) if self.usage else ""
 
 	def add_subcommand(self, command):
 		self.subcommands[command.name] = command
