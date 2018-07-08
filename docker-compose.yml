@@ -5,6 +5,7 @@ services:
   rethinkdb:
     image: rethinkdb
     container_name: rethinkdb
+    restart: always
     ports:
       - "28015:28015"
       - "29015:29015"
@@ -15,6 +16,7 @@ services:
   nginx-rproxy-auth:
     image: cburki/nginx-rproxy-auth
     container_name: nginx-rproxy-auth
+    restart: always
     environment: 
       - PROXY_AUTH_USERNAME=${PROXY_AUTH_USERNAME}
       - PROXY_AUTH_PASSWORD=${PROXY_AUTH_PASSWORD}
@@ -29,6 +31,7 @@ services:
   bloxlink:
     image: ${IMAGE}
     container_name: bloxlink
+    restart: always
     environment: 
       - RELEASE=1
     ports:
