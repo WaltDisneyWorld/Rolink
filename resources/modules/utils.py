@@ -5,8 +5,10 @@ from math import ceil
 from discord import Embed
 from discord.utils import find
 from discord.errors import Forbidden
+from config import ERROR_CHANNEL
 
 r = None
+error_channel = None
 
 
 async def get_prefix(guild):
@@ -169,9 +171,24 @@ async def post_event(event_name, text, guild=None, guild_data=None, channel=None
 			except Forbidden:
 				pass
 
+async def get_log_channel():
+	await client.wait_for("ready")
+	error_c = [guild.get_channel(ERROR_CHANNEL) for guild in client.guilds if guild.get_channel(ERROR_CHANNEL)][0]
+
+	global error_channel
+	error_channel = error_c
+
+async def log_error(description, title="Uncaught Exception", color=0xE74C3C):
+	embed = Embed(title=title, description=description, color=color)
+
+	await error_channel.send(embed=embed)
+
+
 
 async def setup(**kwargs):
 	global r
 	global client
 	r = kwargs.get("r")
 	client = kwargs.get("client")
+
+	client.loop.create_task(get_log_channel())
