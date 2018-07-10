@@ -43,14 +43,18 @@ class Argument:
 		err_msg = None
 
 		if skipped_arg:
+
 			if arg.get("arg_len"):
 				args = skipped_arg.split(" ")
 				skipped_arg = args[0:arg["arg_len"]]
 				skipped_arg = " ".join(skipped_arg)
+
 			if flag_str and skipped_arg.endswith(flag_str):
 				skipped_arg = skipped_arg.rstrip(flag_str).strip()
-			resolved, err_msg = resolver_map.get(arg.get("type", "string")) \
-				(message, arg=arg, content=skipped_arg)
+
+			resolver = resolver_map.get(arg.get("type", "string"))
+			resolved, err_msg = await resolver(message, arg=arg, content=skipped_arg)
+
 		else:
 			content = message.content.rstrip(flag_str).strip()
 
@@ -58,6 +62,7 @@ class Argument:
 				args = content.split(" ")
 				content = args[0:arg["arg_len"]]
 				content = " ".join(content)
+
 				if argument_class:
 					argument_class.args = []
 					for arg1 in args:
@@ -65,13 +70,18 @@ class Argument:
 
 			if content.lower() == "cancel":
 				return False, True
+			
+			resolver = resolver_map.get(arg.get("type", "string"))
 
-			resolved, err_msg = resolver_map.get(arg.get("type", "string"))(message, arg=arg, content=content)
+			resolved, err_msg = await resolver(message, arg=arg, content=content)
 
 		if resolved:
+
 			if arg.get("check"):
+
 				success, err_msg = await arg["check"](message, resolved, parsed_args)
 				argument_class.checked_args[arg["name"]] = success
+
 			else:
 				success = True
 		else:

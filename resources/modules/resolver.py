@@ -1,6 +1,7 @@
 from discord.utils import find
+from discord.errors import Forbidden
 
-def string_resolver(message, arg, content=None):
+async def string_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -15,7 +16,7 @@ def string_resolver(message, arg, content=None):
 
 	return str(content), None
 
-def number_resolver(message, arg, content=None):
+async def number_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -35,7 +36,7 @@ def number_resolver(message, arg, content=None):
 
 	return False, "You must pass a number"
 
-def choice_resolver(message, arg, content=None):
+async def choice_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -45,7 +46,7 @@ def choice_resolver(message, arg, content=None):
 
 	return False, f'Choice must be of either: {str(arg["choices"])}'
 
-def user_resolver(message, arg, content=None):
+async def user_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -69,7 +70,7 @@ def user_resolver(message, arg, content=None):
 
 	return False, "Invalid user"
 
-def channel_resolver(message, arg, content=None):
+async def channel_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -93,7 +94,7 @@ def channel_resolver(message, arg, content=None):
 
 	return False, "Invalid channel"
 
-def role_resolver(message, arg, content=None):
+async def role_resolver(message, arg, content=None):
 	if not content:
 		content = message.content
 
@@ -103,6 +104,7 @@ def role_resolver(message, arg, content=None):
 		return message.role_mentions[0], None
 	else:
 		is_int, is_id = None, None
+		role = None
 
 		try:
 			is_int = int(content)
@@ -111,9 +113,19 @@ def role_resolver(message, arg, content=None):
 			pass
 
 		if is_id:
-			return find(lambda r: r.id == is_int, guild.roles), None
+			role = find(lambda r: r.id == is_int, guild.roles)
 		else:
-			return find(lambda r: r.name == content, guild.roles), None
+			role = find(lambda r: r.name == content, guild.roles)
+
+		if role:
+			return role, None
+		else:
+			try:
+				role = await guild.create_role(name=content, reason="Creating missing role")
+			except Forbidden:
+				return None, "**Invalid permissions:** please ensure I have the ``Manage Roles`` permission."
+			else:
+				return role, None
 
 	return False, "Invalid role"
 
