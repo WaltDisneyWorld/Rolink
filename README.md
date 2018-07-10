@@ -25,22 +25,22 @@
 
 ------------------
 #### Packages
-Bloxlink relies on the following dependencies and frameworks:
+Bloxlink relies on the following dependencies:
 * [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 * [discord.py](https://github.com/Rapptz/discord.py)
 * [rethinkdb](https://rethinkdb.com)
 
 ------------------
 #### Configuration
-Bloxlink relies on a [configuration file](https://github.com/Tigerism/bloxlink/blob/master/config.py.example) in order to load the appropriate settings. You need to rename the file to ``config.py`` and put in the necessary settings. There is also a docker-compose file that must be changed.  You need to rename the file to ``docker-compose.yml``.
+Bloxlink relies on a [configuration file](https://github.com/Tigerism/bloxlink/blob/master/config.py.example) in order to load the appropriate settings. You need to rename the file to ``config.py`` and put in the necessary settings. There is also a [docker-compose](https://github.com/Tigerism/bloxlink/blob/master/docker-compose.yml) file that must be changed.
 
 ------------------
 #### Basic Installation
-Note: the application can be ran in numerous ways. Here is one way:
+Note: bloxlink should be considered an _advanced_ application, and as such, we do not recommend manually running. We will not offer support to users that choose to self-host; use the official bot instead. Here is one way to run the application:
 ```
 $ git clone https://github.com/Tigerism/bloxlink
 $ cd bloxlink
-$ docker-compose up --build
+$ docker-compose up
 ```
 
 ------------------
