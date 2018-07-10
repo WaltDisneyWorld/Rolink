@@ -8,8 +8,6 @@ from resources.modules.utils import post_event
 
 in_prompt = {}
 
-def prefix_validation(prefix):
-	return len(prefix) > 5, "Prefix must be 5 characters or less."
 
 def group_validation(group):
 	if not group.isdigit():
@@ -38,13 +36,6 @@ prompts = [
 			"such as the ability to manage roles, nicknames, channels, kick members, etc. " \
 			"If you do not set these permissions, you may encounter issues with using certain commands.",
 		"information": True
-	},
-	{
-		"prompt": "Would you like to change the server prefix? " \
-			"If so, what would you like to change it to?",
-		"validation": prefix_validation,
-		"default": "!",
-		"name": "Prefix"
 	},
 	{
 		"prompt": "Would you like to link a ROBLOX group to this Discord server?\n" \
@@ -209,7 +200,6 @@ async def setup(**kwargs):
 
 					group_id = setup_args.get("GroupID", ("0", "skipped"))
 					role_management = setup_args.get("RoleManagement", ("merge", "skipped"))
-					prefix = setup_args.get("Prefix", ("prefix", "skipped"))
 					nickname_template = setup_args.get("NicknameTemplate", ("{roblox-name}", "skipped"))
 					verified_role = setup_args.get("VerifiedRole", ("Verified", "skipped"))
 					donate = setup_args.get("Donate", ("yes", "skipped"))
@@ -257,7 +247,6 @@ async def setup(**kwargs):
 
 					await r.table("guilds").insert({
 						"id": str(guild.id),
-						"prefix": (prefix[1] != "skipped" and prefix[0]) or guild_settings.get("prefix") or prefix[0],
 						"nicknameTemplate": (nickname_template[1] != "skipped" and nickname_template[0]) or \
 							guild_settings.get("nicknameTemplate") or nickname_template[0],
 						"verifiedRoleName": (verified_role[1] != "skipped" and verified_role[0]) or \
@@ -266,7 +255,7 @@ async def setup(**kwargs):
 							guild_settings.get("groupID") or None						
 
 					}, conflict="update").run()
-					await response.send(":thumbsup: Your server is now configured with Bloxlink!", dm=True)
+					await response.success("Your server is now configured with Bloxlink!", dm=True, no_dm_post=True)
 
 					await post_event("setup", f"{author.mention} changed the Bloxlink settings.", guild=guild, color=0xD9E212)
 	
