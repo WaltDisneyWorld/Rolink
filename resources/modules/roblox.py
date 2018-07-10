@@ -330,7 +330,6 @@ async def get_user_groups(author=None, roblox_user=None, roblox_id=None):
 
 	return groups
 
-
 async def get_rank(roblox_user, group=None, group_id=None):
 	if not group and group_id:
 		group_id = str(group_id)
@@ -354,6 +353,7 @@ async def get_roles(author, guild=None, complete=True):
 	remove_roles = []
 	add_roles = []
 	errors = []
+	possible_roles = []
 
 	guild = guild or author.guild
 	user, _ = await get_user(author=author)
@@ -389,7 +389,7 @@ async def get_roles(author, guild=None, complete=True):
 
 		if verified_role:
 			add_roles.append(verified_role)
-		
+
 		if complete:
 
 			user_groups = await get_user_groups(author=author, roblox_user=user)
@@ -402,29 +402,38 @@ async def get_roles(author, guild=None, complete=True):
 					role_binds = role_binds[0]
 
 				for group_id_, data in role_binds.items():
+					group = user_groups.get(group_id_)
 
-					if user_groups.get(group_id_):
+					for rank, role_id in data.items():
 
-						group = user_groups.get(group_id_)
+						num = False
 
-						for rank, role_id in data.items():
+						try:
+							num = int(rank) # doing this to capture negative bind values
+						except ValueError:
+							pass
 
-							try:
-								num = int(rank)
-							except ValueError:
-								pass
-
+						if group:
 							user_rank = group.user_rank
-
 							role = find(lambda r: r.id == int(role_id), guild.roles)
 
 							if role:
-								if rank == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
+
+								if rank.lower() == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
+									possible_roles.append(role)
 									if not role in author.roles:
 										add_roles.append(role)
 								else:
-									if role in author.roles:
-										remove_roles.append(role)
+									if not role in (*add_roles, *remove_roles, *possible_roles):
+										if role in author.roles:
+											remove_roles.append(role)
+						else:
+							if rank.lower() == "guest" or num == 0:
+								role = find(lambda r: r.id == int(role_id), guild.roles)
+
+								if role and not role in (*add_roles, *possible_roles) and not role in author.roles:
+									add_roles.append(role)
+
 			if group_id and group_id != "0":
 				rank = await get_rank(user, group_id=group_id)
 				if rank:
@@ -432,15 +441,15 @@ async def get_roles(author, guild=None, complete=True):
 
 					if not role:
 						try:
-							await guild.create_role(name=rank, reason="Adding missing group role")
+							await guild.create_role(name=rank, reason="Creating missing group role")
 						except Forbidden:
-							errors.append("failed to create missing group role " \
-								+ rank)
+							errors.append("failed to create missing group role " + rank)
 
 					if role:
 						add_roles.append(role)
 
-	remove_roles = not guild_data.get("allowOldRoles") and [x for x in remove_roles if not x in add_roles] or []
+	remove_roles = not guild_data.get("allowOldRoles") and [x for x in remove_roles if not x in (*add_roles, *possible_roles)] or []
+	add_roles = [x for x in add_roles if not x in author.roles]
 
 	return add_roles, remove_roles, errors
 
@@ -467,6 +476,8 @@ async def get_nickname(author, guild=None, roblox_user=None, guild_data=None):
 				user_data = await r.table("users").get(str(author.id)).run() or {}
 				clan_tags = user_data.get("clanTags", {})
 				clan_tag = clan_tags.get(str(guild.id), "")
+				clan_tag = clan_tag and f"[{clan_tag.upper()}]" or ""
+
 
 			return ("​" + template.replace(
 				"{roblox-name}", roblox_user.username
@@ -479,18 +490,27 @@ async def get_nickname(author, guild=None, roblox_user=None, guild_data=None):
 			).replace(
 				"{group-rank}", group_rank
 			).replace(
-				"{clan-tag}", f'[{clan_tag.upper()}]'
+				"{clan-tag}", clan_tag
 			))[0:31]
 
 
 async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None):
 	guild = guild or author.guild
 	roblox_user = roblox_user or await get_user(author=author)
+
+	if isinstance(roblox_user, tuple):
+		roblox_user = roblox_user[0]
+
+	if not roblox_user:
+		return [], [], []
+
 	await roblox_user.fill_missing_details()
+
+	if not roblox_user.is_verified:
+		return [], [], []
 
 	nickname = await get_nickname(author, roblox_user=roblox_user)
 	add_roles, remove_roles, errors = await get_roles(author, complete=complete)
-	failed = []
 	added, removed = [], []
 
 	if errors:
@@ -517,7 +537,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 
 	if remove_roles:
 		try:
-			await author.remove_roles(*remove_roles, reason="Removing old group roles")
+			await author.remove_roles(*remove_roles, atomic=True, reason="Removing old group roles")
 			for role in remove_roles:
 				removed.append(role.name)
 		except Forbidden:
@@ -530,7 +550,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 			)
 	if add_roles:
 		try:
-			await author.add_roles(*add_roles, reason="Adding group roles")
+			await author.add_roles(*add_roles, atomic=True, reason="Adding group roles")
 			for role in add_roles:
 				added.append(role.name)
 		except Forbidden:
@@ -543,7 +563,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 			)
 			errors.append("Failed to add group role. Please ensure I have the ``Manage Roles`` " \
 			"permission, and drag my role above the other roles.")
-	
+
 	return added, removed, errors
 
 
@@ -621,8 +641,10 @@ async def unverify_member(author, roblox):
 
 async def get_group(group_id):
 	group_id = str(group_id)
-	if roblox_cache["groups"].get(group_id):
-		return roblox_cache["groups"].get(group_id)
+	group = roblox_cache["groups"].get(group_id)
+
+	if group:
+		return group
 	else:
 		async with aiohttp.ClientSession() as session:
 			response = await fetch(session, api_url + "/groups/" + group_id)

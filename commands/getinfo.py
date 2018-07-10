@@ -21,6 +21,7 @@ async def setup(**kwargs):
 		user = args.parsed_args.get("user", message.author)
 		primary_account, accounts = await get_user(author=user)
 		guild = message.guild
+		author = message.author
 
 		if accounts or primary_account:
 
@@ -58,11 +59,13 @@ async def setup(**kwargs):
 							embed.add_field(name="Group Rank", value="Guest")
 
 					embed.set_thumbnail(url=primary_account.avatar)
+					embed.set_author(name=author, icon_url=author.avatar_url)
 
 					if primary_account.membership != "NBC":
 						embed.add_field(name="Membership", value=primary_account.membership)
-
-					embed.add_field(name="Badges", value=", ".join(primary_account.badges))
+					
+					if primary_account.badges:
+						embed.add_field(name="Badges", value=", ".join(primary_account.badges))
 
 			if parsed_accounts:
 				if primary_account.username in parsed_accounts:

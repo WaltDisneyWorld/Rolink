@@ -47,8 +47,12 @@ async def roblox_prompts(message, response, args, guild=None):
 
 async def verified(author, roblox_user, guild=None):
 	guild = guild or author.guild
-	await post_event("verified", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
-	await give_roblox_stuff(author, roblox_user=roblox_user, complete=True)
+
+	await roblox_user.fill_missing_details()
+
+	if roblox_user.is_verified:
+		await post_event("verified", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
+		await give_roblox_stuff(author, roblox_user=roblox_user, complete=True)
 
 
 async def setup(**kwargs):
@@ -93,9 +97,14 @@ async def setup(**kwargs):
 					])
 					if not is_cancelled:
 						chosen = args["chosen_account"]
+
 						await verify_member(author, parsed_users[parsed_accounts.index(chosen)], primary_account=args["default"] == "yes")
 						await response.success("Welcome to " + guild.name + ", **" + chosen + "!**")
-						await verified(author, user, guild)
+
+						user, _ = await get_user(author=author)
+
+						if user:
+							await verified(author, user, guild)
 				else:
 					await roblox_prompts(message, response, args, guild)
 			else:

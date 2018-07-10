@@ -28,8 +28,10 @@ async def setup(**kwargs):
 				embed.add_field(name="Errored", value=errored[0])
 
 			if not added and not removed and not errored:
-				embed.description = "No binds apply to you. If you're a server manager, " \
-					"you need to make a bind for this person's rank."
+				await response.success("All caught up! There are no roles to add/remove.")
+				return
+
+			embed.set_author(name=author, icon_url=author.avatar_url)
 
 			await response.send(embed=embed)
 
