@@ -21,7 +21,7 @@ class Group:
 		self.owner = self.owner or json.get("Owner") or json.get("owner")
 		self.member_count = self.member_count or json.get("memberCount")
 
-		self.user_rank = self.user_rank or json.get("Rank")
+		self.user_rank = self.user_rank or (json.get("Rank") and str(json.get("Rank")))
 		self.user_role = self.user_role or json.get("Role")
 	def __str__(self):
 		name = u'{}'.format(self.name).encode("utf-8").strip()
