@@ -30,6 +30,8 @@ async def setup(**kwargs):
 					command_embed = Embed(title=f"!{name}", description=command.description)
 					command_embed.set_author(name="Bloxlink", icon_url=client.user.avatar_url)
 
+					command_embed.add_field(name="Category", value=command.category)
+
 					if command.usage:
 						command_embed.add_field(name="Usage", value=f"``!{name} {command.usage}``")
 					else:
