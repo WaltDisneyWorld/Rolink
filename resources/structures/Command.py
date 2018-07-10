@@ -11,7 +11,7 @@ class Command:
 		self.hidden = kwargs.get("hidden") or self.category == "Developer"
 		self.flags = kwargs.get("flags", dict())
 		self.free_to_use = kwargs.get("free_to_use", False)
-		self.flags_enabled = kwargs.get("flags_enabled") or kwargs.get("flags") or False
+		self.flags_enabled = kwargs.get("flags_enabled") or kwargs.get("flags")
 		self.is_subcommand = is_subcommand
 		self.func = func
 
