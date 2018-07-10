@@ -38,9 +38,22 @@ async def setup(**kwargs):
 		if not role_binds.get(group_id):
 			return await response.error("A bind for this group ID does not exist.")
 
-		if rank.isdigit() or rank == "all":
+		if ((rank.isdigit() and rank != "0") or rank == "all"):
 			if not role_binds.get(group_id, {}).get(rank):
 				return await response.error("A binding with this group/rank combination does not exist.")
+
+			role_binds[group_id].pop(rank, None)
+			guild_data["roleBinds"] = role_binds
+
+			await r.table("guilds").insert({
+				**guild_data
+			}, conflict="replace").run()
+
+		elif rank == "guest" or rank == "0":
+			if not role_binds.get(group_id, {}).get("guest") and not role_binds.get(group_id, {}).get("0"):
+				return await response.error("A binding with this group/rank combination does not exist.")
+
+			rank = rank = "guest" and "0"
 
 			role_binds[group_id].pop(rank, None)
 			guild_data["roleBinds"] = role_binds

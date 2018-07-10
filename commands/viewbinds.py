@@ -28,13 +28,15 @@ async def setup(**kwargs):
 			binds = []
 
 			for rank, role_id in bind.items():
+				rank = ((rank == "0" or rank == "guest") and "Guest Role") or rank
 				role = find(lambda r: r.id == int(role_id), guild.roles)
 				role_name = role and role.name or "invalid bind (role deleted)"
 				binds.append(f"**Rank:** {rank} ➜ **Role:** {role_name}")
+			
+			if binds:
+				group = await get_group(group_id)
 
-			group = await get_group(group_id)
-
-			embed.add_field(name=f"{group.name} ({group_id})", value="\n".join(binds), inline=False)
+				embed.add_field(name=f"{group.name} ({group_id})", value="\n".join(binds), inline=False)
 
 		embed.set_author(name=guild.name, icon_url=guild.icon_url)
 		embed.set_footer(text="Use !delbind to delete a bind, or !bind to add a new bind.")

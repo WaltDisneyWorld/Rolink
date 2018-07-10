@@ -15,7 +15,8 @@ async def setup(**kwargs):
 		},
 		{
 			"prompt": "Please specify either the **name or ID** of a **role** in your server " \
-				"that you would like to use for this bind.",
+				"that you would like to use for this bind. A new role will be created if it doesn't " \
+				"already exist.",
 			"type": "role",
 			"name": "role"
 		},
@@ -43,20 +44,27 @@ async def setup(**kwargs):
 
 		new_ranks = []
 
-		if len(ranks) == 1 and not "-" in ranks[0]:
-			new_ranks.append(ranks[0])
+		if (len(ranks) == 1 and not "-" in ranks[0]) or ranks[0][0] == "-":
+			if ranks[0][0] == "guest" or ranks[0][0] == "0":
+				new_ranks.append("0")
+			else:
+				new_ranks.append(ranks[0])
 		else:
 			for x in ranks:
 				if x.isdigit():
 					new_ranks.append(str(x))
 				elif x == "all":
 					new_ranks.append("all")
+				elif x == "guest" or x == "0":
+					new_ranks.append("0")
 				elif x[:1] == "-":
 					try:
 						int(x)
 						new_ranks.append(x)
 					except ValueError:
 						pass
+				else:
+					await response.error("Invalid bind: {}".format(x))
 
 				x = x.split("-")
 
