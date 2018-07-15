@@ -16,4 +16,3 @@ async def setup(client, *args, **kwargs):
 				)
 				await client.change_presence(status=Status.online, activity=Game(game_name))
 				await sleep(20)
-
