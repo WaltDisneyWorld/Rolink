@@ -1,5 +1,6 @@
 import json
 import aiohttp
+import asyncio
 from config import WORD as word_list
 from discord.utils import find
 from discord.errors import Forbidden
@@ -12,17 +13,15 @@ from random import choice
 
 r = None
 
-
 roblox_cache = {
-	"roblox_ids_to_usernames": {},
-	"usernames_to_roblox_ids": {},
-	"roblox_ids_to_usernames": {},
-	"discord_ids_to_roblox_ids": {},
-	"author_users": {},
 	"users": {},
-	"groups": {}
-
+	"author_users": {},
+	"groups": {},
+	"roblox_ids_to_usernames": {},
+	"usernames_to_roblox_ids": {}
 }
+
+
 
 api_url = "https://api.roblox.com/"
 base_url = "https://roblox.com/"
@@ -39,39 +38,55 @@ async def generate_code():
 	return " ".join(words)
 
 async def validate_code(username, code):
-	user_cache = roblox_cache["users"].get(username)
+	user_cache = roblox_cache["users"].get(username.lower())
+
 	if user_cache:
 		id = user_cache.id
 	else:
-		username, id = await get_id_from_api(username)
+		id = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+		if not id:
+			username, id = await get_id_from_api(username)
+			roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id, username)
 	if id:
 		async with aiohttp.ClientSession() as session:
 			response = await fetch(session, f'https://www.roblox.com/users/{id}/profile')
 			response = response[0]
-			return code in response
+
+			if code in response:
+				user = RobloxUser(username=username, id=id)
+				await user.fill_missing_details()
+				roblox_cache["users"][username.lower()] = user
+				return True
 
 	return False
 
 async def get_id_from_api(username):
-	if roblox_cache["usernames_to_roblox_ids"].get(username):
-		return username, roblox_cache["usernames_to_roblox_ids"][username]
+	user = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+	if user:
+		return user[1], user[0]
 
 	async with aiohttp.ClientSession() as session:
 		response = await fetch(session, api_url + "/users/get-by-username/" \
 			"?username=" + username)
 		response = response[0]
+
 		try:
 			response = json.loads(response)
 		except json.decoder.JSONDecodeError:
 			return None, None
 		else:
-			roblox_cache["usernames_to_roblox_ids"][username] = response.get("Id")
-			return response.get("Username"), response.get("Id")
+			username_, id = response.get("Username"), str(response.get("Id"))
+			roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id, username_)
+			return username_, id
+
 	return None, None
 
 async def get_username_from_api(id):
-	if roblox_cache["roblox_ids_to_usernames"].get(id):
-		return roblox_cache["roblox_ids_to_usernames"][id], id
+	id = str(id)
+
+	user = roblox_cache["roblox_ids_to_usernames"].get(id)
+	if user:
+		return user[1], id
 
 	async with aiohttp.ClientSession() as session:
 		response = await fetch(session, api_url + "/users/" + id)
@@ -82,38 +97,23 @@ async def get_username_from_api(id):
 			return None, None
 		else:
 			username = response.get("Username")
-			roblox_cache["roblox_ids_to_usernames"][id] = username
-			return username, response.get("Id")
+			roblox_cache["roblox_ids_to_usernames"][id] = (id, username)
+			return username, str(response.get("Id"))
+
 	return None, None
 
 async def check_username(username, return_class_object=True):
-	user_cache = roblox_cache["users"].get(username)
-	if user_cache:
-		return (return_class_object and user_cache) or user_cache.id
-	else:
-		username, id = await get_id_from_api(username)
-		if username and id:
-			user = RobloxUser(username=username, id=id)
-			roblox_cache["users"][username] = user
-			return (return_class_object and user) or id
-		return False
+	username, id = await get_id_from_api(username)
 
-async def check_id(id, return_class_object=True):
-	username = roblox_cache["roblox_ids_to_usernames"].get(id)
-	if username:
-		user_cache = roblox_cache["users"].get(username)
-		if user_cache:
-			return (return_class_object and user_cache) or username
-	else:
-		username, id = await get_id_from_api(username)
-		if username and id:
-			user = RobloxUser(username=username, id=id)
-			roblox_cache["users"][username] = user
-			return (return_class_object and user) or username
-		return False
+	if username and id:
+		user = RobloxUser(username=username, id=id)
 
+		return return_class_object and user or id
+
+	return False
 
 async def get_details(username=None, id=None, complete=False):
+	id = str(id)
 	user_data = {
 		"username": None,
 		"id": None,
@@ -128,12 +128,16 @@ async def get_details(username=None, id=None, complete=False):
 	}
 
 	user = None
+
 	if username:
-		user = roblox_cache["users"].get(username)
+		user = roblox_cache["users"].get(username.lower())
 	elif id:
 		username = roblox_cache["roblox_ids_to_usernames"].get(id)
+
 		if username:
-			user = roblox_cache["users"].get(username)
+			user = roblox_cache["users"].get(username[1].lower())
+			username = username[1]
+	
 	if user and user.is_verified:
 		if user.id:
 			user_data["id"] = user.id
@@ -162,22 +166,23 @@ async def get_details(username=None, id=None, complete=False):
 		user_data["id"] = roblox_id
 	elif not roblox_id and roblox_name:
 		# get id from username
-		name, id = await get_id_from_api(roblox_name)
+		username, id = await get_id_from_api(roblox_name)
 		user_data["id"] = id
-		user_data["username"] = name
+		user_data["username"] = username
 	elif roblox_id and roblox_name:
-		name, id = await get_id_from_api(roblox_name)
-		if name and id:
+		username, id = await get_id_from_api(roblox_name)
+		if username and id:
 			user_data["id"] = id
-			user_data["username"] = name
+			user_data["username"] = username
 	else:
 		return user_data
 
-	if complete and user_data["id"]:
+	if complete and user_data.get("id"):
 		async with aiohttp.ClientSession() as session:
 			icon_url = await fetch(session, base_url + "bust-thumbnail/json?userId=" \
-				+ str(user_data["id"]) + "&height=180&width=180")
+				+ user_data["id"] + "&height=180&width=180")
 			icon_url = icon_url[0]
+
 			try:
 				icon_url = json.loads(icon_url)
 				user_data["extras"]["avatar"] = icon_url.get("Url")
@@ -187,6 +192,7 @@ async def get_details(username=None, id=None, complete=False):
 			presence_url = await fetch(session, base_url + "presence/user?userId=" \
 				+ str(user_data["id"]))
 			presence_url = presence_url[0]
+
 			try:
 				presence_url = json.loads(presence_url)
 				presence = presence_url.get("LastLocation")
@@ -205,7 +211,7 @@ async def get_details(username=None, id=None, complete=False):
 			except json.decoder.JSONDecodeError:
 				pass
 
-			badges_url = await fetch(session, base_url + "badges/roblox?userId="+str(user_data["id"]))
+			badges_url = await fetch(session, base_url + "badges/roblox?userId="+user_data["id"])
 			badges_url = badges_url[0]
 
 			try:
@@ -233,6 +239,10 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 
 	if author:
 		author_id = str(author.id)
+		user = roblox_cache["author_users"].get(author_id)
+
+		if user:
+			return user[0], user[1] # user, accounts
 
 		user_data = await r.table("users").get(author_id).run() or {}
 		roblox_accounts = user_data.get("robloxAccounts", {})
@@ -240,9 +250,26 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 		guilds = roblox_accounts.get("guilds", {})
 
 		if username or id:
+			if id:
+				id = str(id)
+
+			if not username:
+				username = roblox_cache["roblox_ids_to_usernames"].get(id)
+
+				if username:
+					user = roblox_cache["users"].get(username[1].lower())
+					roblox_cache["author_users"][author_id] = (user, accounts)
+
+					if user:
+						return user, accounts
+
 			user = RobloxUser(id=id, username=username)
 			await user.fill_missing_details()
+
 			if user.is_verified:
+				roblox_cache["users"][user.username.lower()] = user
+				roblox_cache["author_users"][author_id] = (user, accounts)
+
 				if guild:
 					if guilds.get(guild_id) == user.id:
 						return user, accounts
@@ -257,7 +284,11 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 				if guilds.get(guild_id):
 					user = RobloxUser(id=guilds.get(guild_id))
 					await user.fill_missing_details()
+
 					if user.is_verified:
+						roblox_cache["users"][user.username.lower()] = user
+						roblox_cache["author_users"][author_id] = (user, accounts)
+
 						return user, accounts
 					else:
 						return None, accounts
@@ -265,22 +296,32 @@ async def get_user(username=None, id=None, author=None, guild=None, bypass=False
 					if user_data.get("robloxID"):
 						user = RobloxUser(id=user_data.get("robloxID"))
 						await user.fill_missing_details()
+
 						if user.is_verified:
+							roblox_cache["users"][user.username.lower()] = user
+							roblox_cache["author_users"][author_id] = (user, accounts)
+
 							return user, accounts
+
 					return None, accounts
 			else:
 				return None, accounts
+
 	elif username or id:
 		user = RobloxUser(id=id, username=username)
 		await user.fill_missing_details()
+
 		if user.is_verified:
+			roblox_cache["users"][user.username.lower()] = user
 			return user, []
+
 		else:
 			return None, []
 
-async def get_user_groups(author=None, roblox_user=None, roblox_id=None):
+async def get_user_groups(author=None, roblox_id=None, roblox_user=None):
 	groups = {}
 
+	"""
 	if roblox_id:
 		async with aiohttp.ClientSession() as session:
 			response = await fetch(session, api_url + "/users/" + roblox_id + \
@@ -297,36 +338,41 @@ async def get_user_groups(author=None, roblox_user=None, roblox_id=None):
 
 			except json.decoder.JSONDecodeError:
 				return {}
+	"""
+	if author and not roblox_id:
+		if not roblox_user:
+			roblox_user, _ = get_user(author=author)
+			roblox_id = roblox_user and roblox_user.id
 
-	roblox_user = roblox_user or await get_user(author=author)
-	if isinstance(roblox_user, tuple):
-		roblox_user = roblox_user[0]
+		if roblox_user.groups:
+			return roblox_user.groups
 
-	if roblox_user.groups:
-		return roblox_user.groups
+	if roblox_id:
+		roblox_user = roblox_user or RobloxUser(id=roblox_id)
 
-	if not roblox_user.id:
-		roblox_user.fill_missing_details()
+		if roblox_user.groups:
+			return roblox_user.groups
 
-	if not roblox_user.is_verified:
-		return {}
+		if not roblox_user.id:
+			await roblox_user.fill_missing_details()
 
-	roblox_id = str(roblox_user.id)
-
-	async with aiohttp.ClientSession() as session:
-		response = await fetch(session, api_url + "/users/" + roblox_id + \
-			"/groups")
-		response = response[0]
-
-		try:
-			response = json.loads(response)
-			for group_json in response:
-				group = Group(group_json["Id"], **group_json)
-				roblox_user.add_group(group)
-				groups[group.id] = group
-
-		except json.decoder.JSONDecodeError:
+		if not roblox_user.is_verified:
 			return {}
+
+		async with aiohttp.ClientSession() as session:
+			response = await fetch(session, api_url + "/users/" + roblox_id + \
+				"/groups")
+			response = response[0]
+
+			try:
+				response = json.loads(response)
+				for group_json in response:
+					group = Group(group_json["Id"], **group_json)
+					roblox_user.add_group(group)
+					groups[group.id] = group
+
+			except json.decoder.JSONDecodeError:
+				return {}
 
 	return groups
 
@@ -334,8 +380,10 @@ async def get_rank(roblox_user, group=None, group_id=None):
 	if not group and group_id:
 		group_id = str(group_id)
 		group = roblox_cache["groups"].get(group_id) or Group(id=group_id)
+
 		if not roblox_cache["groups"].get(group_id):
 			roblox_cache["groups"][group_id] = group
+
 	elif group and not group_id:
 		group_id = group.id
 
@@ -436,6 +484,8 @@ async def get_roles(author, guild=None, complete=True):
 
 			if group_id and group_id != "0":
 				rank = await get_rank(user, group_id=group_id)
+				group = await get_group(group_id)
+
 				if rank:
 					role = find(lambda r: r.name == rank, guild.roles)
 
@@ -444,6 +494,13 @@ async def get_roles(author, guild=None, complete=True):
 							await guild.create_role(name=rank, reason="Creating missing group role")
 						except Forbidden:
 							errors.append("failed to create missing group role " + rank)
+
+					if group and group.roles:
+						for roleset in group.roles:
+							member_role = find(lambda r: r.name == roleset["Name"], author.roles)
+							if member_role:
+								if rank != roleset:
+									remove_roles.append(member_role)
 
 					if role:
 						add_roles.append(role)
@@ -516,7 +573,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 	if errors:
 		for error in errors:
 			await post_event(
-				"errored",
+				"error",
 				error,
 				guild=guild,
 				color=0xE74C3C
@@ -528,7 +585,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 				await author.edit(nick=nickname)
 			except Forbidden:
 				await post_event(
-					"errored",
+					"error",
 					f"Failed to update {author.mention}'s nickname. Please ensure I " \
 						"have the ``Manage Nickname`` permission, and drag my role above the other roles.",
 					guild=guild,
@@ -542,7 +599,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 				removed.append(role.name)
 		except Forbidden:
 			await post_event(
-				"errored",
+				"error",
 					f"Failed to remove {author.mention}'s role(s). Please ensure I " \
 						"have the ``Manage Roles`` permission, and drag my role above the other roles.",
 				guild=guild,
@@ -555,7 +612,7 @@ async def give_roblox_stuff(author, roblox_user=None, complete=False, guild=None
 				added.append(role.name)
 		except Forbidden:
 			await post_event(
-				"errored",
+				"error",
 					f"Failed to add role(s) to {author.mention}. Please ensure I " \
 						"have the ``Manage Roles`` permission, and drag my role above the other roles.",
 				guild=guild,
@@ -586,20 +643,25 @@ async def mass_filter(accounts=[], isIDs=True, isUsernames=False):
 async def verify_member(author, roblox, guild=None, primary_account=False):
 	author_id = str(author.id)
 	guild = guild or (hasattr(author, "guild") and author.guild)
+
 	if isinstance(roblox, RobloxUser):
 		roblox_id = str(roblox.id)
 	else:
 		roblox_id = str(roblox)
+
 	user_data = await r.table("users").get(author_id).run() or {}
 	roblox_accounts = user_data.get("robloxAccounts", {})
 	roblox_list = roblox_accounts.get("accounts", [])
+
 	if guild:
 		guild_list = roblox_accounts.get("guilds", {})
 		guild_list[str(guild.id)] = roblox_id
 		roblox_accounts["guilds"] = guild_list
+
 	if not roblox_id in roblox_list:
 		roblox_list.append(roblox_id)
 		roblox_accounts["accounts"] = roblox_list
+
 	await r.table("users").insert(
 		{
 			"id": author_id,
@@ -612,23 +674,28 @@ async def verify_member(author, roblox, guild=None, primary_account=False):
 async def unverify_member(author, roblox):
 	author_id = str(author.id)
 	success = False
+
 	if isinstance(roblox, RobloxUser):
 		roblox_id = str(roblox.id)
 	else:
 		roblox_id = str(roblox)
+
 	user_data = await r.table("users").get(author_id).run()
 	roblox_accounts = user_data.get("robloxAccounts", {})
 	roblox_list = roblox_accounts.get("accounts", [])
 	guilds = roblox_accounts.get("guilds", {})
+
 	if roblox_id in roblox_list:
 		roblox_list.remove(roblox_id)
 		roblox_accounts["accounts"] = roblox_list
 		success = True
+
 	for i,v in guilds.items():
 		if v == roblox_id:
 			guilds[i] = None
 			roblox_accounts["guilds"] = guilds
 			success = True
+
 	await r.table("users").insert(
 		{
 			"id": author_id,
@@ -636,6 +703,7 @@ async def unverify_member(author, roblox):
 		},
 		conflict="update"
 	).run()
+
 	return success
 
 
@@ -643,9 +711,7 @@ async def get_group(group_id):
 	group_id = str(group_id)
 	group = roblox_cache["groups"].get(group_id)
 
-	if group:
-		return group
-	else:
+	if (group and not group.roles) or not group:
 		async with aiohttp.ClientSession() as session:
 			response = await fetch(session, api_url + "/groups/" + group_id)
 			response = response[0]
@@ -654,14 +720,50 @@ async def get_group(group_id):
 				response = json.loads(response)
 
 				if response.get("Id"):
-					group = Group(id=response["Id"], **response)
+					if not group:
+						group = Group(id=response["Id"], **response)
+					else:
+						group.load_json(**response)
+
 					roblox_cache["groups"][group_id] = group
 					return group
 
 			except json.decoder.JSONDecodeError:
 				return {}
 
+async def auto_cleanup():
+	while True:
+		await asyncio.sleep(600)
+		global roblox_cache
+
+		roblox_cache = {
+			"users": {},
+			"author_users": {},
+			"groups": {},
+			"roblox_ids_to_usernames": {},
+			"usernames_to_roblox_ids": {}
+		}
+
+async def clear_user_from_cache(author):
+	author_id = str(author.id)
+
+	user = roblox_cache["author_users"].get(author_id)
+	if user:
+		roblox_cache["author_users"].pop(author_id, None)
+
+		user_ = roblox_cache["users"].get(user[0].username.lower())
+
+		if user_:
+			roblox_cache["users"].pop(user[0].username.lower(), None)
+
+		if user[1]:
+			for account in user[1]:
+				if roblox_cache["users"].get(account.lower()):
+					roblox_cache["users"].pop(account.lower(), None)
+
 
 async def setup(**kwargs):
 	global r
 	r = kwargs.get("r")
+	client = kwargs.get("client")
+	client.loop.create_task(auto_cleanup())
