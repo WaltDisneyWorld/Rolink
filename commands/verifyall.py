@@ -8,7 +8,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	client = kwargs.get("client")
 
-	@command(name="verifyall", category="Premium")
+	@command(name="verifyall", category="Premium", permissions={"raw": "manage_guild"})
 	async def verify(message, response, args):
 		"""updates roles/nicknames for each member"""
 
