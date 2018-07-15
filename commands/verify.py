@@ -34,6 +34,7 @@ async def roblox_prompts(message, response, args, guild=None):
 	])
 
 	user, _ = await get_user(author=author)
+	await user.fill_missing_details()
 
 	if not is_cancelled:
 		success = await validate_code(parsed_args["name"], code)
@@ -48,10 +49,8 @@ async def roblox_prompts(message, response, args, guild=None):
 async def verified(author, roblox_user, guild=None):
 	guild = guild or author.guild
 
-	await roblox_user.fill_missing_details()
-
 	if roblox_user.is_verified:
-		await post_event("verified", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
+		await post_event("verify", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
 		await give_roblox_stuff(author, roblox_user=roblox_user, complete=True)
 
 

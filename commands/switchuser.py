@@ -54,14 +54,20 @@ async def setup(**kwargs):
 						try:
 							await author.remove_roles(*roles, reason="Switched User— cleaning their roles")
 						except Forbidden:
-							pass
+							await post_event(
+								"error",
+								f"Failed to delete roles from {author.mention}. Please ensure I have " \
+									"the ``Manage Roles`` permission, and drag my role above the other roles.",
+								guild=guild,
+								color=0xE74C3C
+							)
 
 						new_user, _ = await get_user(id=parsed_args["acc"])
 						await new_user.fill_missing_details()
 
 						await give_roblox_stuff(author, complete=True)
 
-						await post_event("verified", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
+						await post_event("verify", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
 
 						await response.success("You're now verified as **"+new_user.username+"!**")
 			else:

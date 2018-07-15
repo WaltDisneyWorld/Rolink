@@ -1,8 +1,8 @@
 from discord import Embed
 
 events = {
-	"verified": "fired after a member verifies",
-	"errored": "fired after a permission error occurs",
+	"verify": "fired after a member verifies",
+	"error": "fired after a permission error occurs",
 	"setup": "fired if a setting changes"
 }
 events_choices = list(events.keys())

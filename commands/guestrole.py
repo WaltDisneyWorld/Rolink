@@ -38,7 +38,7 @@ async def setup(**kwargs):
 			try:
 				role = await guild.create_role(name=role_name, reason="Creating Guest Role")
 			except Forbidden:
-				await post_event("errored", "Failed to create Guest Role. Please ensure " \
+				await post_event("error", "Failed to create Guest Role. Please ensure " \
 					"I have the ``Manage Roles`` permission, and drag my role above " \
 					"the other roles.", guild=guild, color=0xE74C3C)
 				return

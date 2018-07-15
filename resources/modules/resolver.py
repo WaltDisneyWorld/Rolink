@@ -1,5 +1,6 @@
 from discord.utils import find
 from discord.errors import Forbidden
+from resources.modules.utils import post_event
 
 async def string_resolver(message, arg, content=None):
 	if not content:
@@ -123,6 +124,12 @@ async def role_resolver(message, arg, content=None):
 			try:
 				role = await guild.create_role(name=content, reason="Creating missing role")
 			except Forbidden:
+				await post_event(
+					"error",
+					f"Failed to create role {content}, please ensure I have the ``Manage Roles`` permission.",
+					guild=guild,
+					color=0xE74C3C
+				)
 				return None, "**Invalid permissions:** please ensure I have the ``Manage Roles`` permission."
 			else:
 				return role, None

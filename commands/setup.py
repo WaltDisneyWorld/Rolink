@@ -226,6 +226,13 @@ async def setup(**kwargs):
 											try:
 												await role.delete(reason="Replace option during setup")
 											except Forbidden:
+												await post_event(
+													"error",
+													f"Failed to delete role {role.mention}. Please ensure I have " \
+														"the ``Manage Roles`` permission, and drag my role above the other roles.",
+													guild=guild,
+													color=0xE74C3C
+												)
 												continue
 
 								for rank in sorted_roles:
@@ -237,6 +244,13 @@ async def setup(**kwargs):
 												author
 											))
 										except Forbidden:
+											await post_event(
+												"error",
+												f"Failed to create role {rank["Name"]}. Please ensure I have " \
+													"the ``Manage Roles`` permission, and drag my role above the other roles.",
+												guild=guild,
+												color=0xE74C3C
+											)
 											await response.error("Failed to create role. Please ensure I have the ``Manage Roles`` permission" \
 												"and drag the Bloxlink role above the other roles.")
 											return

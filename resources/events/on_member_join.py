@@ -1,4 +1,4 @@
-from resources.modules.utils import is_premium
+from resources.modules.utils import is_premium, post_event
 from resources.modules.roblox import get_user, get_roles, get_nickname
 from discord.errors import Forbidden
 from discord.utils import find
@@ -35,7 +35,13 @@ async def setup(**kwargs):
 					try:
 						await member.edit(nick=nickname)
 					except Forbidden:
-						pass
+						await post_event(
+							"error",
+							f"Failed to update {member.mention}'s nickname. Please ensure I have " \
+								"the ``Manage Nickname`` permission, and drag my role above the other roles.",
+							guild=guild,
+							color=0xE74C3C
+						)
 		else:
 			unverified_role = find(lambda r: r.name == "Unverified", guild.roles)
 
