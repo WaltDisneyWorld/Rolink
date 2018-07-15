@@ -29,6 +29,7 @@ Bloxlink relies on the following dependencies:
 * [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 * [discord.py](https://github.com/Rapptz/discord.py)
 * [rethinkdb](https://rethinkdb.com)
+* [sanic](https://github.com/channelcat/sanic)
 
 ------------------
 #### Configuration
