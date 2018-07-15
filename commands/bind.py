@@ -32,7 +32,7 @@ async def setup(**kwargs):
 			"min": 1,
 			"max": 20
 		}
-	], aliases=["newbind"])
+	], aliases=["newbind", "binds"])
 	async def setup_command(message, response, args):
 		"""create a new group bind"""
 
@@ -64,25 +64,24 @@ async def setup(**kwargs):
 					except ValueError:
 						pass
 				else:
-					await response.error("Invalid bind: {}".format(x))
 
-				x = x.split("-")
+					x = x.split("-")
 
-				if not len(x) == 2:
-					return await response.error("Sequences must contain 2 numbers.")
+					if not len(x) == 2:
+						return await response.error("Sequences must contain 2 numbers.")
 
-				x1, x2 = x[0].isdigit() and int(x[0]), x[1].isdigit() and int(x[1])
+					x1, x2 = x[0].isdigit() and int(x[0]), x[1].isdigit() and int(x[1])
 
-				if not x1:
-					return await response.error("{} is not a number.".format(x[0]))
-				elif not x2:
-					return await response.error("{} is not a number.".format(x[1]))
+					if not x1:
+						return await response.error("{} is not a number.".format(x[0]))
+					elif not x2:
+						return await response.error("{} is not a number.".format(x[1]))
 
-				if x2-x1 > 10:
-					return await response.error("Too many numbers in range.")
+					if x2-x1 > 10:
+						return await response.error("Too many numbers in range.")
 
-				for y in range(x1, x2+1):
-					new_ranks.append(str(y))
+					for y in range(x1, x2+1):
+						new_ranks.append(str(y))
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
 
