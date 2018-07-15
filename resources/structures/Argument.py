@@ -2,6 +2,7 @@ import asyncio
 import re
 from resources.modules.resolver import resolver_map
 from bot import client
+from config import MAX_RETRIES
 
 in_prompts = {}
 
@@ -112,6 +113,7 @@ class Argument:
 
 		while ctr < len(using_args):
 			skipped_arg = None
+			failed = 0
 			arg = using_args[ctr]
 
 			if skip_args:
@@ -127,6 +129,11 @@ class Argument:
 					parsed_args[arg["name"]] = resolved
 				else:
 					success = False
+					failed += 1
+					if failed > MAX_RETRIES:
+						in_prompts[self.author.id] = None
+						await self.channel.send("**Cancelled prompt:** too many invalid arguments.")
+						return None, "too many invalid prompts" 
 					while not success:
 						in_prompts[self.author.id] = True
 						await self.channel.send(arg["prompt"].format(
@@ -142,10 +149,16 @@ class Argument:
 								parsed_args[arg["name"]] = resolved
 								in_prompts[self.author.id] = None
 
-							elif is_cancelled:
-								in_prompts[self.author.id] = None
-								await self.channel.send("**Cancelled prompt.**")
-								return None, "user cancellation"
+							else:
+								failed += 1
+								if is_cancelled:
+									in_prompts[self.author.id] = None
+									await self.channel.send("**Cancelled prompt.**")
+									return None, "user cancellation"
+								elif failed > MAX_RETRIES:
+									in_prompts[self.author.id] = None
+									await self.channel.send("**Cancelled prompt:** too many invalid arguments.")
+									return None, "user cancellation"
 
 						except asyncio.TimeoutError:
 							in_prompts[self.author.id] = None
