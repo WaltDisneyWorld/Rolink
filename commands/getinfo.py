@@ -63,7 +63,7 @@ async def setup(**kwargs):
 
 					if primary_account.membership != "NBC":
 						embed.add_field(name="Membership", value=primary_account.membership)
-					
+
 					if primary_account.badges:
 						embed.add_field(name="Badges", value=", ".join(primary_account.badges))
 

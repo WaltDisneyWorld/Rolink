@@ -20,7 +20,7 @@ async def setup(**kwargs):
 		embed = Embed(title="Bloxlink Binds")
 
 		if not role_binds:
-			embed = Embed(title="Bloxlink Binds", description="You have no binds! Say ``!binds``" \
+			embed = Embed(title="Bloxlink Binds", description="You have no binds! Say ``!bind``" \
 				" to make a new bind.")
 			return await response.send(embed=embed)
 
@@ -32,7 +32,7 @@ async def setup(**kwargs):
 				role = find(lambda r: r.id == int(role_id), guild.roles)
 				role_name = role and role.name or "invalid bind (role deleted)"
 				binds.append(f"**Rank:** {rank} ➜ **Role:** {role_name}")
-			
+
 			if binds:
 				group = await get_group(group_id)
 

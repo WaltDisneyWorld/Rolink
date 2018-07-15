@@ -41,8 +41,10 @@ class RobloxUser:
 			self.presence = data["extras"].get("presence")
 			self.badges = data["extras"].get("badges")
 			self.is_complete = True
+
 	def add_group(self, group):
 		if not self.groups.get(group.name):
 			self.groups[group.name] = group
+
 	def add_groups(self, groups):
 		self.groups = groups

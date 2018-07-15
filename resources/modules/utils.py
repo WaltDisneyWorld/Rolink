@@ -137,7 +137,7 @@ async def redeem_code(author, code):
 		return (None, None)
 
 async def post_event(event_name, text, guild=None, guild_data=None, channel=None, color=None):
-	event_name_post = f"Bloxlink {event_name[0].upper()+event_name[1:]} Event"
+	event_name_post = f"Bloxlink {event_name.title()} Event"
 
 	if not channel:
 

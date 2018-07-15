@@ -16,16 +16,16 @@ async def setup(**kwargs):
 			"name": "prefix"
 		},
 		{
-			"prompt": "How long should the codes last for?",
-			"type": "string",
-			"check": check_number,
-			"name": "len"
-		},
-		{
 			"prompt": "How many codes would you like to generate?",
 			"type": "string",
 			"check": check_number,
 			"name": "num_codes"
+		},
+		{
+			"prompt": "How long should the codes last for?",
+			"type": "string",
+			"check": check_number,
+			"name": "duration"
 		},
 		{
 			"prompt": "How many people can redeem the code?",
@@ -47,7 +47,7 @@ async def setup(**kwargs):
 		for _ in range(num_codes):
 			code = await generate_code(
 				args.parsed_args["prefix"],
-				int(args.parsed_args["len"]),
+				int(args.parsed_args["duration"]),
 				int(args.parsed_args.get("max_uses", 1))
 			)
 			if code:

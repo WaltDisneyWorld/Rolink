@@ -7,7 +7,7 @@ class Group:
 		self.roles = None
 		self.owner = None
 		self.member_count = None
-		
+
 		self.user_rank = None
 		self.user_role = None
 

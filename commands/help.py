@@ -57,7 +57,7 @@ async def setup(**kwargs):
 			for i,v in commands.items():
 				if (v.hidden and message.author.id == OWNER) or not v.hidden:
 					category = categories.get(v.category, [])
-					category.append(v.name + " ➜ " + v.description)
+					category.append(f'``!{v.name} {v.usage}`` ➜ {v.description}')
 					categories[v.category] = category
 
 			for i,v in categories.items():
