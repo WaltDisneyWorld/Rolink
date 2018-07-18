@@ -7,7 +7,7 @@ async def setup(**kwargs):
 	client = kwargs.get("client")
 
 	@command(name="invite")
-	async def invite(message, response, args):
+	async def invite(message, response, args, prefix):
 		"""invite the bot to your server"""
 
 		me = message.guild.me
@@ -18,6 +18,5 @@ async def setup(**kwargs):
 			"Support server: https://discord.gg/wBndznK**")
 
 		embed.set_author(name=me.name, icon_url=me.avatar_url)
-		print("ran invite command", flush=True)
 
 		await response.send(embed=embed)

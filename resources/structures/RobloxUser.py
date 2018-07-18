@@ -16,6 +16,9 @@ class RobloxUser:
 		self.badges = kwargs.get("badges", [])
 		self.groups = kwargs.get("groups", {})
 
+		self.age = 0
+		self.age_string = None
+
 	async def fill_missing_details(self, complete=False):
 		global get_details
 		global get_user_groups
@@ -40,6 +43,9 @@ class RobloxUser:
 			self.membership = data["extras"].get("membership")
 			self.presence = data["extras"].get("presence")
 			self.badges = data["extras"].get("badges")
+			self.age_string = data["extras"].get("age_string")
+			self.age = data["extras"].get("age")
+
 			self.is_complete = True
 
 	def add_group(self, group):

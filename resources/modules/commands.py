@@ -1,7 +1,6 @@
 import traceback
 import re
 from config import PREFIX as default_prefix
-from asyncio import get_event_loop
 from resources.modules.utils import get_files, get_prefix, log_error
 from resources.module import new_module
 from resources.modules.permissions import check_permissions
@@ -95,7 +94,7 @@ async def parse_message(message):
 
 						if not is_cancelled:
 							try:
-								await command.func(message, response, args)
+								await command.func(message, response, args, prefix)
 							except Exception as e:
 								await response.error("Oops! Something went wrong while executing the command.")
 								

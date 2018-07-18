@@ -25,7 +25,7 @@ async def setup(**kwargs):
 			"optional": True
 		}
 	])
-	async def sudo(message, response, args):
+	async def sudo(message, response, args, prefix):
 		"""spoofs a command as another user"""
 
 		message.author = args.parsed_args["user"]

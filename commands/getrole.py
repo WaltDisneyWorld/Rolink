@@ -7,7 +7,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 
 	@command(name="getrole", alias=["getroles", "roleme"], category="Account")
-	async def getrole(message, response, args):
+	async def getrole(message, response, args, prefix):
 		"""get roles from the server"""
 
 		author = message.author

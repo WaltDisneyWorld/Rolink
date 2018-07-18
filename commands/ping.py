@@ -4,7 +4,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 
 	@command(name="ping")
-	async def ping(message, response, args):
+	async def ping(message, response, args, prefix):
 		"""measures the latency of the bot"""
 
 		t_1 = time.perf_counter()

@@ -22,7 +22,7 @@ async def setup(**kwargs):
 			"name": "role"
 		}
 	], aliases=["logchannels"])
-	async def guestrole(message, response, args):
+	async def guestrole(message, response, args, prefix):
 		"""binds a role for non-group members"""
 
 		author = message.author

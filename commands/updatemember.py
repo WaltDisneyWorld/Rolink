@@ -16,7 +16,7 @@ async def setup(**kwargs):
             "name": "user"
         }
     ])
-	async def updateuser(message, response, args):
+	async def updateuser(message, response, args, prefix):
 		"""updates roles/nickname for the member"""
 
 		author = args.parsed_args["user"]

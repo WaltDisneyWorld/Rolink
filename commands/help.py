@@ -17,7 +17,7 @@ async def setup(**kwargs):
 		await sleep(1.0)
 
 	@command(name="help", aliases=["cmds", "commands"])
-	async def help_command(message, response, args):
+	async def help_command(message, response, args, prefix):
 		"""shows command usage and general help"""
 
 		if args.args:

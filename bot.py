@@ -21,9 +21,10 @@ async def register_modules():
 	for directory in config.MODULE_DIR:
 		files = get_files(directory)
 		for filename in [f.replace(".py", "") for f in files]:
+			#loop.create_task(new_module(directory, filename))
 			await new_module(directory, filename)
 
-	await new_module("web", "api")
+	loop.create_task(new_module("web", "api"))
 
 
 if __name__ == "__main__":

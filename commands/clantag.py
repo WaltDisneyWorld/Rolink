@@ -16,7 +16,7 @@ async def setup(**kwargs):
 			"optional": True
 		}
 	], category="Account")
-	async def on_clan_tag(message, response, args):
+	async def on_clan_tag(message, response, args, prefix):
 		"""assign a clan tag for the server. Leave the value blank to clear clan tag."""
 
 		author = message.author

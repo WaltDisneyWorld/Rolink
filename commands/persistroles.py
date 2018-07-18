@@ -2,16 +2,16 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="grouplock", arguments=[
+	@command(name="persistroles", arguments=[
 		{
-			"prompt": "Would you like to **enable** or **disable** the grouplock?",
+			"prompt": "Would you like to **enable** or **disable** persist-roles?",
 			"type": "choice",
 			"choices": {"enable", "disable"},
 			"name": "enabled",
 		}
 	], category="Premium", permissions={"raw": "manage_guild"})
-	async def grouplock(message, response, args, prefix):
-		"""locks server joining only to members of your group"""
+	async def persistroles(message, response, args, prefix):
+		"""updates roles/nickname on typing"""
 
 		guild = message.guild
 
@@ -19,8 +19,8 @@ async def setup(**kwargs):
 
 		await r.table("guilds").insert({
 			"id": str(guild.id),
-			"groupLocked": enabled
+			"persistRoles": enabled
 		}, conflict="update").run()
 
 		await response.success(f'Successfully **{enabled and "enabled" or "disabled"}** ' \
-			"the grouplock.")
+			"persist-roles.")

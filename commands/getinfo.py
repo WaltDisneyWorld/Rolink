@@ -15,7 +15,7 @@ async def setup(**kwargs):
 
 		}
 	])
-	async def getinfo(message, response, args):
+	async def getinfo(message, response, args, prefix):
 		"""retrieve the user's Roblox information"""
 
 		user = args.parsed_args.get("user", message.author)
@@ -48,6 +48,12 @@ async def setup(**kwargs):
 					embed.add_field(name="Username", value=primary_account.username)
 					embed.add_field(name="ID", value=primary_account.id)
 					embed.add_field(name="Presence", value=primary_account.presence)
+					
+					if primary_account.age_string:
+						embed.add_field(name="Joined Date", value=primary_account.age_string)
+					if primary_account.age:
+						embed.add_field(name="Age", value=f"{primary_account.age} days old")
+
 
 					if guild_data.get("groupID"):
 						group_id = guild_data.get("groupID")

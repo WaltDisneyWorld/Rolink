@@ -32,7 +32,7 @@ async def is_premium(guild=None, author=None):
 		premium = premium if not isinstance(premium, bool) else {}
 		expiry = premium and premium.get("expiry")
 
-		if not expiry and expiry !=0:
+		if not expiry and expiry != 0:
 			return (False, None, {})
 
 		t = time()
@@ -170,6 +170,9 @@ async def post_event(event_name, text, guild=None, guild_data=None, channel=None
 				await channel.send(f"**{event_name_post}** ➜ {text}")
 			except Forbidden:
 				pass
+		else:
+			return True
+	return False
 
 async def get_log_channel():
 	await client.wait_for("ready")

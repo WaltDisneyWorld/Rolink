@@ -37,7 +37,7 @@ async def setup(**kwargs):
 			"name": "code"
 		}
 	])
-	async def sudo(message, response, args):
+	async def sudo(message, response, args, prefix):
 		"""executes Python code"""
 
 		channel = message.channel

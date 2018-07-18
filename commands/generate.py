@@ -35,7 +35,7 @@ async def setup(**kwargs):
 			"optional": True
 		}
 	])
-	async def generate(message, response, args):
+	async def generate(message, response, args, prefix):
 		"""generates Bloxlink Premium codes"""
 
 		author = message.author

@@ -1,20 +1,60 @@
 TOKEN = "abc123"
+
 RETHINKDB = {
 	"PASSWORD": "",
 	"PORT": 28015,
 	"DB": "bloxlink",
-	"HOST": "rethinkdb-stable"
+	"HOST": "rethinkdb"
 }
-PREFIX = ["!"]
+
+PREFIX = "!"
+
+WEB = {
+	"API": {
+		"HOST": "0.0.0.0",
+		"PORT": 1337
+	}
+}
+
 MODULE_DIR = [
 	"resources/events",
 	"resources/modules"
 ]
+
 GAME = ["!help | !invite", "{guilds} servers", "{users} total users"]
+
 WORD = [
 	"bus",
 	"duck",
 	"roblox",
 	"book",
-	"key
+	"key",
+	"shirt",
+	"pants",
+	"battery",
+	"lamp",
+	"desk",
+	"water",
+	"soda",
+	"button",
+	"can",
+	"hello",
+	"mouse",
+	"vase",
+	"rug",
+	"blanket",
+	"pillow",
+	"music",
+	"lego"
 ]
+
+HELP = "**Welcome to Bloxlink!**\n\n" \
+	"**Support Server:** https://discord.gg/wBndznK\n" \
+	"**Website:** https://blox.link/\n" \
+	"**Invite:** https://blox.link/invite"
+
+ERROR_CHANNEL = 464519658373120001
+
+MAX_RETRIES = 3
+
+OWNER = 84117866944663552

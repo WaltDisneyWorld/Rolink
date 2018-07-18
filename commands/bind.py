@@ -33,7 +33,7 @@ async def setup(**kwargs):
 			"max": 20
 		}
 	], aliases=["newbind", "binds"])
-	async def setup_command(message, response, args):
+	async def setup_command(message, response, args, prefix):
 		"""create a new group bind"""
 
 		group_id = str(args.parsed_args["group"])

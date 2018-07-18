@@ -100,7 +100,7 @@ async def setup(**kwargs):
 	@command(name="setup", category="Administration", permissions={
 		"raw": "manage_guild"
 	})
-	async def setup_command(message, response, args):
+	async def setup_command(message, response, args, prefix):
 		"""configure your server with Bloxlink"""
 
 		author = message.author
@@ -134,7 +134,7 @@ async def setup(**kwargs):
 			success = await response.send(embed=embed, dm=True, no_dm_post=True, strict_post=True)
 
 			if success and not already_posted:
-				await response.text(author.mention + ", **check your DMs!**")
+				await response.text(author.mention + ", **prompt will resume in DMs!**")
 				already_posted = True
 			elif not success and already_posted:
 				in_prompt[author.id] = None
@@ -236,17 +236,18 @@ async def setup(**kwargs):
 												continue
 
 								for rank in sorted_roles:
-									role = find(lambda r: r.name == rank["Name"], guild.roles)
+									name = rank["Name"]
+									role = find(lambda r: r.name == name, guild.roles)
 									if not role:
 										try:
-											await guild.create_role(name=rank["Name"], reason="Group {} Role - {}".format(
+											await guild.create_role(name=name, reason="Group {} Role - {}".format(
 												group.id,
 												author
 											))
 										except Forbidden:
 											await post_event(
 												"error",
-												f"Failed to create role {rank["Name"]}. Please ensure I have " \
+												f"Failed to create role **{name}**. Please ensure I have " \
 													"the ``Manage Roles`` permission, and drag my role above the other roles.",
 												guild=guild,
 												color=0xE74C3C

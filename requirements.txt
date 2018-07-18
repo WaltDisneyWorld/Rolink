@@ -4,3 +4,4 @@ rethinkdb
 aiodns
 cchardet
 sanic
+bs4

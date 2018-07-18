@@ -7,7 +7,7 @@ async def setup(**kwargs):
 	r = kwargs.get("r")
 
 	@command(name="donate", alias=["premium"])
-	async def donate(message, response, args):
+	async def donate(message, response, args, prefix):
 		"""donate to Bloxlink! :)"""
 
 		me = message.guild.me

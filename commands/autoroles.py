@@ -10,7 +10,7 @@ async def setup(**kwargs):
 			"name": "enabled",
 		}
 	], category="Premium", permissions={"raw": "manage_guild"})
-	async def autoroles(message, response, args):
+	async def autoroles(message, response, args, prefix):
 		"""gives _all_ roles for each member that joins the server"""
 
 		guild = message.guild

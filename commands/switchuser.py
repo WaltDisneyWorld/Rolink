@@ -7,7 +7,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 
 	@command(name="switchuser", category="Account")
-	async def switchuser(message, response, args):
+	async def switchuser(message, response, args, prefix):
 		"""change your account for the server"""
 
 		author = message.author
@@ -71,6 +71,6 @@ async def setup(**kwargs):
 
 						await response.success("You're now verified as **"+new_user.username+"!**")
 			else:
-				await response.error("You only have **one account** linked! Run ``!verify --force`` to link another.")
+				await response.error(f"You only have **one account** linked! Run ``{prefix}verify -add`` to link another.")
 		else:
-			await response.error("You're **not linked** with Bloxlink! Run ``!verify`` to verify.")
+			await response.error(f"You're **not linked** with Bloxlink! Run ``{prefix}verify`` to verify.")

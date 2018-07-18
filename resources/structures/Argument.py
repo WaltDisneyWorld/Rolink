@@ -71,12 +71,12 @@ class Argument:
 
 			if content.lower() == "cancel":
 				return False, True
-			
+
 			resolver = resolver_map.get(arg.get("type", "string"))
 
 			resolved, err_msg = await resolver(message, arg=arg, content=content)
 
-		if resolved:
+		if resolved or resolved is 0:
 
 			if arg.get("check"):
 
@@ -124,7 +124,7 @@ class Argument:
 
 			if skipped_arg:
 				resolved, _ = await Argument.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self, parsed_args=parsed_args)
-				if resolved:
+				if resolved and resolved is not 0:
 					ctr += 1
 					parsed_args[arg["name"]] = resolved
 				else:
@@ -143,7 +143,7 @@ class Argument:
 							msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
 							resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
-							if resolved:
+							if resolved or resolved is 0:
 								ctr += 1
 								success = True
 								parsed_args[arg["name"]] = resolved
@@ -177,7 +177,7 @@ class Argument:
 					msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
 					resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
-					if resolved:
+					if resolved or resolved is 0:
 						ctr += 1
 						in_prompts[self.author.id] = None
 						parsed_args[arg["name"]] = resolved

@@ -16,8 +16,11 @@ async def setup(**kwargs):
 
 		roles_add = []
 
+		if member.bot:
+			return
+
 		if roblox_user:
-			await roblox_user.fill_missing_details()
+			await roblox_user.fill_missing_details(complete=True)
 
 			if guild_data.get("autoVerification"):
 				nickname = await get_nickname(author=member, roblox_user=roblox_user, guild_data=guild_data)
@@ -49,15 +52,35 @@ async def setup(**kwargs):
 				roles_add.append(unverified_role)
 
 		if await is_premium(guild=guild):
-			if guild_data.get("autoRoles"):
-				add_r, _, _ = await get_roles(author=member, guild=guild)
-				if add_r:
-					roles_add = roles_add + add_r
+			if roblox_user:
+				if guild_data.get("autoRoles"):
+					add_r, _, _ = await get_roles(author=member, guild=guild)
+					if add_r:
+						roles_add = roles_add + add_r
+
 			if guild_data.get("groupLocked"):
+				if not roblox_user:
+					await member.kick(reason="GROUP-LOCK: Not linked on Bloxlink")
+					return
+
 				group_id = str(guild_data.get("groupID","0"))
 				group = roblox_user.groups.get(group_id)
-				if not group:
+
+				if not group and group_id != "0":
+					print(group_id, type(group_id), flush=True)
 					await member.kick(reason=f"GROUP-LOCK: not in linked group {group_id}")
+					return
+
+			age_limit = guild_data.get("ageLimit")
+			if age_limit:
+				if roblox_user:
+					print("checking age", flush=True)
+					if roblox_user and roblox_user.age < age_limit:
+						await member.kick(reason=f"AGE LIMIT: Not old enough: {roblox_user.age} < {age_limit}")
+						return
+				else:
+					await member.kick(reason="AGE LIMIT: user not linked to Bloxlink")
+					return
 
 
 		if roles_add:

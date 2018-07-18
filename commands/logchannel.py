@@ -22,7 +22,7 @@ async def setup(**kwargs):
 			"name": "choice"
 		}
 	], aliases=["logchannels"])
-	async def logchannel(message, response, args):
+	async def logchannel(message, response, args, prefix):
 		"""subscribes to Bloxlink events"""
 
 		author = message.author

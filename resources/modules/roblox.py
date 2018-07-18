@@ -8,6 +8,8 @@ from resources.structures.RobloxUser import RobloxUser
 from resources.structures.Group import Group
 from resources.modules.utils import post_event
 from random import choice
+from bs4 import BeautifulSoup
+from datetime import datetime
 
 
 
@@ -41,19 +43,22 @@ async def validate_code(username, code):
 	user_cache = roblox_cache["users"].get(username.lower())
 
 	if user_cache:
-		id = user_cache.id
+		id_ = user_cache.id
 	else:
-		id = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
-		if not id:
-			username, id = await get_id_from_api(username)
-			roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id, username)
-	if id:
+		id_ = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+
+		if not id_:
+			username, id_ = await get_id_from_api(username)
+			roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id_, username)
+		else:
+			id_ = id_[0]
+	if id_:
 		async with aiohttp.ClientSession() as session:
-			response = await fetch(session, f'https://www.roblox.com/users/{id}/profile')
+			response = await fetch(session, f'https://www.roblox.com/users/{id_}/profile')
 			response = response[0]
 
 			if code in response:
-				user = RobloxUser(username=username, id=id)
+				user = RobloxUser(username=username, id=id_)
 				await user.fill_missing_details()
 				roblox_cache["users"][username.lower()] = user
 				return True
@@ -122,7 +127,9 @@ async def get_details(username=None, id=None, complete=False):
 			"groups": {},
 			"membership": None,
 			"presence": None,
-			"badges": []
+			"badges": [],
+			"age": 0,
+			"age_string": None
 		}
 
 	}
@@ -137,7 +144,7 @@ async def get_details(username=None, id=None, complete=False):
 		if username:
 			user = roblox_cache["users"].get(username[1].lower())
 			username = username[1]
-	
+
 	if user and user.is_verified:
 		if user.id:
 			user_data["id"] = user.id
@@ -154,6 +161,10 @@ async def get_details(username=None, id=None, complete=False):
 				user_data["extras"]["presence"] = user.presence
 			if user.badges:
 				user_data["extras"]["badges"] = user.badges
+			if user.age:
+				user_data["extras"]["age"] = user.age
+			if user.age_string:
+				user_data["extras"]["age_string"] = user.age_string
 
 
 	roblox_name = user_data.get("username") or username
@@ -230,6 +241,28 @@ async def get_details(username=None, id=None, complete=False):
 
 			except json.decoder.JSONDecodeError:
 				pass
+
+			user_page = await fetch(session, f'{base_url}/users/{user_data["id"]}/profile')
+			user_page = user_page[0]
+
+			soup = BeautifulSoup(user_page, 'html.parser')
+
+			for text in soup.body.find_all('p', attrs={'class':'text-lead'}):
+				text = text.text
+
+				if "/" in text:
+					text = text[:text.index("Place")]
+					user_data["extras"]["age_string"] = text
+
+					today = datetime.today()
+					datetime_object = datetime.strptime(text, '%m/%d/%Y')
+
+					difference = today - datetime_object
+
+					user_data["extras"]["age"] = difference.days
+
+					break
+
 
 	return user_data
 
@@ -730,6 +763,8 @@ async def get_group(group_id):
 
 			except json.decoder.JSONDecodeError:
 				return {}
+	else:
+		return group
 
 async def auto_cleanup():
 	while True:

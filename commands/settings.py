@@ -42,7 +42,7 @@ async def setup(**kwargs):
 			"arg_len": 1
 		}
 	], category="Administration")
-	async def settings_cmd(message, response, args):
+	async def settings_cmd(message, response, args, prefix):
 		"""view and configure Bloxlink settings"""
 
 		guild = message.guild
@@ -98,7 +98,10 @@ async def setup(**kwargs):
 					else:
 						to_change = to_change[0]
 
-					change_with = change_with or parsed_args["change_with"]
+					change_with = change_with or (parsed_args and parsed_args.get("change_with"))
+
+					if not change_with:
+						return await response.error("Invalid settings choice.")
 
 					if to_change in ("autoVerification", "autoRoles", "persistRoles", "allowOldRoles", "groupLocked"):
 						change_with = change_with.lower() in ("true", "on", "enabled", "yes")

@@ -10,7 +10,7 @@ async def setup(**kwargs):
 			"name": "enabled",
 		}
 	], category="Administration", permissions={"raw": "manage_guild"})
-	async def autoverify(message, response, args):
+	async def autoverify(message, response, args, prefix):
 		"""gives verified role/nickname to new members"""
 
 		guild = message.guild

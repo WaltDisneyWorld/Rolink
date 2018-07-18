@@ -12,7 +12,7 @@ async def setup(**kwargs):
 			"optional": True
 		}
 	])
-	async def redeem(message, response, args):
+	async def status(message, response, args, prefix):
 		"""shows your Bloxlink Premium status"""
 
 		user = args.parsed_args.get("user") or message.author

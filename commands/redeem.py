@@ -10,7 +10,7 @@ async def setup(**kwargs):
 			"name": "code"
 		}
 	])
-	async def redeem(message, response, args):
+	async def redeem(message, response, args, prefix):
 		"""redeems a Bloxlink Premium code"""
 
 		code = args.parsed_args["code"]

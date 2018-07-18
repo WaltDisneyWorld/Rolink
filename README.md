@@ -30,6 +30,7 @@ Bloxlink relies on the following dependencies:
 * [discord.py](https://github.com/Rapptz/discord.py)
 * [rethinkdb](https://rethinkdb.com)
 * [sanic](https://github.com/channelcat/sanic)
+* [bs4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
 
 ------------------
 #### Configuration

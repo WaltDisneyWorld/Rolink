@@ -21,7 +21,7 @@ async def setup(**kwargs):
 			"name": "rank"
 		}
 	])
-	async def delbind(message, response, args):
+	async def delbind(message, response, args, prefix):
 		"""deletes a group bind"""
 
 		guild = message.guild

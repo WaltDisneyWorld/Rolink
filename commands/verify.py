@@ -33,14 +33,15 @@ async def roblox_prompts(message, response, args, guild=None):
 		}
 	])
 
-	user, _ = await get_user(author=author)
-	await user.fill_missing_details()
-
 	if not is_cancelled:
 		success = await validate_code(parsed_args["name"], code)
 		if success:
 			await response.success("You're now linked to the bot!")
 			await verify_member(author, str(args.checked_args["name"].id), primary_account=parsed_args["default"] == "yes")
+
+			user, _ = await get_user(author=author)
+			await user.fill_missing_details()
+
 			await verified(author, user, guild)
 		else:
 			await response.error("Could not find the code on your profile. Please run this command " \
@@ -58,7 +59,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 
 	@command(name="verify", flags=["force"], category="Account", flags_enabled=True)
-	async def verify(message, response, args):
+	async def verify(message, response, args, prefix):
 		"""link your Roblox account to your Discord account"""
 
 		author = message.author
