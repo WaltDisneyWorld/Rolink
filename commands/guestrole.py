@@ -1,7 +1,10 @@
 from discord import Embed
 from discord.utils import find
 from discord.errors import Forbidden
-from resources.modules.utils import post_event
+
+from resources.module import get_module
+post_event = get_module("utils", attrs=["post_event"])
+
 
 
 async def setup(**kwargs):
@@ -50,7 +53,7 @@ async def setup(**kwargs):
 			role_binds = role_binds[0]
 
 		role_binds[group_id] = role_binds.get(group_id) or {}
-		role_binds[group_id]["0"] = str(role.id)
+		role_binds[group_id]["0"] = {"roles": [role.id], "nickname": None}
 
 		await r.table("guilds").insert({
 			"id": guild_id,

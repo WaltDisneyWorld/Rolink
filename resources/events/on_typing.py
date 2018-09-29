@@ -1,31 +1,51 @@
-from resources.modules.roblox import clear_user_from_cache, give_roblox_stuff
-from resources.modules.utils import is_premium
-from asyncio import sleep
+from asyncio import sleep, TimeoutError
+from discord.errors import NotFound
+from discord import Member
 
-cache = []
+from resources.module import get_module
+clear_user_from_cache, give_roblox_stuff = get_module("roblox", attrs=[
+	"clear_user_from_cache",
+	"give_roblox_stuff"
+	]
+)
+is_premium = get_module("utils", attrs=["is_premium"])
+
+from resources.exceptions import BloxlinkException
+from aiohttp.client_exceptions import ClientOSError
 
 
+class OnTyping:
+	def __init__(self, **kwargs):
+		self.client = kwargs.get("client")
+		self.loop = self.client.loop
+		self.r = kwargs.get("r")
 
-async def cache_loop():
-	while True:
-		global cache
-		cache = []
+	async def setup(self):
 
-		await sleep(300)
+		@self.client.event
+		async def on_typing(channel, user, when):
 
-async def setup(client, *args, **kwargs):
-	loop = client.loop
-	loop.create_task(cache_loop())
-	r = kwargs.get("r")
+			if not isinstance(user, Member):
+				return
 
-	@client.event
-	async def on_typing(channel, user, when):
-		await clear_user_from_cache(author=user)
+			if user.bot:
+				return
 
-		if await is_premium(channel.guild):
+			await clear_user_from_cache(author=user)
 
-			guild_data = await r.table("guilds").get(str(channel.guild.id)).run() or {}
-			persist_roles = guild_data.get("persistRoles")
+			try:
 
-			if persist_roles:
-				await give_roblox_stuff(user, complete=True)
+				is_p, _, _, _ , _ = await is_premium(guild=channel.guild)
+
+				if is_p:
+					guild_data = await self.r.table("guilds").get(str(channel.guild.id)).run() or {}
+					persist_roles = guild_data.get("persistRoles")
+
+					if persist_roles:
+						await give_roblox_stuff(user, complete=True)
+
+			except (NotFound, TypeError, BloxlinkException, ClientOSError, TimeoutError):
+				pass
+
+def new_module():
+	return OnTyping

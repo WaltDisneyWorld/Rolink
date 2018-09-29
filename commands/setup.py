@@ -2,8 +2,11 @@ import asyncio
 from discord import Embed
 from discord.errors import Forbidden
 from discord.utils import find
-from resources.modules.roblox import get_group
-from resources.modules.utils import post_event
+from config import TEMPLATES as templates
+
+from resources.module import get_module
+post_event = get_module("utils", attrs=["post_event"])
+get_group = get_module("roblox", attrs=["get_group"])
 
 
 in_prompt = {}
@@ -72,11 +75,7 @@ prompts = [
 	},
 	{
 		"prompt": "Would you like to set a nickname for new members that join your server?\nAvailable " \
-			"templates: ```\n{roblox-name} --> changes to their ROBLOX Username\n{discord-name} " \
-			"--> changes to their Discord username\n{discord-nick} --> changes to their " \
-			"server display name\n{roblox-id} --> changes to their ROBLOX ID\n" \
-			"{group-rank} --> changes to their current rank in the linked group\n{clan-tag} --> " \
-			"allows the user to specify a clan-tag with !clantag```" \
+			f"templates: ```{templates}```" \
 			"\n\nPlease say the nickname template that you would like to use. You can " \
 			"use multiple.\n",
 		"validation": nickname_validation,
@@ -184,7 +183,7 @@ async def setup(**kwargs):
 				"\n\nSay ``cancel`` to cancel setup.**")
 
 
-			await response.send(embed=embed, dm=True)
+			await response.send(embed=embed, dm=True, no_dm_post=True)
 
 			try:
 				msg = await client.wait_for("message", check=lambda m: m.author == author and not m.guild, timeout=200.0)
@@ -209,7 +208,7 @@ async def setup(**kwargs):
 							"more features on the bot, such as automatically verifying " \
 							"users when they enter the server, or to lock your server to " \
 							"a specific group.\n\nYou may donate here: <https://selly.gg/u/bloxlink/>** ")
-						await response.send(embed=embed, dm=True)
+						await response.send(embed=embed, dm=True, no_dm_post=True)
 
 					if group_id[0] != "0" and group_id[1] != "skipped":
 						group = await get_group(group_id[0])
@@ -221,11 +220,12 @@ async def setup(**kwargs):
 								sorted_roles = sorted(group.roles, key=lambda role: role["Rank"], reverse=True)
 
 								if role_management[0] == "replace" and role_management[1] != "skipped":
-									for role in guild.roles:
-										if not role.is_default():
+									for role in list(guild.roles):
+										if not (role in guild.me.roles or role.is_default()):
 											try:
 												await role.delete(reason="Replace option during setup")
 											except Forbidden:
+												
 												await post_event(
 													"error",
 													f"Failed to delete role {role.mention}. Please ensure I have " \
@@ -233,7 +233,8 @@ async def setup(**kwargs):
 													guild=guild,
 													color=0xE74C3C
 												)
-												continue
+												
+												
 
 								for rank in sorted_roles:
 									name = rank["Name"]

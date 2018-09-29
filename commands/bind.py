@@ -1,3 +1,9 @@
+from config import TEMPLATES, DONATOR_EMBED
+
+from resources.module import get_module
+is_premium = get_module("utils", attrs=["is_premium"])
+
+
 async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
@@ -30,22 +36,36 @@ async def setup(**kwargs):
 			"type": "string",
 			"name": "ranks",
 			"min": 1,
-			"max": 20
+			"max": 40
+		},
+		{
+			"prompt": "Would you like these members to receive a custom nickname?\nPlease say ``skip`` to skip this setting; " \
+				f"otherwise, specify a nickname using this template: ```{TEMPLATES}```",
+			"type": "string",
+			"name": "nickname",
+			"min": 1,
+			"max": 32,
+			"ignoreFormatting": True
 		}
-	], aliases=["newbind", "binds"])
+	], aliases=["newbind", "binds"], examples=[
+		"bind",
+		"bind 1337 | cool people | 1, 2, 3, 5-8 | skip"
+	])
 	async def setup_command(message, response, args, prefix):
 		"""create a new group bind"""
+
+		guild = message.guild
 
 		group_id = str(args.parsed_args["group"])
 		role = args.parsed_args["role"]
 		ranks = (args.parsed_args["ranks"].replace(" ", "")).split(",")
 
-		guild_id = str(message.guild.id)
+		guild_id = str(guild.id)
 
 		new_ranks = []
 
 		if (len(ranks) == 1 and not "-" in ranks[0]) or ranks[0][0] == "-":
-			if ranks[0][0] == "guest" or ranks[0][0] == "0":
+			if ranks[0] == "guest" or ranks[0] == "0":
 				new_ranks.append("0")
 			else:
 				new_ranks.append(ranks[0])
@@ -77,13 +97,14 @@ async def setup(**kwargs):
 					elif not x2:
 						return await response.error("{} is not a number.".format(x[1]))
 
-					if x2-x1 > 10:
+					if x2-x1 > 256:
 						return await response.error("Too many numbers in range.")
 
 					for y in range(x1, x2+1):
 						new_ranks.append(str(y))
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
+		is_p, _, _, _ , _ = await is_premium(guild=guild)
 
 		if isinstance(role_binds, list):
 			role_binds = role_binds[0]
@@ -91,14 +112,50 @@ async def setup(**kwargs):
 		role_binds[group_id] = role_binds.get(group_id) or {}
 
 		for x in new_ranks:
-			role_binds[group_id][x] = str(role.id)
+			rank = role_binds[group_id].get(x, {})
 
-		if len(role_binds) > 10:
-			return await response.error("No more than 10 bounded groups are allowed.")
-		elif len(role_binds[group_id]) > 30:
-			return await response.error("**Too many binds** for group ``{}``.".format(
-				group_id
-			))
+			if not isinstance(rank, dict):
+				rank = {"nickname": args.parsed_args["nickname"].lower() != "skip" and args.parsed_args["nickname"] or None, "roles": [str(rank)]}
+				if str(role.id) not in rank["roles"]:
+					rank["roles"].append(str(role.id))
+			else:
+				if not str(role.id) in rank.get("roles", []):
+					rank["roles"] = rank.get("roles") or []
+					rank["roles"].append(str(role.id))
+
+					if args.parsed_args["nickname"].lower() != "skip":
+						rank["nickname"] = args.parsed_args["nickname"]
+					else:
+						if not rank.get("nickname"):
+							rank["nickname"] = None
+
+			role_binds[group_id][x] = rank
+
+		if len(role_binds) > 15:
+
+			if not is_p:
+				await response.error("No more than 15 bounded groups are allowed. **Bloxlink " \
+					"Premium** users can link up to 50 groups.")
+
+				return await response.send(embed=DONATOR_EMBED)
+
+			else:
+				if len(role_binds) > 50:
+					return await response.error("Sorry! You've reached the **50** group limit. You " \
+						"need to delete some to add more.")
+
+		if len(role_binds[group_id]) > 50:
+
+			if not is_p:
+				await response.error("No more than 50 binds are allowed per group. **Bloxlink " \
+					"Premium** users can bind up to 255 ranks per group.")
+				return await response.send(embed=DONATOR_EMBED)
+
+			else:
+
+				if len(role_binds) > 255:
+					return await response.error("Sorry! You've reached the **255** bind limit. You " \
+						"need to delete some to add more.")
 
 		await r.table("guilds").insert({
 			"id": guild_id,
@@ -108,5 +165,4 @@ async def setup(**kwargs):
 		await response.success("Successfully **bounded** rank ID(s): ``{}`` with discord role **{}!**".format(
 			", ".join(new_ranks),
 			role.name
-
 		))

@@ -3,6 +3,7 @@ class Command:
 		self.name = name or func.__name__
 		self.subcommands = {}
 		self.description = func.__doc__ or "N/A"
+		self.full_description = kwargs.get("full_description") or func.__doc__ or "N/A"
 		self.aliases = kwargs.get("alias") or kwargs.get("aliases") or list()
 		self.permissions = kwargs.get("permissions", dict())
 		self.arguments = kwargs.get("arguments") or kwargs.get("args") or list()

@@ -8,13 +8,13 @@ class Response:
 		self.command = command
 		self.guild = message.guild
 
-	async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False):
+	async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None):
 		channel = dm and self.author or self.channel
 
 		if embed and not dm and not embed.color:
 			embed.color = self.guild.me.color
 		try:
-			msg = await channel.send(embed=embed, content=content)
+			msg = await channel.send(embed=embed, content=content, files=files)
 			if dm and not no_dm_post:
 				await self.channel.send(self.author.mention + ", **check your DMs!**")
 			return msg
@@ -26,7 +26,7 @@ class Response:
 				if embed and dm:
 					embed.color = self.guild.me.color
 
-				return await channel.send(content=on_error or content, embed=embed)
+				return await channel.send(content=on_error or content, embed=embed, files=files)
 			except Forbidden:
 				try:
 					if dm:
@@ -35,7 +35,7 @@ class Response:
 					else:
 						await self.author.send(f'You attempted to use command {self.command} in '
 						f'{self.channel.mention}, but I was unable to post there. ' \
-							"You may need to grant me the ``Embed Links`` permission.")
+							"You may need to grant me the ``Embed Links`` permission.", files=files)
 					return False
 
 				except Forbidden:

@@ -1,19 +1,19 @@
 import traceback
 import logging
-from resources.modules.utils import log_error
-from resources.storage import get
 
+from resources.module import get_module
+log_error = get_module("utils", attrs=["log_error"])
 
-client = get("client")
-loop = client.loop
 
 log = logging.getLogger()
 
+class OnError:
+	def __init__(self, **kwargs):
+		client = kwargs.get("client")
 
+		@client.event
+		async def on_error(event, *args, **kwargs):
+			error = traceback.format_exc()
+			log.exception(error)
 
-@client.event
-async def on_error(event, *args, **kwargs):
-	error = traceback.format_exc()
-	log.exception(error)
-
-	await log_error(error, f'Uncaught Exception: {event}')
+			await log_error(error, f'Uncaught Exception: {event}')

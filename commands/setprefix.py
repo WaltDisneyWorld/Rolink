@@ -7,7 +7,9 @@ async def setup(**kwargs):
 		"name": "new_prefix",
 		"type": "string",
 		"optional": True
-	}], permissions={"raw": "manage_guild"})
+	}], permissions={"raw": "manage_guild"}, examples=[
+		"setprefix !!"
+	])
 	async def setprefix(message, response, args, prefix):
 		"""set the prefix used for Bloxlink commands. The bot will stop listening to the old prefix. Leave the value blank to revert to the original."""
 

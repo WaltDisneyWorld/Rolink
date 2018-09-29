@@ -10,7 +10,7 @@ services:
       - "28015:28015"
       - "29015:29015"
     volumes:
-      - /data/rethinkdb_data
+      - /data:/data
     command: rethinkdb --bind all --initial-password ${RETHINKDB_PW}
 
   nginx-rproxy-auth:
@@ -33,10 +33,32 @@ services:
     container_name: bloxlink
     restart: always
     environment: 
-      - RELEASE=1
+      - RELEASE=MAIN
     ports:
       - "8000:8000"
     volumes:
       - /usr/src/bloxlink
+    depends_on:
+      - rethinkdb
+
+  bloxlink_pro:
+    image: ${IMAGE}
+    container_name: bloxlink_pro
+    restart: always
+    environment: 
+      - RELEASE=PRO
+    volumes:
+      - /usr/src/bloxlink_pro
+    depends_on:
+      - rethinkdb
+
+  bloxlink_canary:
+    image: ${IMAGE}
+    container_name: bloxlink_canary
+    restart: always
+    environment: 
+      - RELEASE=CANARY
+    volumes:
+      - /usr/src/bloxlink_canary
     depends_on:
       - rethinkdb

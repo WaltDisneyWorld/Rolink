@@ -113,3 +113,4 @@ config.py
 assets/
 .env
 docker-build.py
+archive/

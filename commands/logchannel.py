@@ -25,7 +25,6 @@ async def setup(**kwargs):
 	async def logchannel(message, response, args, prefix):
 		"""subscribes to Bloxlink events"""
 
-		author = message.author
 		guild = message.guild
 
 		choice = args.parsed_args["choice"]

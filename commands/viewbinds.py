@@ -1,6 +1,8 @@
 from discord import Embed
 from discord.utils import find
-from resources.modules.roblox import get_group
+
+from resources.module import get_module
+get_group = get_module("roblox", attrs=["get_group"])
 
 async def setup(**kwargs):
 	command = kwargs.get("command")
@@ -20,26 +22,56 @@ async def setup(**kwargs):
 		embed = Embed(title="Bloxlink Binds")
 
 		if not role_binds:
-			embed = Embed(title="Bloxlink Binds", description="You have no binds! Say ``!bind``" \
+			embed = Embed(title="Bloxlink Binds", description=f"You have no binds! Say ``{prefix}bind``" \
 				" to make a new bind.")
 			return await response.send(embed=embed)
 
-		for group_id, bind in role_binds.items():
+		for group_id, bind in dict(role_binds).items():
 			binds = []
 
-			for rank, role_id in bind.items():
+			for rank, data in bind.items():
+				roles = []
+
+				if not isinstance(data, dict):
+					data = {"nickname": None, "roles": [str(data)]}
+
 				rank = ((rank == "0" or rank == "guest") and "Guest Role") or rank
-				role = find(lambda r: r.id == int(role_id), guild.roles)
-				role_name = role and role.name or "invalid bind (role deleted)"
-				binds.append(f"**Rank:** {rank} ➜ **Role:** {role_name}")
+				role_data = data.get("roles", [])
+
+				for role_id in role_data:
+					role = find(lambda r: r.id == int(role_id), guild.roles)
+
+					if role and role.name:
+						roles.append(role.name)
+					else:
+						role_data.remove(role_id)
+						if not role_data:
+							role_binds.pop(group_id, None)
+							guild_data["roleBinds"] = role_binds
+
+							await r.table("guilds").insert({
+								**guild_data
+							}, conflict="replace").run()
+						else:
+
+							data["roles"] = role_data
+							role_binds[group_id][rank] = data
+
+							await r.table("guilds").get(str(guild.id)).update({
+								"roleBinds": role_binds
+							}).run()
+
+				if roles:
+					binds.append(f'**Rank:** {rank} ➜ **Role(s):** {", ".join(roles)} ➜ ' \
+						f'**Nickname:** {data.get("nickname")}')
 
 			if binds:
 				group = await get_group(group_id)
 
 				if group:
-					embed.add_field(name=f"{group.name} ({group_id})", value="\n".join(binds), inline=False)
+					embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
 
 		embed.set_author(name=guild.name, icon_url=guild.icon_url)
-		embed.set_footer(text="Use !delbind to delete a bind, or !bind to add a new bind.")
+		embed.set_footer(text=f"Use {prefix}delbind to delete a bind, or {prefix}bind to add a new bind.")
 
 		return await response.send(embed=embed)

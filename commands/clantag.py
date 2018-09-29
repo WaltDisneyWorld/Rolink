@@ -1,6 +1,8 @@
-from resources.modules.roblox import get_nickname
-from resources.modules.utils import post_event
 from discord.errors import Forbidden
+
+from resources.module import get_module
+get_nickname = get_module("roblox", attrs=["get_nickname"])
+post_event = get_module("utils", attrs=["post_event"])
 
 async def setup(**kwargs):
 	command = kwargs.get("command")
@@ -15,7 +17,9 @@ async def setup(**kwargs):
 			"max": 10,
 			"optional": True
 		}
-	], category="Account")
+	], category="Account", examples=[
+		"clantag awesome"
+	])
 	async def on_clan_tag(message, response, args, prefix):
 		"""assign a clan tag for the server. Leave the value blank to clear clan tag."""
 

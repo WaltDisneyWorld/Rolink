@@ -87,11 +87,12 @@ async def setup(**kwargs):
 				except:
 					pass
 
-			success_embed = Embed(title="Code Evaluation", color=0x2ECC71)
+			# success_embed = Embed(title="Code Evaluation", color=0x2ECC71)
+
 			if ret is None:
 				if value:
-					success_embed.description = value
-					await response.send(embed=success_embed)
+					# success_embed.description = value
+					await response.send(value[0:2000])
 			else:
-				success_embed.description = f'{value}{ret}'
-				await response.send(embed=success_embed)
+				# success_embed.description = f'{value}{ret}'
+				await response.send(f'{value}{ret}'[0:2000])

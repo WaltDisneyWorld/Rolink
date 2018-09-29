@@ -9,7 +9,10 @@ async def setup(**kwargs):
 			"choices": {"enable", "disable"},
 			"name": "enabled",
 		}
-	], category="Premium", permissions={"raw": "manage_guild"})
+	], category="Premium", permissions={"raw": "manage_guild"}, examples=[
+		"grouplock disable",
+		"grouplock enable"
+	])
 	async def grouplock(message, response, args, prefix):
 		"""locks server joining only to members of your group"""
 

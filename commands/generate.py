@@ -1,6 +1,8 @@
-from resources.modules.utils import generate_code
 from discord import File
 from io import BytesIO
+
+from resources.module import get_module
+generate_code = get_module("utils", attrs=["generate_code"])
 
 
 async def check_number(message, number, previous_args):
@@ -16,16 +18,16 @@ async def setup(**kwargs):
 			"name": "prefix"
 		},
 		{
-			"prompt": "How many codes would you like to generate?",
-			"type": "string",
-			"check": check_number,
-			"name": "num_codes"
-		},
-		{
 			"prompt": "How long should the codes last for?",
 			"type": "string",
 			"check": check_number,
 			"name": "duration"
+		},
+		{
+			"prompt": "How many codes would you like to generate?",
+			"type": "string",
+			"check": check_number,
+			"name": "num_codes"
 		},
 		{
 			"prompt": "How many people can redeem the code?",

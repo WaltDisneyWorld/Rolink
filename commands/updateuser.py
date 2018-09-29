@@ -1,6 +1,9 @@
-from resources.modules.roblox import give_roblox_stuff, get_user
-from resources.modules.utils import post_event
 from discord import Embed
+
+from resources.module import get_module
+give_roblox_stuff, get_user = get_module("roblox", attrs=["give_roblox_stuff", "get_user"])
+post_event = get_module("utils", attrs=["post_event"])
+
 
 
 
@@ -8,7 +11,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	client = kwargs.get("client")
 
-	@command(name="updateuser", category="Administration", permissions={"raw": "manage_guild"},
+	@command(name="updateuser", category="Administration", permissions={"raw": "manage_roles"},
     aliases=["updateroles", "updaterole", "updatemember", "updatenickname", "updatenick"], arguments=[
         {
             "prompt": "Please specify a user to update.",

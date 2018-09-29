@@ -5,3 +5,8 @@ aiodns
 cchardet
 sanic
 bs4
+psutil
+lupa
+ffilupa
+PyJWT
+python-dateutil==2.6.0

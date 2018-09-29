@@ -1,0 +1,119 @@
+Bloxlink | Initializing Module on_member_join
+Bloxlink | Initializing Module prefix
+Bloxlink | Initializing Module guestrole
+Bloxlink | Initializing Module updatemember
+Bloxlink | Initializing Module dynamicroles
+Bloxlink | Initializing Module suspendedrank
+Bloxlink | Initializing Module redeem
+Bloxlink | Initializing Module setprefix
+Bloxlink | Initializing Module autoroles
+Bloxlink | Initializing Module keysearch
+Bloxlink | Initializing Module clantag
+Bloxlink | Initializing Module verifyall
+Bloxlink | Initializing Module autoverify
+Bloxlink | Initializing Module generate
+Bloxlink | Initializing Module sudo
+Bloxlink | Initializing Module getinfo
+Bloxlink | Initializing Module verifychannel
+Bloxlink | Initializing Module setavatar
+Bloxlink | Initializing Module invite
+Bloxlink | Initializing Module grouplock
+Bloxlink | Initializing Module joindm
+Bloxlink | Initializing Module bind
+Bloxlink | Initializing Module bansearch
+Bloxlink | Initializing Module switchuser
+Bloxlink | Initializing Module setup
+Bloxlink | Initializing Module delbind
+Bloxlink | Initializing Module stats
+Bloxlink | Initializing Module settings
+Bloxlink | Initializing Module viewbinds
+Bloxlink | Initializing Module logchannel
+Bloxlink | Initializing Module eval
+Bloxlink | Initializing Module verify
+Bloxlink | Initializing Module donate
+Bloxlink | Initializing Module help
+Bloxlink | Initializing Module blacklist
+Bloxlink | Initializing Module robloxsearch
+Bloxlink | Initializing Module welcomemessage
+Bloxlink | Initializing Module getrole
+Bloxlink | Initializing Module persistroles
+Bloxlink | Initializing Module status
+Bloxlink | Initializing Module ping
+Bloxlink | Initializing Module setaccountage
+Bloxlink | Initializing Module devnote
+Bloxlink | Module on_member_join failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module on_message_edit
+Bloxlink | Module prefix failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module guestrole failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module updatemember failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module dynamicroles failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module suspendedrank failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module redeem failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module setprefix failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module autoroles failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module keysearch failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module clantag failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module verifyall failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module autoverify failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module generate failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module sudo failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module getinfo failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module verifychannel failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module setavatar failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module invite failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module grouplock failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module joindm failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module bind failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module bansearch failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module switchuser failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module setup failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module delbind failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module stats failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module settings failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module viewbinds failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module logchannel failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module eval failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module verify failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module donate failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module help failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module blacklist failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module robloxsearch failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module welcomemessage failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module getrole failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module persistroles failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module status failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module ping failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module setaccountage failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module devnote failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Module on_message_edit failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module on_error
+Bloxlink | Initializing Module on_ready
+Bloxlink | Module on_ready failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module on_guild_join
+Bloxlink | Module on_guild_join failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module on_typing
+Bloxlink | Module on_typing failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module on_message
+Bloxlink | Module on_message failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module queue
+Bloxlink | Module queue failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module lua
+Bloxlink | Initializing Module post_server_count
+Bloxlink | Initializing Module timed_actions
+Bloxlink | Initializing Module database
+Bloxlink | Initializing Module logger
+Bloxlink | Initializing Module roblox
+Bloxlink | Module roblox failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module utils
+Bloxlink | Module utils failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module resolver
+Bloxlink | Initializing Module permissions
+Bloxlink | Initializing Module blacklist
+Bloxlink | Module blacklist failed to load: Could not connect to localhost:28015. Error: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 28015), [Errno 61] Connect call failed ('::1', 28015)
+Bloxlink | Initializing Module commands
+Bloxlink | Initializing Module lua_sandbox
+Bloxlink | Initializing Module api
+Bloxlink | Initializing Module index
+Bloxlink | Initializing Module webhook
+Bloxlink | Initializing Module commands
+Bloxlink | Initializing Module oauth

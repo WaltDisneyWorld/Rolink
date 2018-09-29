@@ -1,9 +1,11 @@
 from asyncio import sleep
 from discord import Embed
 
-from config import HELP, OWNER
+from config import HELP, OWNER, PERMISSION_MAP
 from resources.modules.commands import commands
-from resources.modules.utils import get_files
+
+from resources.module import get_module
+get_files = get_module("utils", attrs=["get_files"])
 
 
 
@@ -25,26 +27,49 @@ async def setup(**kwargs):
 
 			for name, command in commands.items():
 
-				if name.lower() == command_name:
+				if name.lower() == command_name or command_name in command.aliases:
 
-					command_embed = Embed(title=f"!{name}", description=command.description)
+					command_embed = Embed(title=f"{prefix}{name}", description=command.full_description or \
+						command.description)
 					command_embed.set_author(name="Bloxlink", icon_url=client.user.avatar_url)
 
 					command_embed.add_field(name="Category", value=command.category)
 
 					if command.usage:
-						command_embed.add_field(name="Usage", value=f"``!{name} {command.usage}``")
+						command_embed.add_field(name="Usage", value=f"``{prefix}{name} {command.usage}``")
 					else:
-						command_embed.add_field(name="Usage", value=f"``!{name}``")
+						command_embed.add_field(name="Usage", value=f"``{prefix}{name}``")
 
 					if command.aliases:
-						command_embed.add_field(name="Alias", value=", ".join(command.aliases))
+						if len(command.aliases) > 1:
+							command_embed.add_field(name="Aliases", value=", ".join(command.aliases))
+						else:
+							command_embed.add_field(name="Alias", value=", ".join(command.aliases))
 
 					if command.permissions:
-						command_embed.add_field(name="Permissions Required", value=command.permissions)
+						permissions = []
+
+						if command.permissions.get("raw"):
+							if PERMISSION_MAP.get(command.permissions["raw"]):
+								permissions.append(f'Role Permission: {PERMISSION_MAP.get(command.permissions["raw"])}')
+							else:
+								permissions.append(f'Role Permission: {command.permissions["raw"]}')
+
+						if command.permissions.get("owner_only") or command.category == "Developer":
+							permissions.append("Bot Developer Only: True")
+
+						if command.category == "Premium":
+							permissions.append("Premium Command")
+
+						command_embed.add_field(name="Permissions Required", value="\n".join(permissions))
 
 					if command.examples:
-						command_embed.add_field(name="Examples", value=", ".join(command.examples))
+						examples = []
+
+						for example in command.examples:
+							examples.append(f"{prefix}{example}")
+
+						command_embed.add_field(name="Examples", value=f"\n".join(examples))
 
 					return await response.send(embed=command_embed)
 

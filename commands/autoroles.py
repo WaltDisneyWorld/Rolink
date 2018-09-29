@@ -9,7 +9,9 @@ async def setup(**kwargs):
 			"choices": {"enable", "disable"},
 			"name": "enabled",
 		}
-	], category="Premium", permissions={"raw": "manage_guild"})
+	], category="Administration", permissions={"raw": "manage_guild"}, examples=[
+		"autoroles enable", "autoroles disable"
+	])
 	async def autoroles(message, response, args, prefix):
 		"""gives _all_ roles for each member that joins the server"""
 

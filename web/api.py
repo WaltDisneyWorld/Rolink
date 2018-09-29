@@ -1,3 +1,5 @@
+"""
+# FIXME
 from asyncio import get_event_loop, ensure_future
 from sanic import Sanic
 from resources.storage import get
@@ -17,7 +19,9 @@ async def register_routes():
 		await new_module(directory, file_name)
 
 
+
 server = app.create_server(host=web["API"]["HOST"], port=web["API"]["PORT"])
 loop = get_event_loop()
 loop.create_task(register_routes())
 task = ensure_future(server)
+"""

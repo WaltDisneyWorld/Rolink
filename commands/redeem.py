@@ -1,4 +1,5 @@
-from resources.modules.utils import redeem_code
+from resources.module import get_module
+redeem_code = get_module("utils", attrs=["redeem_code"])
 
 async def setup(**kwargs):
 	command = kwargs.get("command")
@@ -19,6 +20,9 @@ async def setup(**kwargs):
 
 		if days == -1:
 			await response.error("Cannot redeem code: you **already** have a **lifetime** subscription!")
+		elif days == -2:
+			await response.error("Cannot redeem key: tier levels don't match. You must first transfer " \
+				f"your subscription with ``{prefix}transfer``.")
 		elif days == 0:
 			await response.success("You now have **lifetime** premium!")
 		elif already_redeemed:

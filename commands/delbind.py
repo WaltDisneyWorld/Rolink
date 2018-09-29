@@ -1,6 +1,8 @@
 from discord import Embed
 from discord.utils import find
-from resources.modules.roblox import get_group
+
+from resources.module import get_module
+get_group = get_module("roblox", attrs=["get_group"])
 
 async def setup(**kwargs):
 	command = kwargs.get("command")
@@ -35,10 +37,18 @@ async def setup(**kwargs):
 		group_id = str(args.parsed_args["group"])
 		rank = args.parsed_args["rank"]
 
+		is_num = False
+
+		try:
+			int(rank)
+			is_num = True
+		except ValueError:
+			pass
+
 		if not role_binds.get(group_id):
 			return await response.error("A bind for this group ID does not exist.")
 
-		if ((rank.isdigit() and rank != "0") or rank == "all"):
+		if ((is_num and rank != "0") or rank == "all" or ""):
 			if not role_binds.get(group_id, {}).get(rank):
 				return await response.error("A binding with this group/rank combination does not exist.")
 
@@ -48,6 +58,8 @@ async def setup(**kwargs):
 			await r.table("guilds").insert({
 				**guild_data
 			}, conflict="replace").run()
+
+			return await response.success("Successfully **deleted** this bind.")
 
 		elif rank == "guest" or rank == "0":
 			if not role_binds.get(group_id, {}).get("guest") and not role_binds.get(group_id, {}).get("0"):

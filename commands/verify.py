@@ -1,62 +1,111 @@
-from resources.modules.roblox import generate_code, check_username, \
-	validate_code, verify_member, get_user, mass_filter, give_roblox_stuff
-from resources.modules.utils import post_event
+from discord.errors import Forbidden
+from discord import File
+from os import getcwd
 
+from resources.module import get_module
+generate_code, check_username, validate_code, verify_member, \
+get_user, mass_filter, give_roblox_stuff, get_nickname = get_module("roblox", attrs=[
+	"generate_code",
+	"check_username",
+	"validate_code",
+	"verify_member",
+	"get_user",
+	"mass_filter",
+	"give_roblox_stuff",
+	"get_nickname"]
+)
+post_event = get_module("utils", attrs=["post_event"])
 
 async def validate_username(message, username, previous_args):
 	username_check = await check_username(username)
 	return username_check, not username_check and "Username not found"
 
-
-async def roblox_prompts(message, response, args, guild=None):
-	author = message.author
-	guild = guild or author.guild
-	code = await generate_code()
-	parsed_args, is_cancelled = await args.call_prompt([
-		{
-			"name": "name",
-			"prompt": ":question: What's your Roblox Username?",
-			"check": validate_username
-		},
-		{
-			"name": "default",
-			"type": "choice",
-			"choices": ["yes", "no"],
-			"prompt": ":question: Would you like to set this as your default Roblox account?",
-		},
-		{
-			"name": "done",
-			"prompt": "Hello, **{name}!** To confirm that you own this Roblox account, please " \
-				f'put this code on your profile: ``{code}``\n\nThen say **done** to continue.',
-			"type": "choice",
-			"choices": ["done"],
-		}
-	])
-
-	if not is_cancelled:
-		success = await validate_code(parsed_args["name"], code)
-		if success:
-			await response.success("You're now linked to the bot!")
-			await verify_member(author, str(args.checked_args["name"].id), primary_account=parsed_args["default"] == "yes")
-
-			user, _ = await get_user(author=author)
-			await user.fill_missing_details()
-
-			await verified(author, user, guild)
-		else:
-			await response.error("Could not find the code on your profile. Please run this command " \
-				"again and try again.")
-
 async def verified(author, roblox_user, guild=None):
-	guild = guild or author.guild
+	guild = guild or (hasattr(author, "guild") and author.guild)
 
 	if roblox_user.is_verified:
 		await post_event("verify", f"{author.mention} is now verified as **{roblox_user.username}.**", guild=guild, color=0x2ECC71)
 		await give_roblox_stuff(author, roblox_user=roblox_user, complete=True)
 
+async def roblox_prompts(author, channel, response, args, guild=None, verify_as=None):
+	guild = guild or (hasattr(author, "guild") and author.guild)
+
+	code = await generate_code()
+
+	prompts = [
+		{
+			"name": "default",
+			"type": "choice",
+			"choices": ["yes", "no"],
+			"prompt": ":question: Would you like to set this as your default Roblox account?",
+		}	
+	]
+
+	if not verify_as:
+		prompts.insert(0, {
+			"name": "name",
+			"prompt": ":question: What's your Roblox Username?",
+			"check": validate_username
+		})
+
+	parsed_args, is_cancelled = await args.call_prompt(prompts)
+
+	if not is_cancelled:
+
+		user = verify_as and await get_user(username=verify_as) or args.checked_args["name"]
+
+		if isinstance(user, tuple):
+			user = user[0]
+
+		if user:
+			await user.fill_missing_details()
+
+			if not user.is_verified:
+				return await response.error("This Roblox account does not exist. Please try again.")
+		else:
+			return await response.error("This Roblox account does not exist. Please try again.")
+
+		if not is_cancelled:
+
+			try:
+				await channel.send(
+					file=File(f"{getcwd()}/assets/verify_help.png", filename="verify_help.png")
+				)
+			except Forbidden:
+				try:
+					await channel.send("https://cdn.discordapp.com/attachments/480614508633522176/480614556360507402/unknown.png")
+				except Forbidden:
+					pass
+
+			_, is_cancelled = await args.call_prompt([
+				{
+					"name": "done",
+					"type": "choice",
+					"choices": ["done"],
+					"prompt": f'Hello, **{user.username}!** To confirm that you own this Roblox account, please ' \
+						f'go here: <https://www.roblox.com/my/account> and put this code on your **profile or status**:\n```{code}```\n\n' \
+						"Refer to the attachment for instructions." \
+						"\n\nThen say **done** to continue.",
+				}
+			])
+
+
+			success = await validate_code(user.username, code)
+
+			if not is_cancelled:
+				if success:
+					await response.success(f"You're now linked to Bloxlink as **{user.username}**!")
+					await verify_member(author, user.id, primary_account=parsed_args["default"] == "yes")
+
+					await verified(author, user, guild)
+
+				else:
+					await response.error("Could not find the code on your profile. Please run this command " \
+						"again and try again.")
 
 async def setup(**kwargs):
 	command = kwargs.get("command")
+	r = kwargs.get("r")
 
 	@command(name="verify", flags=["force"], category="Account", flags_enabled=True)
 	async def verify(message, response, args, prefix):
@@ -64,48 +113,62 @@ async def setup(**kwargs):
 
 		author = message.author
 		guild = message.guild
+		channel = message.channel
 
-		force_flag = args.flags.get("force") or args.flags.get("f") or args.flags.get("new") \
-			or args.flags.get("add")
+		if args.flags.get("add") or args.flags.get("force") or args.flags.get("new") or \
+			args.flags.get("f") or args.flags.get("a") or args.flags.get("n"):
 
-		if force_flag:
-			await roblox_prompts(message, response, args, guild)
+			await roblox_prompts(author, channel, response, args, guild)
+
+		elif args.args and "-" not in args.args[0]:
+			account = args.args[0]
+
+			_, accounts = await get_user(author=author)
+
+			if accounts:
+				parsed_accounts, parsed_users = await mass_filter(accounts)
+
+				for parsed_account in parsed_accounts:
+					if account.lower() == parsed_account.lower():
+						roles = list(author.roles)
+						roles.remove(guild.default_role)
+
+						real_account = parsed_users[parsed_accounts.index(parsed_account)]
+
+						await verify_member(author, real_account, guild=guild, primary_account=False)
+
+						try:
+							await author.remove_roles(*roles, reason="Switched User— cleaning their roles")
+						except Forbidden:
+							await post_event(
+								"error",
+								f"Failed to delete roles from {author.mention}. Please ensure I have " \
+									"the ``Manage Roles`` permission, and drag my role above the other roles.",
+								guild=guild,
+								color=0xE74C3C
+							)
+
+						await verified(author, real_account, guild)
+
+						return await response.success(f"You're now verified as **{real_account.username}!**")
+
+			await roblox_prompts(author, channel, response, args, guild, verify_as=account)
+
 		else:
-			user, accounts = await get_user(author=author)
+			user, _ = await get_user(author=author)
+
 			if user:
 				await user.fill_missing_details()
-				msg = await response.success("Welcome to " + guild.name + ", **" + user.username + "!**")
-				await verified(author, user, guild)				
-			elif accounts:
-				parsed_accounts, parsed_users = await mass_filter(accounts)
-				if parsed_accounts:
-					parsed_accounts_text = ", ".join(parsed_accounts) + "\n"
-					args, is_cancelled = await args.call_prompt([
-						{
-							"name": "chosen_account",
-							"type": "choice",
-							"choices": parsed_accounts,
-							"prompt": ":exclamation: No default Roblox account set\n\nWhich account would you like to verify as?\n\n**Please pick one: **" \
-								+ parsed_accounts_text
-						},
-						{
-							"name": "default",
-							"type": "choice",
-							"choices": ["yes", "no"],
-							"prompt": ":question: Would you like to set this as your **default** Roblox account from now on?"
-						}
-					])
-					if not is_cancelled:
-						chosen = args["chosen_account"]
 
-						await verify_member(author, parsed_users[parsed_accounts.index(chosen)], primary_account=args["default"] == "yes")
-						await response.success("Welcome to " + guild.name + ", **" + chosen + "!**")
+				guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
 
-						user, _ = await get_user(author=author)
+				verify_message = guild_data.get("welcomeMessage",
+					"Welcome to {server-name}, **{roblox-name}!**")
+				resolved_message = await get_nickname(author=author, roblox_user=user,
+						guild_data=guild_data, template=verify_message, ignore_trim=True)
 
-						if user:
-							await verified(author, user, guild)
-				else:
-					await roblox_prompts(message, response, args, guild)
+				await response.send(resolved_message)
+				await verified(author, user, guild)
+
 			else:
-				await roblox_prompts(message, response, args, guild)
+				await roblox_prompts(author, channel, response, args, guild)

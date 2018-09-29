@@ -1,4 +1,5 @@
-from resources.modules.commands import parse_message
+from resources.module import get_module
+parse_message = get_module("commands", attrs=["parse_message"])
 
 
 

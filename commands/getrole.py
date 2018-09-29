@@ -1,6 +1,9 @@
 from discord.errors import Forbidden
 from discord import Embed
-from resources.modules.roblox import get_roles, get_user, give_roblox_stuff
+
+from resources.module import get_module
+get_user, give_roblox_stuff = get_module("roblox", attrs=["get_user", "give_roblox_stuff"])
+parse_message = get_module("commands", attrs=["parse_message"])
 
 
 async def setup(**kwargs):
@@ -12,7 +15,7 @@ async def setup(**kwargs):
 
 		author = message.author
 
-		primary_account, _ = await get_user(author=message.author)
+		primary_account, accounts = await get_user(author=message.author)
 
 		if primary_account:
 
@@ -35,7 +38,10 @@ async def setup(**kwargs):
 
 			await response.send(embed=embed)
 
+		elif not accounts:
+			message.content = f"{prefix}verify"
+			return await parse_message(message)
 
 		else:
-			await response.error("You must set a primary account!\nPlease say ``!switchaccount`` " \
+			await response.error("You must set a primary account!\nPlease say ``{prefix}switchaccount`` " \
 				"and pick one.")

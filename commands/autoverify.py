@@ -9,7 +9,9 @@ async def setup(**kwargs):
 			"choices": {"enable", "disable"},
 			"name": "enabled",
 		}
-	], category="Administration", permissions={"raw": "manage_guild"})
+	], category="Administration", permissions={"raw": "manage_guild"}, examples=[
+		"autoverify enable", "autoverify disable"
+	])
 	async def autoverify(message, response, args, prefix):
 		"""gives verified role/nickname to new members"""
 
