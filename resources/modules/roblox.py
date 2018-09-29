@@ -5,7 +5,6 @@ import aiohttp
 from discord.utils import find
 from config import WORD, RETRY_AFTER
 from discord.errors import Forbidden
-#from resources.structures.RobloxUser import RobloxUser
 from resources.structures.RobloxUser import RobloxUser, RobloxUserInit
 from resources.structures.Group import Group
 from random import choice, randint
@@ -16,8 +15,7 @@ from resources.exceptions import RobloxAPIError, PermissionError, GroupNotFound
 from aiohttp.client_exceptions import ClientOSError
 
 from resources.module import get_module
-post_event, post_event = get_module("utils", attrs=["post_event", "post_event"])
-#RobloxUser = get_module("RobloxUser", "resources.structures")
+post_event, is_premium = get_module("utils", attrs=["post_event", "is_premium"])
 
 
 api_url = "https://api.roblox.com/"
@@ -1007,7 +1005,6 @@ class Roblox:
 
 		try:
 			response = json.loads(text)
-
 			return response
 
 		except json.decoder.JSONDecodeError:
@@ -1040,21 +1037,40 @@ class Roblox:
 		else:
 			return group
 
-	async def get_note(self, roblox_id=None):
-		note = await self.r.table("notes").get(roblox_id).run()
+	async def get_note(self, author=None, roblox_id=None, roblox_user=None):
+		notes = []
 
-		if note:
-			return note.get("note")
-		else:
+		if roblox_id:
 			# check bloxlink group for rank
 
-			user = RobloxUser(id=roblox_id)
-			await user.fill_missing_details()
+			note = await self.r.table("notes").get(roblox_id).run()
+			if note:
+				note = note.get("note")
+				if note:
+					notes.append(note)
 
-			if user.groups.get("3587262"):
-				group = user.groups.get("3587262")
+			if roblox_user:
+				user = roblox_user
+			else:
+				user, _ = await self.get_user(id=roblox_id)
+				if user:
+					await user.fill_missing_details()
 
-				return group.user_role in ("Mods", "Helpers") and "Bloxlink Staff"
+			if user:
+
+				if user.groups.get("3587262"):
+					group = user.groups.get("3587262")
+					note = group.user_role in ("Mods", "Helpers") and "Bloxlink Staff"
+
+					if note:
+						notes.append(note)
+
+		if author:
+			is_p, _, _, _ , _ = await is_premium(author=author)
+			if is_p:
+				notes.append("Bloxlink Donator")
+
+		return notes
 
 
 	@staticmethod

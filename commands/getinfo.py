@@ -29,7 +29,7 @@ async def setup(**kwargs):
 			primary_account, accounts = await get_user(author=user)
 			guild = message.guild
 
-			note = None
+			notes = []
 
 			if accounts or primary_account:
 
@@ -54,7 +54,7 @@ async def setup(**kwargs):
 
 					if primary_account.is_verified:
 						id = primary_account.id
-						note = await get_note(roblox_id=id)
+						notes = await get_note(user, roblox_id=id, roblox_user=primary_account)
 
 						if primary_account.is_banned:
 							embed.add_field(name="Username", value=f"~~{primary_account.username}~~")
@@ -105,8 +105,8 @@ async def setup(**kwargs):
 						embed.add_field(name="Other accounts", value= ", ".join(parsed_accounts))
 				"""
 
-				if note:
-					embed.add_field(name="Official Note", value=note)
+				if notes:
+					embed.add_field(name="User Title", value="\n".join(notes))
 
 				await response.send(embed=embed)
 
