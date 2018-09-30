@@ -21,13 +21,6 @@ post_event, is_premium = get_module("utils", attrs=["post_event", "is_premium"])
 api_url = "https://api.roblox.com/"
 base_url = "https://roblox.com/"
 
-roblox_cache = {
-	"users": {},
-	"author_users": {},
-	"groups": {},
-	"roblox_ids_to_usernames": {},
-	"usernames_to_roblox_ids": {}
-}
 
 async def fetch(session, url, raise_on_failure=True, retry=RETRY_AFTER):
 	try:
@@ -56,6 +49,14 @@ class Roblox:
 	def __init__(self, **kwargs):
 		self.r = kwargs.get("r")
 		self.session = kwargs.get("session")
+		self.client = kwargs.get("client")
+		self.roblox_cache = {
+			"users": {},
+			"author_users": {},
+			"groups": {},
+			"roblox_ids_to_usernames": {},
+			"usernames_to_roblox_ids": {}
+		}
 		RobloxUserInit(self)
 
 	async def generate_code(self):
@@ -72,16 +73,16 @@ class Roblox:
 		return " lol ".join(words)
 
 	async def validate_code(self, username, code):
-		user_cache = roblox_cache["users"].get(username.lower())
+		user_cache = self.roblox_cache["users"].get(username.lower())
 
 		if user_cache:
 			id_ = user_cache.id
 		else:
-			id_ = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+			id_ = self.roblox_cache["usernames_to_roblox_ids"].get(username.lower())
 
 			if not id_:
 				username_, id_ = await self.get_id_from_api(username)
-				roblox_cache["usernames_to_roblox_ids"][username_.lower()] = (id_, username)
+				self.roblox_cache["usernames_to_roblox_ids"][username_.lower()] = (id_, username)
 			else:
 				id_ = id_[0]
 		if id_:
@@ -92,14 +93,14 @@ class Roblox:
 			if code in response:
 				user = RobloxUser(username=username, id=id_)
 				await user.fill_missing_details()
-				roblox_cache["users"][username.lower()] = user
+				self.roblox_cache["users"][username.lower()] = user
 
 				return True
 
 		return False
 	
 	async def get_id_from_api(self, username):
-		user = roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+		user = self.roblox_cache["usernames_to_roblox_ids"].get(username.lower())
 		if user:
 			return user[1], user[0]
 
@@ -114,7 +115,7 @@ class Roblox:
 			return None, None
 		else:
 			username_, id = response.get("Username"), str(response.get("Id"))
-			roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id, username_)
+			self.roblox_cache["usernames_to_roblox_ids"][username.lower()] = (id, username_)
 			return username_, id
 
 		return None, None
@@ -122,7 +123,7 @@ class Roblox:
 	async def get_username_from_api(self, id):
 		id = str(id)
 
-		user = roblox_cache["roblox_ids_to_usernames"].get(id)
+		user = self.roblox_cache["roblox_ids_to_usernames"].get(id)
 		if user:
 			return user[1], id
 
@@ -135,7 +136,7 @@ class Roblox:
 			return None, None
 		else:
 			username = response.get("Username")
-			roblox_cache["roblox_ids_to_usernames"][id] = (id, username)
+			self.roblox_cache["roblox_ids_to_usernames"][id] = (id, username)
 			return username, str(response.get("Id"))
 
 		return None, None
@@ -172,12 +173,12 @@ class Roblox:
 		user = None
 
 		if username:
-			user = roblox_cache["users"].get(username.lower())
+			user = self.roblox_cache["users"].get(username.lower())
 		elif id:
-			username = roblox_cache["roblox_ids_to_usernames"].get(id)
+			username = self.roblox_cache["roblox_ids_to_usernames"].get(id)
 
 			if username:
-				user = roblox_cache["users"].get(username[1].lower())
+				user = self.roblox_cache["users"].get(username[1].lower())
 				username = username[1]
 
 		if user and user.is_verified:
@@ -336,7 +337,7 @@ class Roblox:
 
 		if author:
 			author_id = str(author.id)
-			user = roblox_cache["author_users"].get(author_id)
+			user = self.roblox_cache["author_users"].get(author_id)
 
 			if user:
 				return user[0], user[1] # user, accounts
@@ -351,11 +352,11 @@ class Roblox:
 					id = str(id)
 
 				if not username:
-					username = roblox_cache["roblox_ids_to_usernames"].get(id)
+					username = self.roblox_cache["roblox_ids_to_usernames"].get(id)
 
 					if username:
-						user = roblox_cache["users"].get(username[1].lower())
-						roblox_cache["author_users"][author_id] = (user, accounts)
+						user = self.roblox_cache["users"].get(username[1].lower())
+						self.roblox_cache["author_users"][author_id] = (user, accounts)
 
 						if user:
 							return user, accounts
@@ -364,8 +365,8 @@ class Roblox:
 				await user.fill_missing_details()
 
 				if user.is_verified:
-					roblox_cache["users"][user.username.lower()] = user
-					roblox_cache["author_users"][author_id] = (user, accounts)
+					self.roblox_cache["users"][user.username.lower()] = user
+					self.roblox_cache["author_users"][author_id] = (user, accounts)
 
 					if guild:
 						if guilds.get(guild_id) == user.id:
@@ -383,8 +384,8 @@ class Roblox:
 						await user.fill_missing_details()
 
 						if user.is_verified:
-							roblox_cache["users"][user.username.lower()] = user
-							roblox_cache["author_users"][author_id] = (user, accounts)
+							self.roblox_cache["users"][user.username.lower()] = user
+							self.roblox_cache["author_users"][author_id] = (user, accounts)
 
 							return user, accounts
 						else:
@@ -395,8 +396,8 @@ class Roblox:
 							await user.fill_missing_details()
 
 							if user.is_verified:
-								roblox_cache["users"][user.username.lower()] = user
-								roblox_cache["author_users"][author_id] = (user, accounts)
+								self.roblox_cache["users"][user.username.lower()] = user
+								self.roblox_cache["author_users"][author_id] = (user, accounts)
 
 								return user, accounts
 
@@ -415,7 +416,7 @@ class Roblox:
 			await user.fill_missing_details()
 
 			if user.is_verified:
-				roblox_cache["users"][user.username.lower()] = user
+				self.roblox_cache["users"][user.username.lower()] = user
 				return user, []
 
 			else:
@@ -486,10 +487,10 @@ class Roblox:
 	async def get_rank(self, roblox_user, group=None, group_id=None):
 		if not group and group_id:
 			group_id = str(group_id)
-			group = roblox_cache["groups"].get(group_id) or Group(id=group_id)
+			group = self.roblox_cache["groups"].get(group_id) or Group(id=group_id)
 
-			if not roblox_cache["groups"].get(group_id):
-				roblox_cache["groups"][group_id] = group
+			if not self.roblox_cache["groups"].get(group_id):
+				self.roblox_cache["groups"][group_id] = group
 
 		elif group and not group_id:
 			group_id = group.id
@@ -1013,7 +1014,7 @@ class Roblox:
 
 	async def get_group(self, group_id):
 		group_id = str(group_id)
-		group = roblox_cache["groups"].get(group_id)
+		group = self.roblox_cache["groups"].get(group_id)
 
 		if (group and not group.roles) or not group:
 
@@ -1029,7 +1030,7 @@ class Roblox:
 					else:
 						group.load_json(**response)
 
-					roblox_cache["groups"][group_id] = group
+					self.roblox_cache["groups"][group_id] = group
 					return group
 
 			except json.decoder.JSONDecodeError:
@@ -1072,14 +1073,11 @@ class Roblox:
 
 		return notes
 
-
-	@staticmethod
-	async def auto_cleanup():
+	async def auto_cleanup(self):
 		while True:
 			await asyncio.sleep(600)
-			global roblox_cache
 
-			roblox_cache = {
+			self.roblox_cache = {
 				"users": {},
 				"author_users": {},
 				"groups": {},
@@ -1090,31 +1088,23 @@ class Roblox:
 	async def clear_user_from_cache(self, author):
 		author_id = str(author.id)
 
-		user = roblox_cache["author_users"].get(author_id)
+		user = self.roblox_cache["author_users"].get(author_id)
 		if user:
-			roblox_cache["author_users"].pop(author_id, None)
+			self.roblox_cache["author_users"].pop(author_id, None)
 
-			user_ = roblox_cache["users"].get(user[0].username.lower())
+			user_ = self.roblox_cache["users"].get(user[0].username.lower())
 
 			if user_:
-				roblox_cache["users"].pop(user[0].username.lower(), None)
+				self.roblox_cache["users"].pop(user[0].username.lower(), None)
 
 			if user[1]:
 				for account in user[1]:
-					if roblox_cache["users"].get(account.lower()):
-						roblox_cache["users"].pop(account.lower(), None)
+					if self.roblox_cache["users"].get(account.lower()):
+						self.roblox_cache["users"].pop(account.lower(), None)
 
-"""
-async def setup(**kwargs):
-	global r
-	global session
+	async def setup(self):
+		await self.auto_cleanup()
 
-	r = kwargs.get("r")
-	session = kwargs.get("session")
-	client = kwargs.get("client")
-
-	client.loop.create_task(auto_cleanup())
-"""
 
 
 def new_module():
