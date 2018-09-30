@@ -12,7 +12,8 @@ class Response:
 		channel = dm and self.author or self.channel
 
 		if embed and not dm and not embed.color:
-			embed.color = self.guild.me.color
+			#embed.color = self.guild.me.color
+			embed.color = 0x36393E
 		try:
 			msg = await channel.send(embed=embed, content=content, files=files)
 			if dm and not no_dm_post:
@@ -23,8 +24,8 @@ class Response:
 			channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
 
 			try:
-				if embed and dm:
-					embed.color = self.guild.me.color
+				#if embed and dm:
+					#embed.color = self.guild.me.color
 
 				return await channel.send(content=on_error or content, embed=embed, files=files)
 			except Forbidden:
@@ -49,7 +50,7 @@ class Response:
 
 		return await self.send(":anguished: " + error, embed=embed, dm=dm, no_dm_post=no_dm_post)
 
-	async def success(self, success, embed=None, embed_color=0x2ECC71, dm=False, no_dm_post=False):
+	async def success(self, success, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
 		if embed and not dm:
 			embed.color = embed_color
 

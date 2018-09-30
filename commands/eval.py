@@ -2,6 +2,7 @@ import io
 import textwrap
 from contextlib import redirect_stdout
 from discord import Embed
+from discord.errors import Forbidden
 import resources.modules.roblox as roblox
 
 # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py
@@ -65,8 +66,12 @@ async def setup(**kwargs):
 		try:
 			exec(to_compile, env)
 		except Exception as e:
-			error_embed = Embed(title=e.__class__.__name__, description=str(e), color=0xE74C3C)
-			await response.send(embed=error_embed)
+				error_embed = Embed(
+					title="Evaluation Error",
+					description=f"```js\n{e.__class__.__name__}: {e}```",
+					color=0xE74C3C
+				)
+				await response.send(embed=error_embed)
 
 		func = env.get("func")
 
@@ -78,7 +83,11 @@ async def setup(**kwargs):
 				with redirect_stdout(stdout):
 					ret = await func()
 			except Exception as e:
-				error_embed = Embed(title=e.__class__.__name__, description=str(e), color=0xE74C3C)
+				error_embed = Embed(
+					title="Evaluation Error",
+					description=f"```js\n{e.__class__.__name__}: {e}```",
+					color=0xE74C3C
+				)
 				await response.send(embed=error_embed)
 			else:
 				value = stdout.getvalue()
@@ -92,7 +101,22 @@ async def setup(**kwargs):
 			if ret is None:
 				if value:
 					# success_embed.description = value
-					await response.send(value[0:2000])
+					success_embed = Embed(
+						title="Evaluation Result",
+						description=f"```py\n{value[0:2000]}```",
+						color=0x36393E
+					)
+					try:
+						await channel.send(embed=success_embed)
+					except Forbidden:
+						await response.send(value[0:2000])
 			else:
-				# success_embed.description = f'{value}{ret}'
-				await response.send(f'{value}{ret}'[0:2000])
+				success_embed = Embed(
+					title="Evaluation Result",
+					description=f"```py\n{value}{ret[0:2000]}```",
+					color=0x36393E
+				)
+				try:
+					await channel.send(embed=success_embed)
+				except Forbidden:
+					await response.send(f'{value}{ret}'[0:2000])

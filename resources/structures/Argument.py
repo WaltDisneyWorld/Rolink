@@ -3,6 +3,7 @@ import re
 from bot import client
 from config import MAX_RETRIES
 from discord.errors import Forbidden, NotFound, DiscordException
+from discord import Embed
 from resources.exceptions import RobloxAPIError
 
 from resources.module import get_module
@@ -45,6 +46,25 @@ class Argument:
 		return flags, flags and content or ""
 
 	@staticmethod
+	async def say_message(channel, message, type="Success"):
+		if type == "Success":
+			embed = Embed(title="Prompt", description=f"{message}\n\nSay **cancel** to cancel.")
+			embed.colour = 0x36393E
+			#embed.set_footer(text="Say 𝐜𝐚𝐧𝐜𝐞𝐥 to cancel.")
+		else:
+			embed = Embed(title="Prompt Error", description=f"{message}\n\nTry again, or say **cancel** to cancel.")
+			embed.colour = 0xE74C3C
+			#embed.set_footer(text="Try again, or say 𝐜𝐚𝐧𝐜𝐞𝐥 to cancel.")
+		try:
+			await channel.send(embed=embed)
+		except Forbidden:
+			try:
+				await channel.send(f"{message}\n\nTry again, or say **cancel** to cancel.")
+			except Forbidden:
+				pass
+
+
+	@staticmethod
 	async def validate_prompt(message, arg, argument_class, parsed_args, skipped_arg=None, flag_str=None):
 		err_msg = None
 
@@ -61,7 +81,7 @@ class Argument:
 				skipped_arg = skipped_arg.rstrip(flag_str).strip()
 
 			resolver = get_resolver(arg.get("type", "string"))
-			
+
 			if skipped_arg in allow:
 				resolved = skipped_arg
 			else:
@@ -103,11 +123,13 @@ class Argument:
 
 		if not success:
 			if err_msg:
-				await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.`` ' \
-					"Try again or say **cancel** to cancel.")
+				desc = f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.``'
+				await Argument.say_message(message.channel, desc, type="Error")
+				#await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.`` ' \
+				#	"Try again or say **cancel** to cancel.")
 			else:
-				await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument. ' \
-					"Try again or say **cancel** to cancel.")
+				desc = f'Invalid **{arg.get("type", "string")}** argument.'
+				await Argument.say_message(message.channel, desc, type="Error")
 
 		return (success and resolved), False
 
@@ -138,21 +160,28 @@ class Argument:
 
 				if skipped_arg:
 					resolved, _ = await Argument.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self, parsed_args=parsed_args)
+				
 					if resolved and resolved is not 0:
 						ctr += 1
 						parsed_args[arg["name"]] = resolved
 					else:
 						success = False
 						failed += 1
+					
 						if failed > MAX_RETRIES:
 							in_prompts[self.author.id] = None
+							
 							await self.channel.send("**Cancelled prompt:** too many invalid arguments.")
 							return None, "too many invalid prompts" 
 						while not success:
 							in_prompts[self.author.id] = True
-							await self.channel.send(arg["prompt"].format(
-								**parsed_args
-							) + "\nSay **cancel** to cancel.")
+							
+							desc = arg["prompt"].format(**parsed_args)
+							await Argument.say_message(self.channel, desc)
+							#await self.channel.send(arg["prompt"].format(
+							#	**parsed_args
+							#) + "\nSay **cancel** to cancel.")
+							
 							try:
 								msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
 								resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
@@ -165,6 +194,7 @@ class Argument:
 
 								else:
 									failed += 1
+									
 									if is_cancelled:
 										in_prompts[self.author.id] = None
 										await self.channel.send("**Cancelled prompt.**")
@@ -176,6 +206,7 @@ class Argument:
 
 							except asyncio.TimeoutError:
 								in_prompts[self.author.id] = None
+
 								if self.channel:
 									try:
 										await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
@@ -190,11 +221,16 @@ class Argument:
 						continue
 					in_prompts[self.author.id] = True
 					if arg.get("ignoreFormatting"):
-						await self.channel.send(f'{arg["prompt"]}\nSay **cancel** to cancel.')
+						desc = arg["prompt"]
+						await Argument.say_message(self.channel, desc)
+						#await self.channel.send(f'{arg["prompt"]}\nSay **cancel** to cancel.')
 					else:
-						await self.channel.send(arg["prompt"].format(
-							**parsed_args
-						) + "\nSay **cancel** to cancel.")
+						desc = arg["prompt"].format(**parsed_args)
+						await Argument.say_message(self.channel, desc)
+
+						#await self.channel.send(arg["prompt"].format(
+						#	**parsed_args
+						#) + "\nSay **cancel** to cancel.")
 					try:
 						msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
 						resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)

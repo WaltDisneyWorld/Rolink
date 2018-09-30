@@ -129,6 +129,7 @@ async def setup(**kwargs):
 			buffer.append("\n**To end this prompt, say ``cancel``.**")
 
 			embed = Embed(title="Setup Prompt", description="".join(buffer))
+			embed.colour = 0x36393E
 
 			success = await response.send(embed=embed, dm=True, no_dm_post=True, strict_post=True)
 
@@ -181,6 +182,7 @@ async def setup(**kwargs):
 				"configuration. Here are your current settings: ```fix" +
 				f'\n{chr(10).join(buffer)}' + " ```\n\n\nTo complete this setup, please say ``done``." +
 				"\n\nSay ``cancel`` to cancel setup.**")
+			embed.colour = 0x36393E
 
 
 			await response.send(embed=embed, dm=True, no_dm_post=True)
@@ -194,6 +196,7 @@ async def setup(**kwargs):
 				if content == "done":
 
 					embed = Embed(title="Setup Complete")
+					embed.colour = 0x36393E
 
 					guild_settings = await r.table("guilds").get(str(guild.id)).run() or {}
 
@@ -208,6 +211,7 @@ async def setup(**kwargs):
 							"more features on the bot, such as automatically verifying " \
 							"users when they enter the server, or to lock your server to " \
 							"a specific group.\n\nYou may donate here: <https://selly.gg/u/bloxlink/>** ")
+						embed.colour = 0x36393E
 						await response.send(embed=embed, dm=True, no_dm_post=True)
 
 					if group_id[0] != "0" and group_id[1] != "skipped":
