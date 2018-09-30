@@ -159,7 +159,7 @@ async def setup(**kwargs):
 							x += 1
 							setup_args[prompt["name"]] = [msg.content, msg.content]
 						else:
-							await response.error("Your content failed validation.\n**Error**: " + err, dm=True)
+							await response.error("Your content failed validation.\n**Error**: " + err, dm=True, no_dm_post=True)
 					else:
 						if prompt.get("information"):
 							await response.send("**Cancelled setup.**", dm=True, no_dm_post=True)
