@@ -7,6 +7,7 @@ from resources.structures.Argument import Argument
 from resources.structures.Response import Response
 
 from discord.errors import NotFound, Forbidden
+from asyncio import sleep
 from time import time
 
 from resources.exceptions import RobloxAPIError, PermissionError
@@ -34,6 +35,7 @@ class Commands:
 	def __init__(self, **kwargs):
 		self.r = kwargs.get("r")
 		self.client = kwargs.get("client")
+		self.cooldowns = {}
 
 
 	async def get_args(self, message, content="", args=None, command=None):
@@ -90,8 +92,28 @@ class Commands:
 				for index, command in dict(commands).items():
 
 					if index == command_name or command_name in command.aliases:
-
 						time_now = time()
+
+						if command.cooldown:
+							self.cooldowns[author.id] = self.cooldowns.get(author.id, {})
+							self.cooldowns[author.id][command_name] = self.cooldowns[author.id].get(command_name, 0)
+
+							if self.cooldowns[author.id][command_name] <= time_now:
+								self.cooldowns[author.id][command_name] = time_now + command.cooldown
+							else:
+								try:
+									m = await channel.send(":alarm_clock: Woah there! This command has a small cooldown.\n"
+									"Please wait a few seconds and try again.")
+									await sleep(3)
+									await m.delete()
+									await message.delete()
+
+								except (Forbidden, NotFound):
+									pass
+
+								finally:
+									return
+
 						last_refresh = guild_data.get("lastDataRefresh")
 
 						if not last_refresh or (last_refresh and last_refresh + 60 <= time_now):
@@ -186,6 +208,9 @@ class Commands:
 			get_module(path="commands", name=command_name,
 						command=new_command, r=self.r, client=self.client
 						)
+		while True:
+			await sleep(60)
+			self.cooldowns.clear()
 
 
 def new_module():

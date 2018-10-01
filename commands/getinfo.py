@@ -8,7 +8,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="getinfo", alias=["whois"], args = [
+	@command(name="getinfo", cooldown=5, alias=["whois"], args = [
 		{
 			"name": "user",
 			"prompt": "Please specify a user.",

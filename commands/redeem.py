@@ -4,7 +4,7 @@ redeem_code = get_module("utils", attrs=["redeem_code"])
 async def setup(**kwargs):
 	command = kwargs.get("command")
 
-	@command(name="redeem", category="Premium", free_to_use=True, arguments=[
+	@command(name="redeem", cooldown=2, category="Premium", free_to_use=True, arguments=[
 		{
 			"prompt": "Please specify the code to redeem.",
 			"type": "string",

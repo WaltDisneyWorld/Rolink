@@ -15,6 +15,7 @@ class Command:
 		self.flags_enabled = kwargs.get("flags_enabled") or kwargs.get("flags")
 		self.is_subcommand = is_subcommand
 		self.func = func
+		self.cooldown = kwargs.get("cooldown", 0)
 
 		self.usage = []
 		command_args = kwargs.get("arguments")
