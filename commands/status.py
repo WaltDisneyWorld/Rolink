@@ -22,15 +22,27 @@ async def setup(**kwargs):
 
 		user = args.parsed_args.get("user") or message.author
 
-		is_p, days, codes_redeemed, tier, has_p = await is_premium(author=user, guild=message.guild)
+		profile = await is_premium(author=user, guild=message.guild)
 
 		embed = Embed()
 		embed.set_author(name=user, icon_url=user.avatar_url)
 
-		if has_p:
-			embed.add_field(name="Premium Status", value="Active")
-			embed.add_field(name="Expiry", value=days == 0 and "Never (unlimited)" or f'**{days}** days left')
+		if profile.is_premium:
 			embed.colour = 0xFDC333
+			embed.add_field(name="Premium Status", value="Active")
+
+			if profile.selly:
+				embed.add_field(name="Expiry", value=profile.days == 0 and "Never (unlimited)" or f'**{profile.days}** days left')
+
+			elif profile.patreon:
+				amount_cents = profile.payment["attributes"]["amount_cents"]
+				dollars = int(amount_cents / 100)
+				cents_left = amount_cents % 100
+
+				if cents_left < 10:
+					cents_left = "0" + str(cents_left)
+
+				embed.add_field(name="Amount Pledged", value=f"${dollars}.{cents_left}")
 
 			"""
 			if tier == "bronze":

@@ -5,8 +5,13 @@ from math import ceil
 from discord import Embed
 from discord.utils import find
 from discord.errors import Forbidden
-from config import ERROR_CHANNEL, release
+from config import ERROR_CHANNEL, RELEASE
+from resources.structures.DonatorProfile import DonatorProfile
 
+from resources.module import get_module
+is_patron = get_module("patreon", attrs=["is_patron"])
+
+#is_patron = lambda u: u
 
 
 class Utils:
@@ -17,7 +22,7 @@ class Utils:
 		self.error_channel = None
 
 	async def get_prefix(self, guild, guild_data=None):
-		if release == "MAIN" and guild.get_member(469652514501951518):
+		if RELEASE == "MAIN" and guild.get_member(469652514501951518):
 			return "!!"
 
 		guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
@@ -34,15 +39,23 @@ class Utils:
 		author = author or (guild and guild.owner)
 
 		if author:
+
+			# patreon stuff
+			profile = await is_patron(author)
+			if profile.is_premium:
+				print("patreon stuff", flush=True)
+				return profile
+
+			# selly stuff
 			author_data = await self.r.table("users").get(str(author.id)).run() or {}
 
 			premium = author_data.get("premium", {})
 			premium = premium if not isinstance(premium, bool) else {}
 			expiry = premium and premium.get("expiry")
-			tier = premium and premium.get("tier", "bronze")
+			# tier = premium and premium.get("tier", "bronze")
 
 			if not expiry and expiry != 0:
-				return (False, None, {}, None, False)
+				return DonatorProfile(author, False)
 
 			t = time()
 			is_p = expiry == 0 or expiry > t
@@ -59,13 +72,27 @@ class Utils:
 
 				if not str(guild.id) in activated_guilds:
 					return (False, days, {}, "bronze", is_p)
-			
+
 			"""
 
+			if is_p:
+				print("loading selly stuff", flush=True)
 
-			return (is_p, days, author_data.get("redeemed", {}), tier, is_p)
+				profile = DonatorProfile(author, True)
+				profile.load_selly({
+					"days": days,
+					"codes_redeemed": author_data.get("redeemed", {})
+				})
+
+				return profile
+			else:
+				print("1", flush=True)
+				return DonatorProfile(author, False)
 		else:
-			return (False, None, {}, None, False)
+			print("2", flush=True)
+			return DonatorProfile(author, False)
+	
+		print("returning nothing", flush=True)
 
 
 	async def generate_code(self, prefix="bloxlink", duration=31, max_uses=1, tier="bronze"):
@@ -157,13 +184,14 @@ class Utils:
 			duration, already_redeemed = await self.give_premium(
 				author,
 				duration=entry.get("duration", 31),
-				author_data = author_data,
+				author_data=author_data,
 				code=code,
 				override=False,
 				# tier=entry.get("tier", "bronze")
 			)
-			await self.activate_guild(guild=author.guild, author=author)
-			await self.delete_code(code)
+			if duration != -1:
+				await self.activate_guild(guild=author.guild, author=author)
+				await self.delete_code(code)
 
 			return (duration, already_redeemed)
 		else:
@@ -173,11 +201,11 @@ class Utils:
 		if guild.owner != author:
 			return False, "You must own the server to activate premium."
 
-		is_p, days, _, tier, has_p = await self.is_premium(author=author)
+		profile = await self.is_premium(author=author)
 
-		if has_p:
+		if profile.is_premium:
 
-			if tier == "bronze":
+			if profile.tier == "bronze":
 				user_data = await self.r.table("users").get(str(author.id)).run()
 				premium = user_data.get("premium", {})
 				activated_guilds = premium.get("activatedGuilds", [])
@@ -198,7 +226,7 @@ class Utils:
 				else:
 					return False, "You have too many activated servers. You must deactivate one with !deactivate."
 
-			elif tier == "pro":
+			elif profile.tier == "pro":
 				return False, "You already have Pro! You don't need to activate the server."
 		else:
 			return False, "You aren't subscribed to a tier."
@@ -206,11 +234,11 @@ class Utils:
 		return False, "test"
 
 	async def deactivate_guild(self, guild, author):
-		is_p, days, _, tier, has_p = await self.is_premium(author=author)
+		profile = await self.is_premium(author=author)
 
-		if has_p:
+		if profile.is_premium:
 
-			if tier == "bronze":
+			if profile.tier == "bronze":
 				user_data = await self.r.table("users").get(str(author.id)).run()
 				premium = user_data.get("premium", {})
 				activated_guilds = premium.get("activatedGuilds", [])
@@ -232,7 +260,7 @@ class Utils:
 
 				return True, None
 
-			elif tier == "pro":
+			elif profile.tier == "pro":
 				return False, "You already have Pro! You don't need to activate the server."
 		else:
 			return False, "You aren't subscribed to a tier."

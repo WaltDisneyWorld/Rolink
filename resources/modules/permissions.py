@@ -1,4 +1,4 @@
-from config import OWNER, release, DONATOR_EMBED
+from config import OWNER, RELEASE, DONATOR_EMBED
 from discord.utils import find
 from discord.errors import Forbidden, NotFound
 
@@ -10,8 +10,8 @@ class Permissions:
 		self.client = kwargs.get("client")
 
 	async def check_permissions(self, command, channel, author):
-		if author.id == OWNER:
-			return True, None
+		#if author.id == OWNER:
+		#	return True, None
 
 		if not hasattr(author, "guild"):
 			if not channel.guild.chunked:
@@ -24,17 +24,17 @@ class Permissions:
 			if author.id != OWNER:
 				return False, "This command is reserved for the bot developer."
 
-		if command.category == "Premium" or release == "PRO":
-			is_p, _, _, _ , _ = await is_premium(guild=channel.guild)
+		if command.category == "Premium" or RELEASE == "PRO":
+			profile = await is_premium(guild=channel.guild)
 
-			if not command.free_to_use and not is_p:
+			if not command.free_to_use and not profile.is_premium:
 				try:
 					await channel.send(embed=DONATOR_EMBED)
 				except (Forbidden, NotFound):
 					pass
 
 				return False, "This command is reserved for donators. The server owner " \
-					"must have premium for this command to work."
+					"must have premium for this command to work. Run ``!donate`` for instructions on donating."
 
 
 		roles = permissions.get("roles") or permissions.get("role")
