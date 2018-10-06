@@ -48,7 +48,7 @@ async def setup(**kwargs):
 					else:
 						embed.add_field(name="Username", value=primary_account.username)
 
-					note = await get_note(roblox_id=id)
+					notes = await get_note(roblox_id=id)
 					guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
 
 					embed.add_field(name="ID", value=primary_account.id)
@@ -86,8 +86,8 @@ async def setup(**kwargs):
 					if primary_account.description:
 						embed.add_field(name="Description", value=primary_account.description[0:500])
 
-					if note:
-						embed.add_field(name="Official Note", value=note)
+					if notes:
+						embed.add_field(name="User Title", value="\n".join(notes))
 
 					await response.send(embed=embed)
 
