@@ -1,5 +1,5 @@
 import aiohttp
-from config import release, DBL_TOKEN
+from config import RELEASE, DBL_TOKEN
 
 
 
@@ -9,7 +9,7 @@ class PostServerCount:
 
 	async def post_count(self):
 
-		if release == "MAIN":
+		if RELEASE == "MAIN":
 			url = f"https://discordbots.org/api/bots/{self.client.user.id}/stats"
 
 			headers = {"Authorization": DBL_TOKEN}

@@ -9,7 +9,7 @@ is_premium = get_module("utils", attrs=["is_premium"])
 
 from os import environ as env
 
-release = env.get("RELEASE", 0)
+RELEASE = env.get("RELEASE", 0)
 
 text = [
 	":wave: Welcome to Bloxlink! <:bloxlink:372437348539170817>",
@@ -34,12 +34,12 @@ class OnGuildJoin:
 		@self.client.event
 		async def on_guild_join(guild):
 
-			if release == "PRO":
-				is_p, days, codes_redeemed, tier, has_p = await is_premium(guild)
+			if RELEASE == "PRO":
+				profile = await is_premium(guild)
 
-				if not is_p:
+				if not profile.is_premium:
 					return await guild.leave()
-			
+
 			await self.r.table("guilds").insert({
 				"id": str(guild.id),
 				**DEFAULTS

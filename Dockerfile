@@ -11,7 +11,7 @@ ADD . /usr/src/bloxlink
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 
 
-ENV RELEASE CANARY 
+ENV RELEASE LOCAL 
 ENV TOKEN 0
 
 EXPOSE 8000
