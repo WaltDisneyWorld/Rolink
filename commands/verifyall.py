@@ -51,9 +51,10 @@ async def setup(**kwargs):
 		futures = []
 
 		for member in guild.members:
-			futures.append(asyncio.ensure_future(coro1(member)))
+			#futures.append(asyncio.ensure_future(coro1(member)))
+			await coro1(member)
 
-		await asyncio.gather(*futures)
+		#await asyncio.gather(*futures)
 
 		await response.success("All done! You may submit another full member scan in an hour.")
 

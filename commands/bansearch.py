@@ -96,9 +96,10 @@ async def setup(**kwargs):
 					pass
 
 			for ban in bans:
-				futures.append(asyncio.ensure_future(coro1(ban)))
+				#futures.append(asyncio.ensure_future(coro1(ban)))
+				await coro1(ban)
 
-			await asyncio.gather(*futures)
+			#await asyncio.gather(*futures)
 
 			async def coro2(user):
 				try:
@@ -119,12 +120,13 @@ async def setup(**kwargs):
 				except RobloxAPIError:
 					pass
 
-			futures.clear()
+			#futures.clear()
 
 			for user in guild.members:
-				futures.append(asyncio.ensure_future(coro2(user)))
+				#futures.append(asyncio.ensure_future(coro2(user)))
+				await coro2(user)
 
-			await asyncio.gather(*futures)
+			#await asyncio.gather(*futures)
 
 			if ban_evaders:
 				action = args.parsed_args["action"]

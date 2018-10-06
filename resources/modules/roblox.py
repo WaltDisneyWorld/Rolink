@@ -321,13 +321,17 @@ class Roblox:
 				except RobloxAPIError:
 					user_data["extras"]["is_banned"] = True
 
-			futures = []
+			"""futures = []
 
 			futures.append(asyncio.ensure_future(coro1()))
 			futures.append(asyncio.ensure_future(coro2()))
 			futures.append(asyncio.ensure_future(coro3()))
 
 			await asyncio.gather(*futures)
+			"""
+			await coro1()
+			await coro2()
+			await coro3()
 
 		return user_data
 
@@ -1067,8 +1071,8 @@ class Roblox:
 						notes.append(note)
 
 		if author:
-			is_p, _, _, _ , _ = await is_premium(author=author)
-			if is_p:
+			profile = await is_premium(author=author)
+			if profile.is_premium:
 				notes.append("Bloxlink Donator")
 
 		return notes

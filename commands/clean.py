@@ -73,9 +73,10 @@ async def setup(**kwargs):
 
 		for member in guild.members:
 			if not member.bot:
-				futures.append(asyncio.ensure_future(scan(member)))
+				#futures.append(asyncio.ensure_future(scan(member)))
+				await scan(member)
 
-		await asyncio.gather(*futures)
+		#await asyncio.gather(*futures)
 
 		try:
 			await msg.delete()
