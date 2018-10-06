@@ -1,4 +1,4 @@
-from config import release
+from config import RELEASE
 from discord.errors import Forbidden, NotFound
 from discord.utils import find
 from resources.exceptions import RobloxAPIError, PermissionError
@@ -31,7 +31,7 @@ class OnMemberJoin:
 					await roblox_user.fill_missing_details(complete=True)
 
 					if guild_data.get("joinDM", True):
-						if release == "MAIN" or (release == "PRO" and not guild.get_member(426537812993638400)):
+						if RELEASE == "MAIN" or (RELEASE == "PRO" and not guild.get_member(426537812993638400)):
 
 							join_message = guild_data.get("welcomeMessage",
 								"Welcome to {server-name}, **{roblox-name}!**")
@@ -101,9 +101,9 @@ class OnMemberJoin:
 					if unverified_role:
 						roles_add.append(unverified_role)
 
-				is_p, _, _, _, _ = await is_premium(guild=guild)
+				profile = await is_premium(guild=guild)
 
-				if is_p:
+				if profile.is_premium:
 
 					if guild_data.get("groupLocked"):
 						if not roblox_user:
@@ -232,9 +232,9 @@ async def setup(**kwargs):
 				if unverified_role:
 					roles_add.append(unverified_role)
 
-			is_p, _, _, _, _ = await is_premium(guild=guild)
+			profile = await is_premium(guild=guild)
 
-			if is_p:
+			if profile.is_premium:
 
 				if guild_data.get("groupLocked"):
 					if not roblox_user:

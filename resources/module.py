@@ -28,10 +28,10 @@ async def load_database():
 
 def get_module(name, path=None, attrs=None, *args, **kwargs):
 	path = path or "resources.modules"
+	path = path.replace("/", ".")
 	module = None
 
 	if loaded_modules.get(f'{name}-{path}'):
-		#print(f"returning cached module {name}-{path}", flush=True)
 		module = loaded_modules.get(f'{name}-{path}')
 	else:
 		import_name = f'{path}.{name}'.replace("/",".").replace(".py","")

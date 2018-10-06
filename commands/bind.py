@@ -104,7 +104,7 @@ async def setup(**kwargs):
 						new_ranks.append(str(y))
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
-		is_p, _, _, _ , _ = await is_premium(guild=guild)
+		profile = await is_premium(guild=guild)
 
 		if isinstance(role_binds, list):
 			role_binds = role_binds[0]
@@ -133,7 +133,7 @@ async def setup(**kwargs):
 
 		if len(role_binds) > 15:
 
-			if not is_p:
+			if not profile.is_premium:
 				await response.error("No more than 15 bounded groups are allowed. **Bloxlink " \
 					"Premium** users can link up to 50 groups.")
 
@@ -146,7 +146,7 @@ async def setup(**kwargs):
 
 		if len(role_binds[group_id]) > 50:
 
-			if not is_p:
+			if not profile.is_premium:
 				await response.error("No more than 50 binds are allowed per group. **Bloxlink " \
 					"Premium** users can bind up to 255 ranks per group.")
 				return await response.send(embed=DONATOR_EMBED)

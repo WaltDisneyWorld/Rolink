@@ -11,11 +11,11 @@ settings = {
 	"verifiedRoleName": "change the verified role name",
 	"allowOldRoles": "the bot will not remove old roles",
 	"autoRoles": "toggle whether members get all roles on join",
+	"dynamicRoles": "toggle whether missing roles are automatically created",
 	"welcomeMessage": "message that users are greeted with",
 	"joinDM": "people will be DM'd the greeting on server join",
 	"persistRoles": "(premium) toggle whether members get updated roles/nick on typing",
-	"groupLocked": "(premium) toggle whether members must be in the group to join",
-	"dynamicRoles": "(premium) toggle whether missing roles are automatically created"
+	"groupLocked": "(premium) toggle whether members must be in the group to join"
 }
 
 settings_choices = list(settings.keys())
@@ -131,12 +131,12 @@ async def setup(**kwargs):
 
 			text = "\n".join(["**" + x + "** ➜ ``" + str(guild_data.get(x, "N/A"))+ "``" for x in settings.keys()])
 
-			is_p, days, _, tier, has_premium = await is_premium(guild=guild)
+			profile = await is_premium(guild=guild)
 
-			text = text + f'\n**Premium** ➜ ``{is_p}``'
+			text = text + f'\n**Premium** ➜ ``{profile.is_premium}``'
 
-			if is_p:
-				text = text + f'\n\t**Premium Until** ➜ ``{days==0 and "lifetime" or str(days) + " days"}``'
+			if profile.is_premium:
+				text = text + f'\n\t**Premium Until** ➜ ``{profile.days==0 and "lifetime" or str(profile.days) + " days"}``'
 
 			embed = Embed(title="Bloxlink Server Settings")
 

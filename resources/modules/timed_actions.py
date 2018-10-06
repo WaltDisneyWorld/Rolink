@@ -28,9 +28,8 @@ class TimedActions:
 					actual_guild = self.client.get_guild(int(guild.get("actualId", "1")))
 
 					if actual_guild:
-						is_p, _, _, _, _ = await is_premium(guild=actual_guild)
-
-						if is_p:
+						profile = await is_premium(guild=actual_guild)
+						if profile.is_premium:
 							group_id = str(guild.get("groupID"))
 
 							if group_id:
@@ -132,7 +131,7 @@ class TimedActions:
 				except:
 					await sleep(60)
 
-			await sleep(5)
+			await sleep(60)
 
 	async def setup(self):
 		await self.group_shouts()

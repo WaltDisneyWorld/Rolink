@@ -34,10 +34,9 @@ class OnTyping:
 			await clear_user_from_cache(author=user)
 
 			try:
+				profile = await is_premium(guild=channel.guild)
 
-				is_p, _, _, _ , _ = await is_premium(guild=channel.guild)
-
-				if is_p:
+				if profile.is_premium:
 					guild_data = await self.r.table("guilds").get(str(channel.guild.id)).run() or {}
 					persist_roles = guild_data.get("persistRoles")
 
