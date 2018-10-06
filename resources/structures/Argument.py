@@ -54,7 +54,9 @@ class Argument:
 		else:
 			embed = Embed(title="Prompt Error", description=f"{message}\n\nTry again, or say **cancel** to cancel.")
 			embed.colour = 0xE74C3C
-			#embed.set_footer(text="Try again, or say 𝐜𝐚𝐧𝐜𝐞𝐥 to cancel.")
+
+		embed.set_footer(text="This prompt will automatically cancel in 200 seconds.")
+
 		try:
 			await channel.send(embed=embed)
 		except Forbidden:
