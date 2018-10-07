@@ -16,6 +16,7 @@ from aiohttp.client_exceptions import ClientOSError
 
 from resources.module import get_module
 post_event, is_premium = get_module("utils", attrs=["post_event", "is_premium"])
+get_virtual_group = get_module("virtualgroups", attrs=["get_virtual_group"])
 
 
 api_url = "https://api.roblox.com/"
@@ -591,63 +592,85 @@ class Roblox:
 						role_binds = role_binds[0]
 
 					for group_id_, data in role_binds.items():
-						group = user_groups.get(str(group_id_))
+						if group_id_ == "virtualGroups":
+							for virtual_group_name, data_ in data.items():
+								virtual_group_resolver = get_virtual_group(virtual_group_name)
 
-						for rank, data_ in data.items():
-							if not isinstance(data_, dict):
-								data_ = {"nickname": None, "roles": [str(data_)]}
+								if virtual_group_resolver:
+									result = await virtual_group_resolver(author)
 
-							num = False
+									if result:
+										for role_id in data_.get("roles", []):
+											role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
 
-							try:
-								num = int(rank) # doing this to capture negative bind values
-							except ValueError:
-								pass
+											if role:
+												possible_roles.append(role)
 
-							if group:
-								user_rank = group.user_rank
+												if not role in author.roles:
+													add_roles.append(role)
+									else:
+										if not role in (*add_roles, *remove_roles, *possible_roles):
+											if role in author.roles:
+												remove_roles.append(role)
 
-								for role_id in data_.get("roles", []):
-									role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
+						else:
+							group = user_groups.get(str(group_id_))
 
-									if role:
+							for rank, data_ in data.items():
+								if not isinstance(data_, dict):
+									data_ = {"nickname": None, "roles": [str(data_)]}
 
-										if rank.lower() == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
-											possible_roles.append(role)
+								num = False
 
-											nickname = data_.get("nickname")
+								try:
+									num = int(rank) # doing this to capture negative bind values
+								except ValueError:
+									pass
 
-											if nickname:
+								if group:
+									user_rank = group.user_rank
 
-												if role == author.top_role:
-													top_role_nickname = await self.get_nickname(author=author, template=nickname, roblox_user=user)
+									for role_id in data_.get("roles", []):
+										role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
 
-												resolved_nickname = await self.get_nickname(author=author, template=nickname, roblox_user=user)
+										if role:
 
-												if resolved_nickname and not resolved_nickname in possible_nicknames:
-													possible_nicknames.append([role, resolved_nickname])
-													# possible_nicknames.append(resolved_nickname)
+											if rank.lower() == "all" or user_rank == rank or (num and num < 0 and int(user_rank) >= abs(num)):
+												possible_roles.append(role)
 
-											if not role in author.roles:
-												add_roles.append(role)
-										else:
-											if not role in (*add_roles, *remove_roles, *possible_roles):
-												if role in author.roles:
-													remove_roles.append(role)
-							else:
-								for role_id in data_.get("roles", []):
-									role_id = str(role_id)
-									role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
+												nickname = data_.get("nickname")
 
-									if role:
-										if rank.lower() == "guest" or num is 0:
-											possible_roles.append(role)
-											if not role in (*author.roles, *add_roles):
-												add_roles.append(role)
-										else:
-											if not role in (*add_roles, *remove_roles, *possible_roles):
-												if role in author.roles:
-													remove_roles.append(role)
+												if nickname:
+
+													if role == author.top_role:
+														top_role_nickname = await self.get_nickname(author=author, template=nickname, roblox_user=user)
+
+													resolved_nickname = await self.get_nickname(author=author, template=nickname, roblox_user=user)
+
+													if resolved_nickname and not resolved_nickname in possible_nicknames:
+														possible_nicknames.append([role, resolved_nickname])
+														# possible_nicknames.append(resolved_nickname)
+
+												if not role in author.roles:
+													add_roles.append(role)
+											else:
+												if not role in (*add_roles, *remove_roles, *possible_roles):
+													if role in author.roles:
+														remove_roles.append(role)
+								else:
+									for role_id in data_.get("roles", []):
+										role_id = str(role_id)
+										role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
+
+										if role:
+											if rank.lower() == "guest" or num is 0:
+												possible_roles.append(role)
+												if not role in (*author.roles, *add_roles):
+													add_roles.append(role)
+											else:
+												if not role in (*add_roles, *remove_roles, *possible_roles):
+													if role in author.roles:
+														remove_roles.append(role)
 
 				if group_id and group_id != "0":
 					if user.groups.get(str(group_id)):

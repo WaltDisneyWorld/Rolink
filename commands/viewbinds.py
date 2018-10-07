@@ -26,50 +26,75 @@ async def setup(**kwargs):
 				" to make a new bind.")
 			return await response.send(embed=embed)
 
+		virtual_groups = {}
+
 		for group_id, bind in dict(role_binds).items():
 			binds = []
-
-			for rank, data in bind.items():
+			if group_id == "virtualGroups":
 				roles = []
 
-				if not isinstance(data, dict):
-					data = {"nickname": None, "roles": [str(data)]}
+				for virtual_group_name, data in bind.items():
+					role_ids = data.get("roles", [])
 
-				rank = ((rank == "0" or rank == "guest") and "Guest Role") or rank
-				role_data = data.get("roles", [])
+					if role_ids:
+						for role_id in role_ids:
+							role = find(lambda r: r.id == int(role_id), guild.roles)
 
-				for role_id in role_data:
-					role = find(lambda r: r.id == int(role_id), guild.roles)
+							if role:
+								roles.append(role.name)
+					if roles:
+						virtual_groups[virtual_group_name] = roles
+			else:
 
-					if role and role.name:
-						roles.append(role.name)
-					else:
-						role_data.remove(role_id)
-						if not role_data:
-							role_binds.pop(group_id, None)
-							guild_data["roleBinds"] = role_binds
+				for rank, data in bind.items():
+					roles = []
 
-							await r.table("guilds").insert({
-								**guild_data
-							}, conflict="replace").run()
+					if not isinstance(data, dict):
+						data = {"nickname": None, "roles": [str(data)]}
+
+					rank = ((rank == "0" or rank == "guest") and "Guest Role") or rank
+					role_data = data.get("roles", [])
+
+					for role_id in role_data:
+						role = find(lambda r: r.id == int(role_id), guild.roles)
+
+						if role and role.name:
+							roles.append(role.name)
 						else:
+							role_data.remove(role_id)
+							if not role_data:
+								role_binds.pop(group_id, None)
+								guild_data["roleBinds"] = role_binds
 
-							data["roles"] = role_data
-							role_binds[group_id][rank] = data
+								await r.table("guilds").insert({
+									**guild_data
+								}, conflict="replace").run()
+							else:
 
-							await r.table("guilds").get(str(guild.id)).update({
-								"roleBinds": role_binds
-							}).run()
+								data["roles"] = role_data
+								role_binds[group_id][rank] = data
 
-				if roles:
-					binds.append(f'**Rank:** {rank} ➜ **Role(s):** {", ".join(roles)} ➜ ' \
-						f'**Nickname:** {data.get("nickname")}')
+								await r.table("guilds").get(str(guild.id)).update({
+									"roleBinds": role_binds
+								}).run()
 
-			if binds:
-				group = await get_group(group_id)
+					if roles:
+						binds.append(f'**Rank:** {rank} ➜ **Role(s):** {", ".join(roles)} ➜ ' \
+							f'**Nickname:** {data.get("nickname")}')
 
-				if group:
-					embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
+				if binds:
+					group = await get_group(group_id)
+
+					if group:
+						embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
+
+		if virtual_groups:
+			text_buffer = []
+
+			for virtual_group, roles in virtual_groups.items():
+				text_buffer.append(f'**{virtual_group}** ➜ **Role(s):** {", ".join(roles)}')
+
+			embed.add_field(name="Virtual Groups", value="\n".join(text_buffer))
 
 		embed.set_author(name=guild.name, icon_url=guild.icon_url)
 		embed.set_footer(text=f"Use {prefix}delbind to delete a bind, or {prefix}bind to add a new bind.")
