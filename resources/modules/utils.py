@@ -11,7 +11,6 @@ from resources.structures.DonatorProfile import DonatorProfile
 from resources.module import get_module
 is_patron = get_module("patreon", attrs=["is_patron"])
 
-#is_patron = lambda u: u
 
 
 class Utils:
@@ -76,7 +75,6 @@ class Utils:
 			"""
 
 			if is_p:
-				print("loading selly stuff", flush=True)
 
 				profile = DonatorProfile(author, True)
 				profile.load_selly({
@@ -86,13 +84,9 @@ class Utils:
 
 				return profile
 			else:
-				print("1", flush=True)
 				return DonatorProfile(author, False)
 		else:
-			print("2", flush=True)
 			return DonatorProfile(author, False)
-	
-		print("returning nothing", flush=True)
 
 
 	async def generate_code(self, prefix="bloxlink", duration=31, max_uses=1, tier="bronze"):

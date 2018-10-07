@@ -64,7 +64,7 @@ class Patreon:
 
 			return await self.generate_token()
 
-	async def load_pledges(self, url="{BASE_URL}/api/campaigns/{campaign_id}/pledges?include=patron.null"):
+	async def load_pledges(self, url="{BASE_URL}/api/campaigns/{campaign_id}/pledges"):
 		url = url.format(BASE_URL=BASE_URL, campaign_id=await self.get_campaign_id())
 
 		if not self.pledge_loop_started:

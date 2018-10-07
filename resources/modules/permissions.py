@@ -10,8 +10,8 @@ class Permissions:
 		self.client = kwargs.get("client")
 
 	async def check_permissions(self, command, channel, author):
-		#if author.id == OWNER:
-		#	return True, None
+		if author.id == OWNER:
+			return True, None
 
 		if not hasattr(author, "guild"):
 			if not channel.guild.chunked:
