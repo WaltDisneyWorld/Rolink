@@ -184,8 +184,9 @@ class Commands:
 									await response.error("Oops! A ``Forbidden`` exception was raised. Please ensure I have the proper " \
 										"permissions needed for this command. If you don't know what permissions, then give me ``Administrator``.")
 								except RobloxAPIError:
-									await response.error("Sorry, the Roblox API is currently down, so I wasn't able to process the task. "
-									"You may try this command again later.")
+									await response.error("Sorry, we were unable to process your command due to a Roblox API Error. "
+									"You may try again, and if this persists, Roblox may be down, or you may be supplying an invalid "
+									"item to the command.")
 								except PermissionError as e:
 									# call post_event
 									await response.send(f":x: Bloxlink encountered a Permission Error:\n{e}")
