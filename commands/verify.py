@@ -165,7 +165,10 @@ async def setup(**kwargs):
 				verify_message = guild_data.get("welcomeMessage",
 					"Welcome to {server-name}, **{roblox-name}!**")
 				resolved_message = await get_nickname(author=author, roblox_user=user,
-						guild_data=guild_data, template=verify_message, ignore_trim=True)
+					guild_data=guild_data, template=verify_message, ignore_trim=True)
+	
+				resolved_message = resolved_message + f"\n\nSay ``{prefix}verify -add`` to change your Roblox account. Then, use " \
+					f"``{prefix}switchuser`` to switch into that user on different servers."
 
 				await response.send(resolved_message)
 				await verified(author, user, guild)
