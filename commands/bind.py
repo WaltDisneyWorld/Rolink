@@ -115,7 +115,7 @@ async def setup(**kwargs):
 			rank = role_binds[group_id].get(x, {})
 
 			if not isinstance(rank, dict):
-				rank = {"nickname": args.parsed_args["nickname"].lower() != "skip" and args.parsed_args["nickname"] or None, "roles": [str(rank)]}
+				rank = {"nickname": args.parsed_args["nickname"].lower() not in ("skip", "done") and args.parsed_args["nickname"] or None, "roles": [str(rank)]}
 				if str(role.id) not in rank["roles"]:
 					rank["roles"].append(str(role.id))
 			else:
@@ -123,7 +123,7 @@ async def setup(**kwargs):
 					rank["roles"] = rank.get("roles") or []
 					rank["roles"].append(str(role.id))
 
-					if args.parsed_args["nickname"].lower() != "skip":
+					if args.parsed_args["nickname"].lower() not in ("skip", "done"):
 						rank["nickname"] = args.parsed_args["nickname"]
 					else:
 						if not rank.get("nickname"):

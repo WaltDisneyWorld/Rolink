@@ -597,21 +597,41 @@ class Roblox:
 								virtual_group_resolver = get_virtual_group(virtual_group_name)
 
 								if virtual_group_resolver:
-									result = await virtual_group_resolver(author)
+									if data_.get("moreData"):
+										for bind_id, bind_data in data_["moreData"].items():
+											result = await virtual_group_resolver(author, roblox_user=user, bind_data=(bind_id, bind_data))
 
-									if result:
-										for role_id in data_.get("roles", []):
-											role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
+											if result:
+												for role_id in bind_data.get("roles", []):
+													role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
 
-											if role:
-												possible_roles.append(role)
+													if role:
+														possible_roles.append(role)
 
-												if not role in author.roles:
-													add_roles.append(role)
+														if not role in author.roles:
+															add_roles.append(role)
+											else:
+												if not role in (*add_roles, *remove_roles, *possible_roles):
+													if role in author.roles:
+														remove_roles.append(role)
+									
 									else:
-										if not role in (*add_roles, *remove_roles, *possible_roles):
-											if role in author.roles:
-												remove_roles.append(role)
+
+										result = await virtual_group_resolver(author, roblox_user=user, bind_data=data_)
+
+										if result:
+											for role_id in data_.get("roles", []):
+												role = find(lambda r: int(float(r.id)) == int(float(role_id)), guild.roles)
+
+												if role:
+													possible_roles.append(role)
+
+													if not role in author.roles:
+														add_roles.append(role)
+										else:
+											if not role in (*add_roles, *remove_roles, *possible_roles):
+												if role in author.roles:
+													remove_roles.append(role)
 
 						else:
 							group = user_groups.get(str(group_id_))

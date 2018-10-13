@@ -1,6 +1,8 @@
 from discord import Embed
 from discord.utils import find
 
+from resources.exceptions import RobloxAPIError
+
 from resources.module import get_module
 get_group = get_module("roblox", attrs=["get_group"])
 
@@ -12,7 +14,7 @@ async def setup(**kwargs):
 		"raw": "manage_guild"
 	}, aliases=["viewbind"])
 	async def viewbinds(message, response, args, prefix):
-		"""view group binds"""
+		"""view group/virtual group binds"""
 
 		guild = message.guild
 
@@ -30,11 +32,11 @@ async def setup(**kwargs):
 
 		for group_id, bind in dict(role_binds).items():
 			binds = []
-			if group_id == "virtualGroups":
-				roles = []
 
+			if group_id == "virtualGroups":
 				for virtual_group_name, data in bind.items():
 					role_ids = data.get("roles", [])
+					roles = []
 
 					if role_ids:
 						for role_id in role_ids:
@@ -44,6 +46,20 @@ async def setup(**kwargs):
 								roles.append(role.name)
 					if roles:
 						virtual_groups[virtual_group_name] = roles
+					else:
+						roles = {}
+
+						if data.get("moreData", {}):
+							for bind_id, bind_data in data["moreData"].items():
+								roles[bind_id] = []
+
+								for role_id in bind_data.get("roles", []):
+									role = find(lambda r: r.id == int(role_id), guild.roles)
+
+									if role:
+										roles[bind_id].append(role.name)
+						if roles:
+							virtual_groups[virtual_group_name] = roles
 			else:
 
 				for rank, data in bind.items():
@@ -52,7 +68,7 @@ async def setup(**kwargs):
 					if not isinstance(data, dict):
 						data = {"nickname": None, "roles": [str(data)]}
 
-					rank = ((rank == "0" or rank == "guest") and "Guest Role") or rank
+					rank = ((rank in ("0", 0, "guest")) and "Guest Role") or rank
 					role_data = data.get("roles", [])
 
 					for role_id in role_data:
@@ -70,7 +86,6 @@ async def setup(**kwargs):
 									**guild_data
 								}, conflict="replace").run()
 							else:
-
 								data["roles"] = role_data
 								role_binds[group_id][rank] = data
 
@@ -83,18 +98,28 @@ async def setup(**kwargs):
 							f'**Nickname:** {data.get("nickname")}')
 
 				if binds:
-					group = await get_group(group_id)
+					if group_id not in ("0", 0, "guest"):
+						try:
+							group = await get_group(group_id)
 
-					if group:
-						embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
+							if group:
+								embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
+
+						except RobloxAPIError:
+							embed.add_field(name=f"Invalid Group: {group_id}", value=("\n".join(binds))[0:1023], inline=False)
 
 		if virtual_groups:
 			text_buffer = []
 
-			for virtual_group, roles in virtual_groups.items():
-				text_buffer.append(f'**{virtual_group}** ➜ **Role(s):** {", ".join(roles)}')
+			for virtual_group, data in virtual_groups.items():
+				if isinstance(data, dict):
+					for bind_id, roles in data.items():
+						text_buffer.append(f'**{virtual_group}** ➜ **ID:** {bind_id} ➜ **Role(s):** {", ".join(roles)}')
+				else:
+					text_buffer.append(f'**{virtual_group}** ➜ **Role(s):** {", ".join(data)}')
 
 			embed.add_field(name="Virtual Groups", value="\n".join(text_buffer))
+
 
 		embed.set_author(name=guild.name, icon_url=guild.icon_url)
 		embed.set_footer(text=f"Use {prefix}delbind to delete a bind, or {prefix}bind to add a new bind.")
