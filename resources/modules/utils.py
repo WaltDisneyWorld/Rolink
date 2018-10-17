@@ -1,3 +1,4 @@
+import asyncio
 from os import listdir
 from random import choice, randint
 from time import time
@@ -5,11 +6,14 @@ from math import ceil
 from discord import Embed
 from discord.utils import find
 from discord.errors import Forbidden
-from config import ERROR_CHANNEL, RELEASE
+from aiohttp.client_exceptions import ClientOSError
+from config import ERROR_CHANNEL, RELEASE, RETRY_AFTER
 from resources.structures.DonatorProfile import DonatorProfile
+from resources.exceptions import RobloxAPIError
 
 from resources.module import get_module
 is_patron = get_module("patreon", attrs=["is_patron"])
+
 
 
 
@@ -19,6 +23,31 @@ class Utils:
 		self.r = kwargs.get("r")
 		self.client = kwargs.get("client")
 		self.error_channel = None
+		self.session = kwargs.get("session")
+
+
+	async def fetch(self, url, raise_on_failure=True, retry=RETRY_AFTER):
+		try:
+			async with self.session.get(url) as response:
+				text = await response.text()
+				if raise_on_failure:
+					if response.status != 200:
+						if retry != 0:
+							retry -= 1
+							await asyncio.sleep(1.0)
+
+							return await self.fetch(url, raise_on_failure=raise_on_failure, retry=retry)
+
+						raise RobloxAPIError
+
+				if text == "The service is unavailable.":
+					raise RobloxAPIError
+
+				return text, response
+
+		except ClientOSError:
+			# todo: raise HttpError with non-roblox URLs
+			raise RobloxAPIError
 
 	async def get_prefix(self, guild, guild_data=None):
 		if RELEASE == "MAIN" and guild.get_member(469652514501951518):
