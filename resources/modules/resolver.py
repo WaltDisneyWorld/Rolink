@@ -63,7 +63,7 @@ class Resolver:
 		if message.mentions:
 			if message.mentions[0].id != self.client.user.id:
 				return message.mentions[0], None
-		
+
 		is_int, is_id = None, None
 
 		try:
