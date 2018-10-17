@@ -35,6 +35,7 @@ class Commands:
 	def __init__(self, **kwargs):
 		self.r = kwargs.get("r")
 		self.client = kwargs.get("client")
+		self.session = kwargs.get("session")
 		self.cooldowns = {}
 
 
@@ -181,8 +182,8 @@ class Commands:
 										else:
 											await self.client.request_offline_members(guild)
 								except Forbidden:
-									await response.error("Oops! A ``Forbidden`` exception was raised. Please ensure I have the proper " \
-										"permissions needed for this command. If you don't know what permissions, then give me ``Administrator``.")
+									await response.error("I wasn't able to participate in the channel you used this command. Please ensure "
+									"I have the proper permissions for the channel/server.")
 								except RobloxAPIError:
 									await response.error("Sorry, we were unable to process your command due to a Roblox API Error. "
 									"You may try again, and if this persists, Roblox may be down, or you may be supplying an invalid "
@@ -207,7 +208,7 @@ class Commands:
 	async def setup(self):
 		for command_name in [f.replace(".py", "") for f in commands_list]:
 			get_module(path="commands", name=command_name,
-						command=new_command, r=self.r, client=self.client
+						command=new_command, r=self.r, client=self.client, session=self.session
 						)
 		while True:
 			await sleep(60)
