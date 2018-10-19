@@ -31,7 +31,7 @@ class Utils:
 			async with self.session.get(url) as response:
 				text = await response.text()
 				if raise_on_failure:
-					if response.status != 200:
+					if response.status >= 500:
 						if retry != 0:
 							retry -= 1
 							await asyncio.sleep(1.0)
@@ -71,7 +71,6 @@ class Utils:
 			# patreon stuff
 			profile = await is_patron(author)
 			if profile.is_premium:
-				print("patreon stuff", flush=True)
 				return profile
 
 			# selly stuff
