@@ -8,13 +8,12 @@ is_premium, fetch = get_module("utils", attrs=["is_premium", "fetch"])
 async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
-	session = kwargs.get("session")
 
 	@command(name="assetbind", category="Binds", permissions={
 		"raw": "manage_guild"
 	}, arguments=[
 		{
-			"prompt": "Please say the asset ID for the bind. You can find this at the end of the URL. It should" \
+			"prompt": "Please say the asset ID of the bind. You can find this at the end of the URL. It should " \
 			"just be numbers.",
 			"type": "number",
 			"name": "asset"
@@ -41,23 +40,25 @@ async def setup(**kwargs):
 		asset_id = str(args.parsed_args["asset"])
 
 		asset_type = "Asset"
-		try:
-			# is this a gamepass?
-			web_response = await fetch(f'https://api.roblox.com/marketplace/game-pass-product-info?gamePassId={asset_id}')
-			web_response = web_response[0]
-			asset_type = "GamePass"
 
-		except RobloxAPIError:
-			# item is not a gamepass, so it must be a badge or asset
-			web_response = await fetch(f"https://api.roblox.com/Marketplace/ProductInfo?assetId={asset_id}")
-			web_response = web_response[0]
+		async with message.channel.typing():
+			try:
+				# is this a gamepass?
+				web_response = await fetch(f'https://api.roblox.com/marketplace/game-pass-product-info?gamePassId={asset_id}')
+				web_response = web_response[0]
+				asset_type = "GamePass"
 
-			web_response = loads(web_response)
+			except RobloxAPIError:
+				# item is not a gamepass, so it must be a badge or asset
+				web_response = await fetch(f"https://api.roblox.com/Marketplace/ProductInfo?assetId={asset_id}")
+				web_response = web_response[0]
 
-			if web_response.get("ProductType") == "User Product":
-				asset_type = "Asset"
-			else:
-				asset_type = "Badge"
+				web_response = loads(web_response)
+
+				if web_response.get("ProductType") == "User Product":
+					asset_type = "Asset"
+				else:
+					asset_type = "Badge"
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
 		virtual_groups = role_binds.get("virtualGroups", {})
