@@ -28,7 +28,7 @@ async def fetch(session, url, raise_on_failure=True, retry=RETRY_AFTER):
 		async with session.get(url) as response:
 			text = await response.text()
 			if raise_on_failure:
-				if response.status != 200:
+				if response.status >= 500:
 					if retry != 0:
 						retry -= 1
 						await asyncio.sleep(1.0)
@@ -64,14 +64,14 @@ class Roblox:
 		words = []
 
 		for i in range(5):
-			x = randint(1,2)
+			x = randint(1, 2)
 
 			words.append(choice(WORD))
 
 			if i != 4:
 				words.append(x == 1 and "and" or "or")
 
-		return " lol ".join(words)
+		return " oof ".join(words)
 
 	async def validate_code(self, username, code):
 		user_cache = self.roblox_cache["users"].get(username.lower())
@@ -99,13 +99,13 @@ class Roblox:
 				return True
 
 		return False
-	
+
 	async def get_id_from_api(self, username):
 		user = self.roblox_cache["usernames_to_roblox_ids"].get(username.lower())
+
 		if user:
 			return user[1], user[0]
 
-		
 		response = await fetch(self.session, api_url + "users/get-by-username/" \
 			"?username=" + username, raise_on_failure=True)
 		response = response[0]
@@ -131,6 +131,7 @@ class Roblox:
 
 		response = await fetch(self.session, api_url + "users/" + id, raise_on_failure=True)
 		response = response[0]
+
 		try:
 			response = json.loads(response)
 		except json.decoder.JSONDecodeError:
@@ -248,12 +249,12 @@ class Roblox:
 
 					if presence == "Playing":
 						presence = "playing a game"
-					elif presence == "Offline":
-						presence = "offline"
 					elif presence == "Online" or presence == "Website":
 						presence = "browsing the website"
 					elif presence == "Creating":
 						presence = "in studio"
+					else:
+						presence = "offline"
 
 					user_data["extras"]["presence"] = presence
 
@@ -510,6 +511,9 @@ class Roblox:
 		return response != "Guest" and response.strip()
 
 	async def get_roles(self, author, roblox_user=None, guild=None, complete=True):
+		if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
+			return [], [], [], []
+
 		remove_roles = []
 		add_roles = []
 		errors = []
@@ -597,7 +601,7 @@ class Roblox:
 								virtual_group_resolver = get_virtual_group(virtual_group_name)
 
 								if virtual_group_resolver:
-									if data_.get("moreData"):
+									if isinstance(data_.get("moreData"), dict):
 										for bind_id, bind_data in data_["moreData"].items():
 											result = await virtual_group_resolver(author, roblox_user=user, bind_data=(bind_id, bind_data))
 
@@ -846,6 +850,9 @@ class Roblox:
 
 
 	async def give_roblox_stuff(self, author, roblox_user=None, complete=False, guild=None):
+		if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
+			return [], [], []
+
 		guild = guild or author.guild
 		roblox_user = roblox_user or await self.get_user(author=author)
 
@@ -892,8 +899,6 @@ class Roblox:
 					raise PermissionError("Sorry, this person has a higher role than me, so I can't "
 					"update their roles due to Discord limitations. Please drag my role above the other roles.")
 
-				#raise PermissionError("Sorry, I couldn't update this person's roles. Please ensure I "
-				#"have the Manage Roles permission, and drag my role above the other roles.")
 		if add_roles:
 			try:
 				await author.add_roles(*add_roles, atomic=True, reason="Adding group roles")

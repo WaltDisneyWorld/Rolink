@@ -63,7 +63,7 @@ async def setup(**kwargs):
 							embed.add_field(name="Username", value=primary_account.username)
 
 						embed.add_field(name="ID", value=primary_account.id)
-						embed.add_field(name="Presence", value=primary_account.presence)
+						embed.add_field(name="Presence", value=primary_account.presence or "offline")
 
 						if primary_account.age_string:
 							embed.add_field(name="Join Date", value=primary_account.age_string)
@@ -89,7 +89,7 @@ async def setup(**kwargs):
 
 						embed.set_author(name=user, icon_url=user.avatar_url, url=primary_account.profile_link)
 
-						if primary_account.membership != "NBC":
+						if primary_account.membership not in ("NBC", None):
 							embed.add_field(name="Membership", value=primary_account.membership)
 
 						if primary_account.badges:

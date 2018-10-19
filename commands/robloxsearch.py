@@ -77,7 +77,7 @@ async def setup(**kwargs):
 
 					embed.set_author(name=primary_account.username, url=primary_account.profile_link)
 
-					if primary_account.membership != "NBC":
+					if primary_account.membership not in ("NBC", None):
 						embed.add_field(name="Membership", value=primary_account.membership)
 
 					if primary_account.badges:
