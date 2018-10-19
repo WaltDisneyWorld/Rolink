@@ -41,6 +41,8 @@ async def setup(**kwargs):
 	async def sudo(message, response, args, prefix):
 		"""executes Python code"""
 
+		if message.author.id != 84117866944663552: return # extra eval security
+
 		channel = message.channel
 
 		env = {
