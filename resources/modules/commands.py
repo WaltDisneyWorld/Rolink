@@ -185,7 +185,7 @@ class Commands:
 									await response.error("I wasn't able to participate in the channel you used this command. Please ensure "
 									"I have the proper permissions for the channel/server.")
 								except RobloxAPIError:
-									await response.error("Sorry, we were unable to process your command due to a Roblox API Error. "
+									await response.error("Sorry, I was unable to process your command due to a Roblox API Error. "
 									"You may try again, and if this persists, Roblox may be down, or you may be supplying an invalid "
 									"item to the command.")
 								except PermissionError as e:
