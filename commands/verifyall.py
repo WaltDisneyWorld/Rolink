@@ -12,7 +12,8 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	client = kwargs.get("client")
 
-	@command(name="verifyall", category="Premium", permissions={"raw": "manage_guild"})
+	@command(name="verifyall", category="Premium", permissions={
+		"raw": "manage_guild", "exceptions": {"roles": "Bloxlink Updater"}})
 	async def verify(message, response, args, prefix):
 		"""updates roles/nicknames for each member"""
 

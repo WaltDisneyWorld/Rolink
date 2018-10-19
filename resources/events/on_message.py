@@ -1,5 +1,6 @@
 from resources.structures.Argument import Argument
 from discord.errors import Forbidden, NotFound
+from discord.utils import find
 
 from resources.module import get_module
 parse_message = get_module("commands", attrs=["parse_message"])
@@ -35,10 +36,11 @@ class OnMessage:
 				guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
 
 				if str(guild_data.get("verifyChannel", "1")) == str(channel.id):
-					try:
-						await message.delete()
-					except (Forbidden, NotFound):
-						pass
+					if not find(lambda r: r.name in ("Bloxlink Bypass", "Bloxlink Admin", "Bloxlink Updater"), author.roles):
+						try:
+							await message.delete()
+						except (Forbidden, NotFound):
+							pass
 
 
 def new_module():

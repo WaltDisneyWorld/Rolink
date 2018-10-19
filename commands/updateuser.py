@@ -11,8 +11,9 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	client = kwargs.get("client")
 
-	@command(name="updateuser", category="Administration", permissions={"raw": "manage_roles"},
-    aliases=["updateroles", "updaterole", "updatemember", "updatenickname", "updatenick"], arguments=[
+	@command(name="updateuser", category="Administration", permissions={
+		"raw": "manage_roles", "exceptions": {"roles": ["Bloxlink Updater"]} },
+    aliases=["updateroles", "updaterole", "updatemember", "updatenickname", "updatenick", "update"], arguments=[
         {
             "prompt": "Please specify a user to update.",
             "type": "user",

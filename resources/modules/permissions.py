@@ -62,10 +62,20 @@ class Permissions:
 		raw = permissions.get("raw")
 
 		if raw:
+			if find(lambda r: r.name == "Bloxlink Admin", author.roles):
+				return True, None
+
 			perms = channel.permissions_for(author)
+			exceptions = permissions.get("exceptions", {})
 
 			if isinstance(raw, str):
 				if not getattr(perms, raw, None):
+					role_exceptions = exceptions.get("roles", [])
+
+					for role_name in role_exceptions:
+						if find(lambda r: r.name == role_name, author.roles):
+							return True, None
+
 					return False, f'Missing role permission: {raw}'
 
 			elif isinstance(raw, list):
