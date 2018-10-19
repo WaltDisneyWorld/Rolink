@@ -11,7 +11,7 @@ async def setup(**kwargs):
 
 		me = message.guild.me
 
-		embed = Embed(description = f"**To add **Bloxlink** to your server, click " \
+		embed = Embed(description = f"**To add Bloxlink to your server, click " \
 			"the link below:\nhttps://blox.link/invite\n" \
 			"Support server: https://discord.gg/wBndznK**")
 
