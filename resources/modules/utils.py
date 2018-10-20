@@ -212,7 +212,7 @@ class Utils:
 				# tier=entry.get("tier", "bronze")
 			)
 			if duration != -1:
-				await self.activate_guild(guild=author.guild, author=author)
+				#await self.activate_guild(guild=author.guild, author=author)
 				await self.delete_code(code)
 
 			return (duration, already_redeemed)
