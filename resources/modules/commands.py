@@ -58,7 +58,7 @@ class Commands:
 
 		return new_args, is_cancelled
 
-	async def parse_message(self, message):
+	async def parse_message(self, message, guild_data=None):
 		content = message.content
 		channel = message.channel
 		author = message.author
@@ -70,7 +70,7 @@ class Commands:
 		if not guild or not author or not channel:
 			return
 
-		guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
+		guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
 		guild_prefix = await get_prefix(guild=guild, guild_data=guild_data)
 		prefix = guild_prefix or default_prefix

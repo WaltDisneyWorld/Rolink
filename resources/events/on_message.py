@@ -1,4 +1,5 @@
 from resources.structures.Argument import Argument
+from config import MAGIC_ROLES
 from discord.errors import Forbidden, NotFound
 from discord.utils import find
 
@@ -18,11 +19,7 @@ class OnMessage:
 
 			if author.bot:
 				return
-			if not hasattr(message, "guild"):
-				return
 			if not message.guild:
-				return
-			if not hasattr(message, "channel"):
 				return
 			if not message.channel:
 				return
@@ -30,13 +27,27 @@ class OnMessage:
 			guild = message.guild
 			channel = message.channel
 
-			is_command = await parse_message(message)
+			guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
+
+			if guild_data.get("ignoredChannels", {}).get(str(channel.id)):
+				if find(lambda r: r.name in MAGIC_ROLES, author.roles):
+					is_command = await parse_message(message, guild_data=guild_data)
+				elif guild.owner == author:
+					is_command = await parse_message(message, guild_data=guild_data)
+				else:
+					perms = channel.permissions_for(author)
+
+					if hasattr(perms, "manage_server") or hasattr(perms, "administrator"):
+						is_command = await parse_message(message, guild_data=guild_data)
+					else:
+						return
+			else:
+				is_command = await parse_message(message, guild_data=guild_data)
 
 			if not is_command and not Argument.is_in_prompt(author):
-				guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
 
 				if str(guild_data.get("verifyChannel", "1")) == str(channel.id):
-					if not find(lambda r: r.name in ("Bloxlink Bypass", "Bloxlink Admin", "Bloxlink Updater"), author.roles):
+					if not find(lambda r: r.name in MAGIC_ROLES, author.roles):
 						try:
 							await message.delete()
 						except (Forbidden, NotFound):
