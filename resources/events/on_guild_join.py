@@ -15,7 +15,7 @@ text = [
 	":wave: Welcome to Bloxlink! <:bloxlink:372437348539170817>",
 	":exclamation: To view all commands, say ``!help``.",
 	":gear: To set up your server with Bloxlink, use ``!setup``.  To set up binds, say ``!bind``.",
-	":sparkles: To turn on automatic member verification, say ``!autoverify``. If you have Bloxlink Premium (<https://selly.gg/u/bloxlink>), say ``!autoroles`` to turn on automatic member roles.",
+	":sparkles: Check out <https://github.com/bloxlink/docs> for cool things you can do with Bloxlink!",
 	":question: If you require assistance with Bloxlink, don't hesitate to join the support server! https://discord.gg/g4Z2Pbx",
 	"<:twitter:450703269652725760> Why not follow us on Twitter? <https://twitter.com/bloxlink>"
 ]
@@ -27,7 +27,6 @@ class OnGuildJoin:
 	def __init__(self, **kwargs):
 		self.client = kwargs.get("client")
 		self.r = kwargs.get("r")
-
 
 	async def setup(self):
 
