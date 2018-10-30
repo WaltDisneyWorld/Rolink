@@ -1119,6 +1119,20 @@ class Roblox:
 						notes.append(note)
 
 		if author:
+			bloxlink_guild = self.client.get_guild(372036754078826496)
+
+			if bloxlink_guild:
+				member = bloxlink_guild.get_member(author.id)
+
+				if not member:
+					if not bloxlink_guild.chunked:
+						await self.client.request_offline_members(bloxlink_guild)
+						member = bloxlink_guild.get_member(author.id)
+
+				if member:
+					if find(lambda r: r.name == "Bug Hunter", member.roles):
+						notes.append("Bloxlink Bug Hunter")
+
 			profile = await is_premium(author=author)
 			if profile.is_premium:
 				notes.append("Bloxlink Donator")
