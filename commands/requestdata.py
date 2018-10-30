@@ -10,7 +10,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="requestdata")
+	@command(name="requestdata", alias=["rd"])
 	async def requestdata(message, response, args, prefix):
 		"""requests all data that is saved under your Discord ID"""
 

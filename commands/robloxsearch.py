@@ -8,7 +8,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="robloxsearch", cooldown=5, flags_enabled=True, alias=["search"], args = [
+	@command(name="robloxsearch", cooldown=5, flags_enabled=True, alias=["search", "rs", "rsearch"], args = [
 		{
 			"name": "user",
 			"prompt": "Please specify the search query.",
