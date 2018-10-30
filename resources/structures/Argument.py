@@ -272,4 +272,3 @@ class Argument:
 
 		finally:
 			in_prompts[self.author.id] = None
-
