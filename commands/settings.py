@@ -1,4 +1,6 @@
 from discord import Embed
+from discord.utils import find
+from config import MAGIC_ROLES
 
 from resources.module import get_module
 is_premium, post_event = get_module("utils", attrs=["is_premium", "post_event"])
@@ -62,11 +64,12 @@ async def setup(**kwargs):
 		action = args.parsed_args["action"]
 
 		if action == "change":
+			if not find(lambda r: r.name in MAGIC_ROLES, author.roles):
+				perms = channel.permissions_for(author)
 
-			perms = channel.permissions_for(author)
-			if not perms.administrator and not perms.manage_guild:
-				return await response.error("You need ``manage_server`` or ``administrator`` to " \
-					"change settings.")
+				if not perms.administrator and not perms.manage_guild:
+					return await response.error("You need ``manage_server`` or ``administrator`` to " \
+						"change settings.")
 
 			is_cancelled = False
 			to_change = None
@@ -94,7 +97,7 @@ async def setup(**kwargs):
 						"name": "change_with",
 						"check": resolve_change_with,
 						"min": 1,
-						"max": 50
+						"max": 100
 					}
 				])
 			finally:
@@ -174,4 +177,3 @@ async def setup(**kwargs):
 						await response.text(f"**{option}** ➜ ``{desc}``")
 					else:
 						await response.error("Invalid settings choice.")
-
