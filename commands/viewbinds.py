@@ -124,4 +124,5 @@ async def setup(**kwargs):
 		embed.set_author(name=guild.name, icon_url=guild.icon_url)
 		embed.set_footer(text=f"Use {prefix}delbind to delete a bind, or {prefix}bind to add a new bind.")
 
-		return await response.send(embed=embed)
+		
+		await response.send(embed=embed)
