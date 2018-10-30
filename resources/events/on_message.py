@@ -37,7 +37,7 @@ class OnMessage:
 				else:
 					perms = channel.permissions_for(author)
 
-					if hasattr(perms, "manage_server") or hasattr(perms, "administrator"):
+					if perms.manage_guild or perms.administrator:
 						is_command = await parse_message(message, guild_data=guild_data)
 					else:
 						return
