@@ -58,7 +58,7 @@ class Patreon:
 
 				await self.generate_token()
 
-		except ContentTypeError:
+		except (ContentTypeError, KeyError):
 			self.patrons = self.patrons or await self.get_patrons_from_db()
 			await sleep(500)
 
