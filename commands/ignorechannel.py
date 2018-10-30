@@ -2,9 +2,7 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="ignorechannel", permissions={
-		"raw": "manage_guild"}
-	)
+	@command(name="ignorechannel", permissions={"raw": "manage_guild"}, category="Administration")
 	async def ignorechannel(message, response, args, prefix):
 		"""toggles commands from being used by non-admins in the current channel"""
 
@@ -14,7 +12,7 @@ async def setup(**kwargs):
 		guild_data = await r.table("guilds").get(str(guild.id)).run() or {}
 
 		ignored_channels = guild_data.get("ignoredChannels", {})
-		ignored_channels[str(channel.id)] = not ignored_channels.get(str(channel.id), True)
+		ignored_channels[str(channel.id)] = not ignored_channels.get(str(channel.id), False)
 
 		disabled = bool(ignored_channels[str(channel.id)])
 
