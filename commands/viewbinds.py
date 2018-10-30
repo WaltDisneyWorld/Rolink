@@ -87,7 +87,7 @@ async def setup(**kwargs):
 								}, conflict="replace").run()
 							else:
 								data["roles"] = role_data
-								role_binds[group_id][rank] = data
+								role_binds.get(group_id, {})[rank] = data
 
 								await r.table("guilds").get(str(guild.id)).update({
 									"roleBinds": role_binds
