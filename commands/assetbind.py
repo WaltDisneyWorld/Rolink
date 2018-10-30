@@ -45,15 +45,17 @@ async def setup(**kwargs):
 			try:
 				# is this a gamepass?
 				web_response = await fetch(f'https://api.roblox.com/marketplace/game-pass-product-info?gamePassId={asset_id}')
-				web_response = web_response[0]
+				web_response = loads(web_response[0])
+
+				if web_response.get("errors"):
+					raise RobloxAPIError
+
 				asset_type = "GamePass"
 
 			except RobloxAPIError:
 				# item is not a gamepass, so it must be a badge or asset
 				web_response = await fetch(f"https://api.roblox.com/Marketplace/ProductInfo?assetId={asset_id}")
-				web_response = web_response[0]
-
-				web_response = loads(web_response)
+				web_response = loads(web_response[0])
 
 				if web_response.get("ProductType") == "User Product":
 					asset_type = "Asset"
