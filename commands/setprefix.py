@@ -6,6 +6,8 @@ async def setup(**kwargs):
 		"prompt": "What would you like to use as the prefix?",
 		"name": "new_prefix",
 		"type": "string",
+		"max": 6,
+		"min": 1,
 		"optional": True
 	}], permissions={"raw": "manage_guild"}, examples=[
 		"setprefix !!"
