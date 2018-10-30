@@ -1,4 +1,10 @@
-from discord.errors import Forbidden
+from discord.errors import Forbidden, HTTPException, DiscordException
+from resources.module import get_loader
+
+from discord import File
+from io import BytesIO
+
+Paginate = get_loader("paginate")
 
 class Response:
 	def __init__(self, message, command="N/A"):
@@ -41,6 +47,36 @@ class Response:
 
 				except Forbidden:
 					return False
+		
+		except HTTPException:
+			# check for embed, THEN do pagination
+			if embed:
+				"""
+				paginate = Paginate(embed=embed, field_limit=5)
+				async with paginate.get_embed_field() as field:
+					pass
+				"""
+				"""
+				paginate = Paginate(message=self.message, embed=embed, smart_fields=True)
+				await paginate.start()
+				"""
+				file = BytesIO()
+				file.write(bytes(str([x.get("value") for x in embed.to_dict()["fields"]]), "utf-8")) # temp
+
+				try:
+					await self.channel.send(
+						files=[
+							File(file.getvalue(), filename="binds.txt"),
+						]
+					)
+				except DiscordException:
+					pass
+
+				finally:
+					file.close()
+
+			else:
+				raise HTTPException
 
 		return True
 
