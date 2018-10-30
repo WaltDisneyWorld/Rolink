@@ -249,7 +249,7 @@ class Roblox:
 
 					if presence == "Playing":
 						presence = "playing a game"
-					elif presence == "Online" or presence == "Website":
+					elif presence == "Online":
 						presence = "browsing the website"
 					elif presence == "Creating":
 						presence = "in studio"
@@ -1130,8 +1130,13 @@ class Roblox:
 						member = bloxlink_guild.get_member(author.id)
 
 				if member:
-					if find(lambda r: r.name == "Bug Hunter", member.roles):
-						notes.append("Bloxlink Bug Hunter")
+					for role in member.roles:
+						if role.name == "Bug Hunter":
+							notes.append("Bloxlink Bug Hunter")
+						elif role.name == "Partner":
+							notes.append("Bloxlink Partner")
+						elif role.name == "Sponsor":
+							notes.append("Bloxlink Sponsor")
 
 			profile = await is_premium(author=author)
 			if profile.is_premium:
