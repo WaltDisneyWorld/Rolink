@@ -2,6 +2,7 @@ from importlib import import_module
 from config import RETHINKDB
 from resources.structures.Client import client
 from time import sleep
+from typing import Callable, Optional, Any
 import rethinkdb as r; r.set_loop_type("asyncio")
 import traceback
 import asyncio
@@ -26,6 +27,28 @@ async def load_database():
 	conn.repl()
 
 
+def get_loader(name: str, path: Optional=None) -> Callable:
+	path = path or "resources.modules"
+	path = path.replace("/", ".")
+
+	import_name = f'{path}.{name}'.replace("/",".").replace(".py","")
+
+	def wrapper(*args, **kwargs) -> Any:
+		try:
+			module = import_module(import_name)
+
+			if hasattr(module, "new_module"):
+				module = module.new_module()
+
+			return module(client=client, r=r, session=session, *args, **kwargs)
+
+		except Exception as e:
+			print(f"Module {name} failed to load: {e}", flush=True)
+			traceback.print_exc()
+
+	return wrapper
+
+
 def get_module(name, path=None, attrs=None, *args, **kwargs):
 	path = path or "resources.modules"
 	path = path.replace("/", ".")
@@ -42,12 +65,9 @@ def get_module(name, path=None, attrs=None, *args, **kwargs):
 			if hasattr(module, "new_module"):
 				new_class = module.new_module()
 				module = new_class(client=client, r=r, session=session)
-
-				if hasattr(module, "setup"):
-					loop.create_task(module.setup(*args, **kwargs))
-			else:
-				if hasattr(module, "setup"):
-					loop.create_task(module.setup(*args, **kwargs))
+			
+			if hasattr(module, "setup"):
+				loop.create_task(module.setup(*args, **kwargs))
 
 		except (ModuleNotFoundError, ImportError) as e:
 			# log(e)
