@@ -25,9 +25,9 @@ async def setup(**kwargs):
 			entry = processed.get(guild.id)
 
 			if entry[1] == str(author):
-				return await response.error("You've recently ran a scan, please wait a little longer.")
+				return await response.send("<:BloxlinkSweaty:506622933502918656> You've recently ran a scan, please wait a little longer.")
 			else:
-				return await response.error(f"**{entry[1]}** recently ran a scan, please wait a little longer.")
+				return await response.send(f"<:BloxlinkSweaty:506622933502918656> **{entry[1]}** recently ran a scan, please wait a little longer.")
 
 			return
 

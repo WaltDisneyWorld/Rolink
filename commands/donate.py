@@ -12,7 +12,7 @@ async def setup(**kwargs):
 
 		me = message.guild.me
 
-		embed = Embed(description = "We appreciate all donations! Donations go towards **server " \
+		embed = Embed(description = "<:BloxlinkSale:506622933184020490> We appreciate all donations! Donations go towards **server " \
 			"costs, domain costs, and other expenses.** If you'd like to be a generous soul and donate" \
 			", we'll give you some **sweet perks** such as a **sweet role in our Discord and " \
 			"donator-only commands.** :)")

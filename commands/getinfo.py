@@ -58,7 +58,7 @@ async def setup(**kwargs):
 
 						if primary_account.is_banned:
 							embed.add_field(name="Username", value=f"~~{primary_account.username}~~")
-							embed.description = "Note: this user is _banned_. Not all data may be available."
+							embed.description = "<:BloxlinkDead:506661879234560000> This user is _banned_. Not all data may be available."
 						else:
 							embed.add_field(name="Username", value=primary_account.username)
 

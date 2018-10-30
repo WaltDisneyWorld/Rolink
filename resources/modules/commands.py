@@ -182,22 +182,22 @@ class Commands:
 										else:
 											await self.client.request_offline_members(guild)
 								except Forbidden:
-									await response.error("I wasn't able to participate in the channel you used this command. Please ensure "
+									await response.error("<:BloxlinkError:506622933226225676> I wasn't able to participate in the channel you used this command. Please ensure "
 									"I have the proper permissions for the channel/server.")
 								except RobloxAPIError:
-									await response.error("Sorry, I was unable to process your command due to a Roblox API Error. "
+									await response.error("<:BloxlinkSad:506622933158985728> Sorry, I was unable to process your command due to a Roblox API Error. "
 									"You may try again, and if this persists, Roblox may be down, or you may be supplying an invalid "
 									"item to the command.")
 								except PermissionError as e:
 									# call post_event
-									await response.send(f":x: Bloxlink encountered a Permission Error:\n{e}")
+									await response.send(f"<:BloxlinkError:506622933226225676> Bloxlink encountered a Permission Error:\n{e}")
 								except CancelledPrompt as e:
 									if e.args:
 										await response.send(f"**Cancelled prompt:** {e}")
 									else:
 										await response.send("**Cancelled prompt.**")
 								except Exception as e:
-									await response.error("We're sorry, this command failed to execute. We've been "
+									await response.error("<:BloxlinkSad:506622933158985728> We're sorry, this command failed to execute. We've been "
 									"sent the error message, so this problem should be fixed ASAP.")
 
 									error = traceback.format_exc()
@@ -205,7 +205,7 @@ class Commands:
 
 									traceback.print_exc()
 						else:
-							await response.error("You don't satisfy the required permissions: "
+							await response.send("<:BloxlinkError:506622933226225676> You don't meet the required permissions: "
 							f'``{permission_error}``')
 						return True
 

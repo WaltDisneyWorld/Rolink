@@ -25,8 +25,8 @@ async def setup(**kwargs):
 		days_left = last_requested > time_now and ceil((last_requested - time_now)/86400)
 
 		if on_cooldown:
-			await response.error("You've recently requested a copy of your data. "
-			f"You may request again in **{days_left}** days.")
+			await response.send("<:BloxlinkSweaty:506622933502918656> You've recently requested a copy of your data. "
+			f"You may request again in **{days_left}** day{days_left > 1 and 's'}.")
 		else:
 
 			user_json = json.dumps(user_data)
@@ -36,7 +36,7 @@ async def setup(**kwargs):
 
 			try:
 
-				await author.send("Here's your data. You may request again in **30** days.",
+				await author.send("<:BloxlinkSearch:506622933012054028> Here's your data. You may request again in **30** days.",
 					files=[
 						File(buffer.getvalue(), filename=f"{author.id}.json"),
 					]

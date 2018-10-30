@@ -19,7 +19,7 @@ async def setup(**kwargs):
 		days, already_redeemed = await redeem_code(author=message.author, code=code)
 
 		if days == -1:
-			await response.error("Cannot redeem code: you **already** have a **lifetime** subscription!")
+			await response.send("<:BloxlinkCrying:506622931791642625> Cannot redeem code: you **already** have a **lifetime** subscription!")
 		elif days == -2:
 			await response.error("Cannot redeem key: tier levels don't match. You must first transfer " \
 				f"your subscription with ``{prefix}transfer``.")

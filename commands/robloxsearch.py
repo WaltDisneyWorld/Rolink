@@ -44,7 +44,7 @@ async def setup(**kwargs):
 
 					if primary_account.is_banned:
 						embed.add_field(name="Username", value=f"~~{primary_account.username}~~")
-						embed.description = "<:ban:476838302092230672> This user is _banned_. Not all data may be available."
+						embed.description = "<:BloxlinkDead:506661879234560000> This user is _banned_. Not all data may be available."
 					else:
 						embed.add_field(name="Username", value=primary_account.username)
 
@@ -92,6 +92,6 @@ async def setup(**kwargs):
 					await response.send(embed=embed)
 
 				else:
-					return await response.error("There is no account found with your query.")
+					return await response.send("<:BloxlinkSearch:506622933012054028> There is no account found with your query.")
 			else:
-				return await response.error("There is no account found with your query.")
+				return await response.send("<:BloxlinkSearch:506622933012054028> There is no account found with your query.")

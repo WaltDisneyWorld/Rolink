@@ -84,13 +84,13 @@ class Response:
 		if embed and not dm:
 			embed.color = embed_color
 
-		return await self.send(":anguished: " + error, embed=embed, dm=dm, no_dm_post=no_dm_post)
+		return await self.send("<:BloxlinkSad:506622933158985728> " + error, embed=embed, dm=dm, no_dm_post=no_dm_post)
 
 	async def success(self, success, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
 		if embed and not dm:
 			embed.color = embed_color
 
-		return await self.send(":ok_hand: " + success, embed=embed, dm=dm, no_dm_post=no_dm_post)
+		return await self.send("<:BloxlinkSuccess:506622931791773696> " + success, embed=embed, dm=dm, no_dm_post=no_dm_post)
 
 	async def text(self, text, dm=False, no_dm_post=False):
 		return await self.send(text, dm=dm, no_dm_post=no_dm_post)
