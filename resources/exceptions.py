@@ -3,6 +3,11 @@ class BloxlinkException(Exception):
 
     pass
 
+class CancelledPrompt(BloxlinkException):
+    """Raised when a user cancels the prompt"""
+
+    pass
+
 class RobloxAPIError(BloxlinkException):
     """Raised if the Roblox API is down"""
 

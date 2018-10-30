@@ -10,7 +10,7 @@ from discord.errors import NotFound, Forbidden
 from asyncio import sleep
 from time import time
 
-from resources.exceptions import RobloxAPIError, PermissionError
+from resources.exceptions import RobloxAPIError, PermissionError, CancelledPrompt
 
 from resources.module import get_module
 get_files, get_prefix, log_error = get_module("utils", attrs=["get_files", "get_prefix", "log_error"])
@@ -191,6 +191,11 @@ class Commands:
 								except PermissionError as e:
 									# call post_event
 									await response.send(f":x: Bloxlink encountered a Permission Error:\n{e}")
+								except CancelledPrompt as e:
+									if e.args:
+										await response.send(f"**Cancelled prompt:** {e}")
+									else:
+										await response.send("**Cancelled prompt.**")
 								except Exception as e:
 									await response.error("We're sorry, this command failed to execute. We've been "
 									"sent the error message, so this problem should be fixed ASAP.")
