@@ -20,6 +20,7 @@ class Group:
 		self.name = self.name or json.get("Name")
 		self.description = self.description or json.get("Description") or json.get("description", "N/A")
 		self.roles = self.roles or json.get("Roles")
+		self.rolesets = self.roles
 		self.owner = self.owner or json.get("Owner") or json.get("owner")
 		self.member_count = self.member_count or json.get("memberCount")
 		self.embed_url = self.embed_url or json.get("EmblemUrl")
