@@ -37,19 +37,20 @@ async def setup(**kwargs):
 
 			parsed_args, is_cancelled = await args.call_prompt([
 				{
-					"prompt": "Please specify the ``rank ID`` (found on the group admin page), or say ``all`` " \
-					f"to delete all binds for group **{bind_id}**. This is a guest role, say ``guest``.",
+					"prompt": "Please specify the ``rank ID`` (found on the group admin page), or say ``everything`` " \
+					f"to delete all binds for group **{bind_id}**. If this is a guest role, say ``guest``.",
 					"type": "string",
 					"name": "rank"
 				}
 			])
 
 			if not is_cancelled:
-				rank = parsed_args["rank"]
+				rank = parsed_args["rank"].lower()
 
-				if rank.lower() in ("all", "everything"):
+				if rank == "everything":
 					role_binds.pop(bind_id, None)
-				elif rank.lower() == "guest":
+
+				elif rank == "guest":
 					if not role_binds.get(bind_id, {}).get("guest") and not role_binds.get(bind_id, {}).get("0"):
 						return await response.error(f"No binding for group ``{bind_id}`` exists.")
 
