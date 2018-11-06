@@ -37,6 +37,7 @@ class Commands:
 		self.client = kwargs.get("client")
 		self.session = kwargs.get("session")
 		self.cooldowns = {}
+		self.client = kwargs.get("client")
 
 
 	async def get_args(self, message, content="", args=None, command=None):
@@ -163,7 +164,7 @@ class Commands:
 
 						processed_messages.append(message.id)
 
-						response = Response(message, command_name)
+						response = Response(message, self.client.user.id, guild_data, command_name)
 						permission_success, permission_error = await check_permissions(command, channel, author)
 
 						if permission_success:
@@ -175,14 +176,14 @@ class Commands:
 								except NotFound:
 									if not guild.chunked and not guild.unavailable:
 										try:
-											await channel.send("Oops! A ``NotFound`` exception was raised. We're now attempting to "\
+											await channel.error("Oops! A ``NotFound`` exception was raised. We're now attempting to "\
 											"fetch offline members for your server. You may retry this command after a few seconds.")
 										except NotFound:
 											pass
 										else:
 											await self.client.request_offline_members(guild)
 								except Forbidden:
-									await response.error("<:BloxlinkError:506622933226225676> I wasn't able to participate in the channel you used this command. Please ensure "
+									await response.error("I wasn't able to participate in the channel you used this command. Please ensure "
 									"I have the proper permissions for the channel/server.")
 								except RobloxAPIError:
 									await response.error("<:BloxlinkSad:506622933158985728> Sorry, I was unable to process your command due to a Roblox API Error. "
@@ -190,14 +191,14 @@ class Commands:
 									"item to the command.")
 								except PermissionError as e:
 									# call post_event
-									await response.send(f"<:BloxlinkError:506622933226225676> Bloxlink encountered a Permission Error:\n{e}")
+									await response.error(f"Bloxlink encountered a Permission Error:\n{e}")
 								except CancelledPrompt as e:
 									if e.args:
 										await response.send(f"**Cancelled prompt:** {e}")
 									else:
 										await response.send("**Cancelled prompt.**")
 								except Exception as e:
-									await response.error("<:BloxlinkSad:506622933158985728> We're sorry, this command failed to execute. We've been "
+									await response.error("I'm sorry, this command failed to execute. We've been "
 									"sent the error message, so this problem should be fixed ASAP.")
 
 									error = traceback.format_exc()
@@ -205,7 +206,7 @@ class Commands:
 
 									traceback.print_exc()
 						else:
-							await response.send("<:BloxlinkError:506622933226225676> You don't meet the required permissions: "
+							await response.error("You don't meet the required permissions: "
 							f'``{permission_error}``')
 						return True
 
