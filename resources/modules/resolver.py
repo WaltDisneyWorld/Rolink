@@ -13,7 +13,7 @@ class Resolver:
 		if not content:
 			content = message.content
 
-		min = arg.get("min", -100)
+		min = arg.get("min", 0)
 		max = arg.get("max", 100)
 
 		if arg.get("min") or arg.get("max"):
