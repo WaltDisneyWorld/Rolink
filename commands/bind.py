@@ -30,7 +30,7 @@ async def setup(**kwargs):
 			"prompt": "What rank would you like to receive role **{role.name}**? Please specify a **sequence " \
 				"of ranks** as such: ``1,2,3,4,5-7``, with each number corresponding to a rank ID or a " \
 				"sequence of ranks. Use - to denote a range, example: ``5-7`` means ranks 5, 6, and 7.\n" \
-				"You can specify ``all`` to include ``everyone`` in the group, and you can negate the number " \
+				"You can specify ``all`` to include everyone in the group, and you can negate the number " \
 				"to catch everyone with that rank number _and above._ Example: -10 means everyone with rank " \
 				"10 _and above._",
 			"type": "string",
@@ -51,7 +51,7 @@ async def setup(**kwargs):
 		"bind",
 		"bind 1337 | cool people | 1, 2, 3, 5-8 | skip"
 	])
-	async def setup_command(message, response, args, prefix):
+	async def bind(message, response, args, prefix):
 		"""create a new group bind"""
 
 		guild = message.guild
@@ -75,7 +75,7 @@ async def setup(**kwargs):
 					new_ranks.append(str(x))
 				elif x == "all":
 					new_ranks.append("all")
-				elif x == "guest" or x == "0":
+				elif x in ("guest", "0", 0):
 					new_ranks.append("0")
 				elif x[:1] == "-":
 					try:
