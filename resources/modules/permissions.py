@@ -34,7 +34,7 @@ class Permissions:
 					pass
 
 				return False, "This command is reserved for donators. The server owner " \
-					"must have premium for this command to work. Run ``!donate`` for instructions on donating."
+					"must have premium for this command to work. Run !donate for instructions on donating."
 
 
 		roles = permissions.get("roles") or permissions.get("role")
