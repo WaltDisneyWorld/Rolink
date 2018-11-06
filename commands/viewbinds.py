@@ -103,10 +103,10 @@ async def setup(**kwargs):
 							group = await get_group(group_id)
 
 							if group:
-								embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds))[0:1023], inline=False)
+								embed.add_field(name=f"{group.name} ({group_id})", value=("\n".join(binds)), inline=False)
 
 						except RobloxAPIError:
-							embed.add_field(name=f"Invalid Group: {group_id}", value=("\n".join(binds))[0:1023], inline=False)
+							embed.add_field(name=f"Invalid Group: {group_id}", value=("\n".join(binds)), inline=False)
 
 		if virtual_groups:
 			text_buffer = []
