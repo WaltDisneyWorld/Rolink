@@ -1,4 +1,4 @@
-from discord import Embed, File
+from discord import File
 from discord.errors import Forbidden
 from resources.exceptions import PermissionError, RobloxAPIError
 from io import BytesIO
@@ -42,9 +42,9 @@ async def setup(**kwargs):
 			entry = processed.get(guild.id)
 
 			if entry[1] == str(author):
-				return await response.error("You've recently ran a scan, please wait a little longer.")
+				return await response.silly("You've recently ran a scan, please wait a little longer.")
 			else:
-				return await response.error(f"**{entry[1]}** recently ran a scan, please wait a little longer.")
+				return await response.silly(f"**{entry[1]}** recently ran a scan, please wait a little longer.")
 
 			return
 
@@ -211,7 +211,7 @@ async def setup(**kwargs):
 
 		try:
 			await msg.delete()
-		except NotFound:
+		except (NotFound, AttributeError): # AttributeError temp until d.py bug fixed
 			pass
 
 		await asyncio.sleep(3600)

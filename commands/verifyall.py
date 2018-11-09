@@ -25,9 +25,9 @@ async def setup(**kwargs):
 			entry = processed.get(guild.id)
 
 			if entry[1] == str(author):
-				return await response.send("<:BloxlinkSweaty:506622933502918656> You've recently ran a scan, please wait a little longer.")
+				return await response.silly("You've recently ran a scan, please wait a little longer.")
 			else:
-				return await response.send(f"<:BloxlinkSweaty:506622933502918656> **{entry[1]}** recently ran a scan, please wait a little longer.")
+				return await response.silly(f"**{entry[1]}** recently ran a scan, please wait a little longer.")
 
 			return
 
@@ -61,7 +61,7 @@ async def setup(**kwargs):
 
 		try:
 			await msg.delete()
-		except NotFound:
+		except (NotFound, AttributeError): # AttributeError until d.py bug fixed
 			pass
 
 		await asyncio.sleep(3600)
