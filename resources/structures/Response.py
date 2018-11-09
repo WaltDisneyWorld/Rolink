@@ -8,15 +8,16 @@ from io import BytesIO
 Paginate = get_loader("paginate")
 
 class Response:
-	def __init__(self, message, client_id, guild_data, command="N/A"):
-		self.message = message
-		self.channel = message.channel
-		self.author = message.author
-		self.command = command
-		self.guild = message.guild
-		self.guild_data = guild_data
-		self.webhook_only = guild_data.get("customBot", {}).get("enabled")
-		self.client_id = client_id
+	def __init__(self, **kwargs):
+		self.message = kwargs.get("message")
+		self.channel = self.message.channel
+		self.author = self.message.author
+		self.command = kwargs.get("command")
+		self.guild = self.message.guild
+		self.guild_data = kwargs.get("guild_data", {})
+		self.webhook_only = self.guild_data.get("customBot", {}).get("enabled")
+		self.client = kwargs.get("client")
+		self.r = kwargs.get("r")
 
 	async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None):
 		channel = dm and self.author or self.channel
@@ -26,9 +27,12 @@ class Response:
 			bot_name = self.guild_data["customBot"]["name"]
 			bot_avatar = self.guild_data["customBot"]["avatar"]
 
-			for webhook in await self.channel.webhooks():
-				if (webhook.user and webhook.user.id) == self.client_id:
-					verified_webhook = webhook
+			try:
+				for webhook in await self.channel.webhooks():
+					if (webhook.user and webhook.user.id) == self.client.user.id:
+						verified_webhook = webhook
+			except Forbidden:
+				self.webhook_only = False
 
 			if not verified_webhook:
 				# try to create the webhook
@@ -36,9 +40,10 @@ class Response:
 					verified_webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
 				except Forbidden:
 					self.webhook_only = False
+					verified_webhook = False
 
 					try:
-						await self.channel.send("Customized Bot is enabled, but I couldn't "
+						await channel.send("Customized Bot is enabled, but I couldn't "
 						"create the webhook! Please give me the ``Manage Webhooks`` permission.")
 					except Forbidden:
 						pass
@@ -88,36 +93,41 @@ class Response:
 
 				except Forbidden:
 					return False
-		
+
 		except HTTPException:
 			# check for embed, THEN do pagination
-			if embed:
-				"""
-				paginate = Paginate(embed=embed, field_limit=5)
-				async with paginate.get_embed_field() as field:
-					pass
-				"""
-				"""
-				paginate = Paginate(message=self.message, embed=embed, smart_fields=True)
-				await paginate.start()
-				"""
-				file = BytesIO()
-				file.write(bytes(str([x.get("value") for x in embed.to_dict()["fields"]]), "utf-8")) # temp
-
-				try:
-					await self.channel.send(
-						files=[
-							File(file.getvalue(), filename="data.txt"),
-						]
-					)
-				except DiscordException:
-					pass
-
-				finally:
-					file.close()
+			if self.webhook_only:
+				self.webhook_only = False
+				return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files)
 
 			else:
-				raise HTTPException
+				if embed:
+					"""
+					paginate = Paginate(embed=embed, field_limit=5)
+					async with paginate.get_embed_field() as field:
+						pass
+					"""
+					"""
+					paginate = Paginate(message=self.message, embed=embed, smart_fields=True)
+					await paginate.start()
+					"""
+					file = BytesIO()
+					file.write(bytes(str([x.get("value") for x in embed.to_dict()["fields"]]), "utf-8")) # temp
+
+					try:
+						await self.channel.send(
+							files=[
+								File(file.getvalue(), filename="data.txt"),
+							]
+						)
+					except DiscordException:
+						pass
+
+					finally:
+						file.close()
+
+				else:
+					raise HTTPException
 
 		return True
 
@@ -135,6 +145,16 @@ class Response:
 
 		return await self.send(f"{emoji} {success}", embed=embed, dm=dm, no_dm_post=no_dm_post)
 
+	async def silly(self, text, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
+		emoji = self.webhook_only and ":sweat_smile:" or "<:BloxlinkSweaty:506622933502918656>"
+		if embed and not dm:
+			embed.color = embed_color
+
+		return await self.send(f"{emoji} {text}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+
 	async def text(self, text, dm=False, no_dm_post=False):
 		return await self.send(text, dm=dm, no_dm_post=no_dm_post)
-  
+
+
+def new_module():
+	return Response

@@ -13,11 +13,12 @@ in_prompts = {}
 
 
 class Argument:
-	def __init__(self, message, args, command):
+	def __init__(self, message, args, response, command):
 		self.message = message
 		self.channel = message.channel
 		self.author = message.author
 		self.guild = message.guild
+		self.response = response
 
 		self.args = args
 		self.parsed_args = {}
@@ -45,8 +46,7 @@ class Argument:
 
 		return flags, flags and content or ""
 
-	@staticmethod
-	async def say_message(channel, message, type="Success"):
+	async def say_message(self, channel, message, type="Success"):
 		if type == "Success":
 			embed = Embed(title="Prompt", description=f"{message}\n\nSay **cancel** to cancel.")
 			embed.colour = 0x36393E
@@ -58,16 +58,15 @@ class Argument:
 		embed.set_footer(text="This prompt will automatically cancel in 200 seconds.")
 
 		try:
-			await channel.send(embed=embed)
+			await self.response.send(embed=embed)
 		except Forbidden:
 			try:
-				await channel.send(f"{message}\n\nTry again, or say **cancel** to cancel.")
+				await self.response.send(f"{message}\n\nTry again, or say **cancel** to cancel.")
 			except Forbidden:
 				pass
 
 
-	@staticmethod
-	async def validate_prompt(message, arg, argument_class, parsed_args, skipped_arg=None, flag_str=None):
+	async def validate_prompt(self, message, arg, argument_class, parsed_args, skipped_arg=None, flag_str=None):
 		err_msg = None
 
 		allow = arg.get("allow") or arg.get("allowed") or arg.get("exclude") or []
@@ -126,12 +125,12 @@ class Argument:
 		if not success:
 			if err_msg:
 				desc = f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.``'
-				await Argument.say_message(message.channel, desc, type="Error")
+				await self.say_message(message.channel, desc, type="Error")
 				#await message.channel.send(f'Invalid **{arg.get("type", "string")}** argument: ``{err_msg}.`` ' \
 				#	"Try again or say **cancel** to cancel.")
 			else:
 				desc = f'Invalid **{arg.get("type", "string")}** argument.'
-				await Argument.say_message(message.channel, desc, type="Error")
+				await self.say_message(message.channel, desc, type="Error")
 
 		return (success and resolved), False
 
@@ -161,7 +160,7 @@ class Argument:
 						pass
 
 				if skipped_arg:
-					resolved, _ = await Argument.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self, parsed_args=parsed_args)
+					resolved, _ = await self.validate_prompt(self.message, arg, flag_str=flag_str, skipped_arg=skipped_arg, argument_class=self, parsed_args=parsed_args)
 				
 					if resolved and resolved is not 0:
 						ctr += 1
@@ -173,20 +172,20 @@ class Argument:
 						if failed > MAX_RETRIES:
 							in_prompts[self.author.id] = None
 							
-							await self.channel.send("**Cancelled prompt:** too many invalid arguments.")
+							await self.response.send("**Cancelled prompt:** too many invalid arguments.")
 							return None, "too many invalid prompts" 
 						while not success:
 							in_prompts[self.author.id] = True
-							
+
 							desc = arg["prompt"].format(**parsed_args)
-							await Argument.say_message(self.channel, desc)
+							await self.say_message(self.channel, desc)
 							#await self.channel.send(arg["prompt"].format(
 							#	**parsed_args
 							#) + "\nSay **cancel** to cancel.")
-							
+
 							try:
 								msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
-								resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
+								resolved, is_cancelled = await self.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
 								if resolved or resolved is 0:
 									ctr += 1
@@ -196,14 +195,14 @@ class Argument:
 
 								else:
 									failed += 1
-									
+
 									if is_cancelled:
 										in_prompts[self.author.id] = None
-										await self.channel.send("**Cancelled prompt.**")
+										await self.response.send("**Cancelled prompt.**")
 										return None, "user cancellation"
 									elif failed > MAX_RETRIES:
 										in_prompts[self.author.id] = None
-										await self.channel.send("**Cancelled prompt:** too many invalid arguments.")
+										await self.response.send("**Cancelled prompt:** too many invalid arguments.")
 										return None, "user cancellation"
 
 							except asyncio.TimeoutError:
@@ -211,7 +210,7 @@ class Argument:
 
 								if self.channel:
 									try:
-										await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
+										await self.response.send("**Cancelled prompt:** timeout reached (200s)")
 									except DiscordException:
 										pass
 
@@ -224,18 +223,18 @@ class Argument:
 					in_prompts[self.author.id] = True
 					if arg.get("ignoreFormatting"):
 						desc = arg["prompt"]
-						await Argument.say_message(self.channel, desc)
+						await self.say_message(self.channel, desc)
 						#await self.channel.send(f'{arg["prompt"]}\nSay **cancel** to cancel.')
 					else:
 						desc = arg["prompt"].format(**parsed_args)
-						await Argument.say_message(self.channel, desc)
+						await self.say_message(self.channel, desc)
 
 						#await self.channel.send(arg["prompt"].format(
 						#	**parsed_args
 						#) + "\nSay **cancel** to cancel.")
 					try:
 						msg = await client.wait_for("message", check=Argument.check_prompt(self), timeout=200.0)
-						resolved, is_cancelled = await Argument.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
+						resolved, is_cancelled = await self.validate_prompt(msg, arg, argument_class=self, parsed_args=parsed_args)
 
 						if resolved or resolved is 0:
 							ctr += 1
@@ -244,11 +243,11 @@ class Argument:
 
 						elif is_cancelled:
 							in_prompts[self.author.id] = None
-							await self.channel.send("**Cancelled prompt.**")
+							await self.response.send("**Cancelled prompt.**")
 							return None, "user cancellation"
 
 					except asyncio.TimeoutError:
-						await self.channel.send("**Cancelled prompt:** timeout reached (200s)")
+						await self.response.send("**Cancelled prompt:** timeout reached (200s)")
 						in_prompts[self.author.id] = None
 						return None, "timeout reached"
 
