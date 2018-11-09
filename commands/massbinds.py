@@ -5,9 +5,9 @@ async def setup(**kwargs):
 	command = kwargs.get("command")
 	r = kwargs.get("r")
 
-	@command(name="massbind", category="Premium", permissions={
+	@command(name="massbinds", category="Binds", permissions={
 		"raw": "manage_guild"
-	}, arguments=[
+	}, aliases=["creategrouproles", "massroles", "creategroupranks", "massbind"], arguments=[
 		{
 			"prompt": "Which **group** would you like to create binds for?\n" \
 				"Please specify the **group ID.**",
@@ -19,7 +19,7 @@ async def setup(**kwargs):
 	], examples=[
 		"massbind 1337"
 	])
-	async def massbind(message, response, args, prefix):
+	async def massbinds(message, response, args, prefix):
 		"""creates binds & roles to match the group roleset"""
 
 		guild = message.guild
@@ -31,9 +31,11 @@ async def setup(**kwargs):
 
 		role_binds = (await r.table("guilds").get(guild_id).run() or {}).get("roleBinds") or {}
 		if isinstance(role_binds, list):
-			role_binds = role_binds[0]		
+			role_binds = role_binds[0]
+
 		role_binds[group_id] = role_binds.get(group_id) or {}
 
+		group.rolesets.sort(key=lambda x: x["Rank"], reverse=True)
 		for roleset in group.rolesets:
 			rank_num = str(roleset["Rank"])
 			rank = role_binds[group_id].get(rank_num, {})
@@ -56,10 +58,4 @@ async def setup(**kwargs):
 			"roleBinds": role_binds
 		}, conflict="update").run()
 
-		await response.success("Successfully **bounded** roles for the group rolesets!")
-
-
-
-
-
-		
+		await response.success("Successfully **bounded** roles from the group rolesets!")
