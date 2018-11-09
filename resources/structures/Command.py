@@ -14,6 +14,7 @@ class Command:
 		self.free_to_use = kwargs.get("free_to_use", False)
 		self.flags_enabled = kwargs.get("flags_enabled") or kwargs.get("flags")
 		self.is_subcommand = is_subcommand
+		self.restrict_permissions = is_subcommand and bool(self.permissions)
 		self.func = func
 		self.cooldown = kwargs.get("cooldown", 0)
 
@@ -32,5 +33,8 @@ class Command:
 
 		self.usage = " | ".join(self.usage) if self.usage else ""
 
-	def add_subcommand(self, command):
-		self.subcommands[command.name] = command
+	def add_subcommand(self, subcommand):
+		if not subcommand.restrict_permissions:
+			subcommand.permissions = self.permissions
+
+		self.subcommands[subcommand.name] = subcommand

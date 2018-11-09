@@ -4,7 +4,6 @@ from config import PREFIX as default_prefix
 
 from resources.structures.Command import Command
 from resources.structures.Argument import Argument
-from resources.structures.Response import Response
 
 from discord.errors import NotFound, Forbidden
 from asyncio import sleep
@@ -12,10 +11,12 @@ from time import time
 
 from resources.exceptions import RobloxAPIError, PermissionError, CancelledPrompt
 
-from resources.module import get_module
+from resources.module import get_module, get_loader
 get_files, get_prefix, log_error = get_module("utils", attrs=["get_files", "get_prefix", "log_error"])
 is_blacklisted = get_module("blacklist", attrs=["is_blacklisted"])
 check_permissions = get_module("permissions", attrs=["check_permissions"])
+
+Response = get_loader("Response", "resources.structures")
 
 
 
@@ -31,6 +32,14 @@ def new_command(name=None, **kwargs):
 
 	return wrapper
 
+def new_subcommand(parent_name, name=None, **kwargs):
+	def wrapper(func):
+		command = Command(func, name=name or func.__name__, is_subcommand=True, **kwargs)
+		parent_command = commands[parent_name]
+		parent_command.add_subcommand(command)
+
+	return wrapper
+
 class Commands:
 	def __init__(self, **kwargs):
 		self.r = kwargs.get("r")
@@ -40,7 +49,7 @@ class Commands:
 		self.client = kwargs.get("client")
 
 
-	async def get_args(self, message, content="", args=None, command=None):
+	async def get_args(self, message, response, content="", args=None, command=None):
 		if args:
 			skipable_args = content.split(" | ")
 		else:
@@ -52,7 +61,7 @@ class Commands:
 		if command.flags_enabled:
 			flags, flag_str = Argument.parse_flags(content)
 
-		new_args = Argument(message, args=args, command=command)
+		new_args = Argument(message, args=args, response=response, command=command)
 		_, is_cancelled = await new_args.call_prompt(flag_str=flag_str, skip_args=skipable_args)
 
 		new_args.flags = flags
@@ -95,6 +104,13 @@ class Commands:
 
 					if index == command_name or command_name in command.aliases:
 						time_now = time()
+
+						if args:
+							# subcommand checking
+							if command.subcommands.get(args[0]):
+								command = command.subcommands[args[0]]
+								print(command.func, flush=True)
+								del args[0]
 
 						if command.cooldown:
 							self.cooldowns[author.id] = self.cooldowns.get(author.id, {})
@@ -158,17 +174,13 @@ class Commands:
 						except:
 							pass
 
-
-						if len(processed_messages) > 5000:
-							processed_messages.clear()
-
 						processed_messages.append(message.id)
 
-						response = Response(message, self.client.user.id, guild_data, command_name)
+						response = Response(message=message, guild_data=guild_data, command=command_name)
 						permission_success, permission_error = await check_permissions(command, channel, author)
 
 						if permission_success:
-							args, is_cancelled = await self.get_args(message, after, args, command)
+							args, is_cancelled = await self.get_args(message, response, after, args, command)
 
 							if not is_cancelled:
 								try:
@@ -208,17 +220,20 @@ class Commands:
 						else:
 							await response.error("You don't meet the required permissions: "
 							f'``{permission_error}``')
+
 						return True
 
 
 	async def setup(self):
 		for command_name in [f.replace(".py", "") for f in commands_list]:
 			get_module(path="commands", name=command_name,
-						command=new_command, r=self.r, client=self.client, session=self.session
+						command=new_command, subcommand=new_subcommand, 
+						r=self.r, client=self.client, session=self.session
 						)
 		while True:
 			await sleep(60)
 			self.cooldowns.clear()
+			processed_messages.clear()
 
 
 def new_module():
