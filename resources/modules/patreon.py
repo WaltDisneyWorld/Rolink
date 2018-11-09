@@ -3,6 +3,8 @@ from resources.structures.DonatorProfile import DonatorProfile
 from asyncio import sleep
 from aiohttp.client_exceptions import ContentTypeError
 
+
+
 BASE_URL = "https://www.patreon.com/api/oauth2"
 
 
@@ -58,11 +60,14 @@ class Patreon:
 
 				await self.generate_token()
 
-		except (ContentTypeError, KeyError):
+		except ContentTypeError:
 			self.patrons = self.patrons or await self.get_patrons_from_db()
 			await sleep(500)
 
 			return await self.generate_token()
+		except KeyError:
+			self.patrons = self.patrons or await self.get_patrons_from_db()
+			print("Patreons failed to load", flush=True)
 
 	async def load_pledges(self, url="{BASE_URL}/api/campaigns/{campaign_id}/pledges"):
 		url = url.format(BASE_URL=BASE_URL, campaign_id=await self.get_campaign_id())
