@@ -1,0 +1,42 @@
+version: "3.5"
+
+services:
+  rethinkdb:
+    image: rethinkdb
+    container_name: rethinkdb
+    restart: always
+    ports:
+      - "28015:28015"
+      - "29015:29015"
+    networks:
+      - default
+      - bloxlink-network
+    command: rethinkdb --bind all --initial-password ${RETHINKDB_PW}
+
+  rewrite:
+    image: rewrite:latest
+    container_name: master
+    restart: always
+    environment:
+      - RELEASE=LOCAL
+      - SHARDS_PER_CLUSTER=1
+      - CLUSTER_IMAGE=rewrite:latest
+      - LABEL=bloxlink
+    volumes:
+      - /usr/src/rewrite
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+    networks:
+      - default
+      - bloxlink-network
+    entrypoint: ["python3", "gateway/master.py"]
+    ports:
+      - "8000:8000"
+      - "8765:8765"
+    depends_on:
+      - rethinkdb
+
+networks:
+  bloxlink-network:
+    name: bloxlink-network
+

@@ -1,0 +1,21 @@
+{
+	"prompt": {
+		"title": "Prompt",
+		"cancelledPrompt": "Cancelled prompt",
+		"timeoutWarning": "This prompt will automatically cancel in {timeout} seconds.",
+		"toCancel": "Say **cancel** to cancel.",
+		"errors": {
+			"title": "Prompt Error",
+			"invalidArgument": "Invalid {arg} argument"
+		},
+		"resolvers": {
+
+		}
+	},
+	"permissions": {
+		"genericError": "Bloxlink is missing permissions for this command. Please give me the appropriate permissions. "
+	},
+	"errors": {
+		"commandError": "oops, we made a little oof, try again later"
+	}
+}
