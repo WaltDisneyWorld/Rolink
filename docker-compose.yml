@@ -21,7 +21,7 @@ services:
       - RELEASE=LOCAL
       - SHARDS_PER_CLUSTER=1
       - CLUSTER_IMAGE=rewrite:latest
-      - LABEL=bloxlink
+      - LABEL=rewrite
     volumes:
       - /usr/src/rewrite
       - /var/run/docker.sock:/var/run/docker.sock
