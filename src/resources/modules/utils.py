@@ -16,7 +16,7 @@ class Utils:
 		if not guild:
 			return PREFIX
 
-		if RELEASE == "MAIN" and guild.get_member(469652514501951518):
+		if RELEASE == "MAIN" and await guild.fetch_member(469652514501951518):
 			return "!!"
 
 		guild_data = guild_data or await self.args.r.table("guilds").get(str(guild.id)).run() or {}
