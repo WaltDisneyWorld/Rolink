@@ -1,2 +1,0 @@
-class ClusterException(Exception):
-	pass
