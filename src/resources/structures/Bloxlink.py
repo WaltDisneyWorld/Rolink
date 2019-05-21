@@ -13,7 +13,7 @@ import asyncio; loop = asyncio.get_event_loop()
 SHARD_COUNT = int(env.get("SHARD_COUNT", 1))
 SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
 
-LOG_LEVEL = env.get("LOG_LEVEL", "INFO").lower()
+LOG_LEVEL = env.get("LOG_LEVEL", "INFO").upper()
 LABEL = env.get("LABEL", "Bloxlink")
 
 
@@ -27,9 +27,9 @@ class BloxlinkStructure(AutoShardedClient):
 		super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
 
 	@staticmethod
-	def log(text, level=LOG_LEVEL):
-		if level.lower() == LOG_LEVEL:
-			print(f"{LABEL} | {text}", flush=True)
+	def log(*text, level=LOG_LEVEL):
+		if level.upper() == LOG_LEVEL:
+			print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
 
 	@staticmethod
 	def module(module):
@@ -40,11 +40,11 @@ class BloxlinkStructure(AutoShardedClient):
 		new_module = module(args)
 
 		failed = False
-		if hasattr(new_module, "setup"):
+		if hasattr(new_module, "__setup__"):
 			try:
-				loop.create_task(new_module.setup())
+				loop.create_task(new_module.__setup__())
 			except Exception as e:
-				Bloxlink.log(f"ERROR | Module {new_module.__name__.lower()}.setup() failed: {e}")
+				Bloxlink.log(f"ERROR | Module {new_module.__name__.lower()}.__setup__() failed: {e}")
 				failed = True
 
 		if not failed:

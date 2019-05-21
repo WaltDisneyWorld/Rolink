@@ -7,7 +7,7 @@ class MessageEvent:
 	def __init__(self, args):
 		pass
 
-	async def setup(self):
+	async def __setup__(self):
 
 		@Bloxlink.event
 		async def on_message(message):
