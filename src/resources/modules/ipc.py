@@ -63,7 +63,6 @@ class IPC:
 
 				await self.client.wait_for("ready")
 
-				"""
 				# for initial stats posting
 				await websocket.send(json.dumps({
 					"type": "READY",
@@ -75,7 +74,6 @@ class IPC:
 						"users": len(self.client.users)
 					}
 				}))
-				"""
 
 				async for message in websocket:
 

@@ -18,7 +18,7 @@ LABEL = env.get("LABEL", "bloxlink")
 class Cluster:
 	def __init__(self, cluster_id, shard_range, network, total_shard_count, websocket_auth):
 		self.id = cluster_id
-		self.range = shard_range
+		self.shards = shard_range
 
 		self.network = network
 		self.container = None
@@ -47,7 +47,7 @@ class Cluster:
 				# end of the unknown options
 				"Cmd": ["python3", "src/bot.py"],
 				"Env": [
-					f"SHARD_RANGE={str(self.range)}",
+					f"SHARD_RANGE={str(self.shards)}",
 					f"SHARD_COUNT={self.total_shard_count}",
 					f"CLUSTER_ID={self.id}",
 					f"WEBSOCKET_PORT={WEBSOCKET_PORT}",
@@ -71,13 +71,14 @@ class Cluster:
 			async for line in logs:
 				print(line, flush=True)
 
-			errors = errors + await container.log(stderr=True)
+			all_errors = await container.log(stderr=True)
+
+			errors = errors + all_errors
 			print(errors, flush=True)
-			#print(errors, flush=True) # TODO: do something with this.. maybe log to a file?
 
 		finally:
 			await self.network.disconnect({"Container": f"{LABEL}-child-{self.id}"})
 			await container.delete(force=True)
 
 			if errors:
-				raise ClusterException(str(errors))
+				raise ClusterException("\n".join(all_errors)[0:2000])

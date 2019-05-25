@@ -2,21 +2,22 @@ import sys
 import os
 import asyncio
 import logging
+import json
 import websockets
 import aiohttp
 import docker
-import json
 import uuid
 import aiodocker
-from structures.Cluster import Cluster # pylint: disable=E0611,import-error
-from exceptions import ClusterException # pylint: disable=E0611,wrong-import-order
+import datetime
 from async_timeout import timeout
 from concurrent.futures._base import CancelledError
+from structures.Cluster import Cluster # pylint: disable=E0611,import-error
+from exceptions import ClusterException # pylint: disable=E0611,wrong-import-order
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.abspath(os.path.join(dir_path, os.pardir)))
 
-from src.config import TOKEN # pylint: disable=wrong-import-position
+from src.config import TOKEN, WEBHOOKS # pylint: disable=wrong-import-position
 
 
 async_docker = aiodocker.Docker()
@@ -60,7 +61,7 @@ async def get_shard_count():
 			return (await response.json())["shards"]
 
 
-async def start_cluster(network, cluster_id, shard_range, total_shard_count):
+async def start_cluster(network, session, cluster_id, shard_range, total_shard_count):
 	print(f"Spawning a new cluster with shards: {shard_range}", flush=True)
 
 	cluster = Cluster(cluster_id, shard_range, network=network, total_shard_count=total_shard_count, websocket_auth=WEBSOCKET_AUTH)
@@ -69,15 +70,26 @@ async def start_cluster(network, cluster_id, shard_range, total_shard_count):
 	try:
 		await cluster.spawn()
 	except ClusterException as e:
+		webhook_data = {
+			"username": "Cluster Manager",
+			"embeds": [{
+				"title": f"Cluster {cluster_id} died. Restarting.",
+				"timestamp": datetime.datetime.now().isoformat(),
+				"color": 13319470
+			}]
+		}
 		if e.args:
 			print(f"Cluster {cluster_id} died: {e}", flush=True)
+			webhook_data["embeds"][0]["fields"] = [{"name": "Traceback", "value": str(e) }]
 		else:
 			print(f"Cluster {cluster_id} died.", flush=True)
+
+		await session.post(WEBHOOKS["LOGS"], json=webhook_data)
 
 		clusters.remove(cluster)
 
 		await asyncio.sleep(20)
-		await start_cluster(network, cluster_id, shard_range, total_shard_count)
+		await start_cluster(network, session, cluster_id, shard_range, total_shard_count)
 
 
 async def start_clusters():
@@ -85,6 +97,8 @@ async def start_clusters():
 	tasks = []
 
 	network = None
+
+	session = aiohttp.ClientSession()
 
 	try:
 		network = await async_docker.networks.get("bloxlink-network")
@@ -104,9 +118,21 @@ async def start_clusters():
 
 		if shard_range:
 			# append cluster spawning task
-			tasks.append(start_cluster(network, cluster_id, tuple(shard_range), shard_count))
+			tasks.append(start_cluster(network, session, cluster_id, tuple(shard_range), shard_count))
 
 		cluster_id += 1
+
+	try:
+		await session.post(WEBHOOKS["LOGS"], json={
+			"username": "Cluster Manager",
+			"embeds": [{
+				"timestamp": datetime.datetime.now().isoformat(),
+				"title": f"Starting {len(tasks)} cluster{'s' if len(tasks) > 1 else ''}",
+				"color": 7506393,
+			}]
+		})
+	except:
+		print("MASTER | Failed to post starting clusters webhook", flush=True)
 
 	await asyncio.wait(tasks) # spawn all clusters
 
@@ -132,8 +158,10 @@ async def cluster_timeout(future, websocket, message):
 
 			del pending[nonce]
 
-async def websocket_connect(websocket, path):
+async def websocket_connect(websocket, _):
 	print("MASTER | New client connected", flush=True)
+
+	session = aiohttp.ClientSession()
 
 	async for message in websocket:
 		try:
@@ -153,10 +181,35 @@ async def websocket_connect(websocket, path):
 			break
 
 		cluster_id = int(message.get("cluster_id", 0))
+		cluster = clusters[cluster_id]
 
 		if message.get("type"):
 			if message["type"] == "IDENTIFY":
-				clusters[cluster_id].websocket = websocket
+				cluster.websocket = websocket
+			elif message["type"] == "READY":
+				guilds = message["data"]["guilds"]
+				users = message["data"]["users"]
+
+				if len(cluster.shards) > 1:
+					shard_desc = f"{min(cluster.shards)}-{max(cluster.shards)}"
+				else:
+					shard_desc = cluster.shards[0]
+
+				try:
+					await session.post(WEBHOOKS["LOGS"], json={
+						"username": "Cluster Manager",
+						"embeds": [{
+							"title": f"Cluster {cluster_id} connected",
+							"timestamp": datetime.datetime.now().isoformat(),
+							"color": 3066737,
+							"description": "All shards have successfully connected to the gateway.",
+							"fields": [{"name": "Statistics", "value": f"**Shards:** {shard_desc}\n**Guilds:** {guilds}\n**Users:** {users}"}]
+
+						}]
+					})
+				except:
+					print("MASTER | Failed to post log webhook", flush=True)
+
 			elif message["type"] == "EVAL":
 				if message.get("data"):
 					future = loop.create_future()
@@ -189,6 +242,7 @@ async def websocket_connect(websocket, path):
 					if num_completed == num_all:
 						future.set_result(True)
 
+	await session.close()
 
 
 
