@@ -1,20 +1,25 @@
 from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient
-from config import RETHINKDB # pylint: disable=E0611
+from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
 from .Args import Args
 from rethinkdb import RethinkDB; r = RethinkDB(); r.set_loop_type("asyncio")
 from rethinkdb.errors import ReqlDriverError
 from ast import literal_eval
 import traceback
+import datetime
+import logging
+import aiohttp
 import asyncio; loop = asyncio.get_event_loop()
 
-
+CLUSTER_ID = env.get("CLUSTER_ID", "0")
 SHARD_COUNT = int(env.get("SHARD_COUNT", 1))
 SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
 
 LOG_LEVEL = env.get("LOG_LEVEL", "INFO").upper()
 LABEL = env.get("LABEL", "Bloxlink")
+
+logger = logging.getLogger()
 
 
 loaded_modules = {}
@@ -25,11 +30,33 @@ class BloxlinkStructure(AutoShardedClient):
 
 	def __init__(self, *args, **kwargs): # pylint: disable=W0235
 		super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
+		self.session = aiohttp.ClientSession()
 
 	@staticmethod
 	def log(*text, level=LOG_LEVEL):
 		if level.upper() == LOG_LEVEL:
 			print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
+
+
+	def error(self, text, title="Error"):
+		logger.exception(text)
+		loop.create_task(self._error(text, title=title))
+
+	async def _error(self, text, title=None):
+		try:
+			await self.session.post(WEBHOOKS["LOGS"], json={
+				"username": f"Cluster {CLUSTER_ID} {title}",
+				"embeds": [{
+					"timestamp": datetime.datetime.now().isoformat(),
+					"fields": [
+						{"name": "Traceback", "value": text[0:2000]},
+						{"name": "Affected Shards", "value": SHARD_RANGE}
+					],
+					"color": 13319470,
+				}]
+			})
+		except:
+			pass
 
 	@staticmethod
 	def module(module):
