@@ -2,7 +2,7 @@ from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException
 from discord import File
 from ..structures.Bloxlink import Bloxlink
-
+from config import PREFIX # pylint: disable=E0611
 
 
 
@@ -15,7 +15,7 @@ class Response:
 		self.webhook_only = self.guild_data.get("customBot", {}).get("enabled")
 		self.locale = kwargs.get("locale")
 		self.command_name = kwargs.get("command_name")
-		self.prefix = kwargs.get("prefix", "!")
+		self.prefix = kwargs.get("prefix", PREFIX)
 
 		self.author = self.message.author
 		self.channel = self.message.channel
