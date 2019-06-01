@@ -1,24 +1,31 @@
 import re
 import traceback
-from ..structures import Command, Bloxlink, Args
-from ..exceptions import PermissionError, CancelledPrompt
 from discord.errors import Forbidden
+from ..exceptions import PermissionError, CancelledPrompt # pylint: disable=redefined-builtin
+from ..structures import Command, Bloxlink, Args
 
 
 get_prefix = Bloxlink.get_module("utils", attrs="get_prefix")
+get_board = Bloxlink.get_module("trello", attrs="get_board")
 
 Locale = Bloxlink.get_module("locale")
 Response = Bloxlink.get_module("response")
 Arguments = Bloxlink.get_module("arguments")
 
 commands = {}
+trello_boards = {}
 
 @Bloxlink.module
 class Commands:
 	def __init__(self, args):
 		self.args = args
 
-	async def get_args(self, message, args, response, content, command, locale):
+	async def get_args(self, message, args, response, content, command, locale, guild_data):
+		new_args = Args(
+			message = message,
+			command_name = command,
+			guild_data = guild_data
+		)
 		arguments = Arguments(message, None, response, locale)
 		parsed_args = {}
 
@@ -53,13 +60,13 @@ class Commands:
 			parsed_args = await arguments.call_prompt(args)
 			# TODO: catch PermissionError from resolver and post the event
 
-		args = Args(
+		new_args.add(
 			parsed_args = parsed_args,
 			string_args = content and content.split(" ") or [],
-			call_prompt = arguments.call_prompt
+			call_prompt = arguments.call_prompt,
 		)
 
-		return args
+		return new_args
 
 	async def parse_message(self, message, guild_data=None):
 		guild = message.guild
@@ -68,13 +75,14 @@ class Commands:
 		channel = message.channel
 
 		guild_data = guild_data or (guild and await self.args.r.table("guilds").get(str(guild.id)).run()) or {}
-
-		prefix = await get_prefix(guild=guild, guild_data=guild_data)
+		trello_board = await get_board(guild_data=guild_data, guild=guild)
+		prefix = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
 		client_match = re.search(f"<@!?{self.args.client.user.id}>", content)
 		check = client_match and client_match.group(0) or (content[:len(prefix)].lower() == prefix.lower() and prefix)
 
-		if not check: return
+		if not check:
+			return
 
 		after = content[len(check):].strip()
 		args = after.split(" ")
@@ -85,7 +93,7 @@ class Commands:
 		if command_name:
 			for index, command in dict(commands).items():
 				if index == command_name or command_name in command.aliases:
-					if not command.dm_allowed and not guild:
+					if not (command.dm_allowed or guild):
 						try:
 							await channel.send("This command does not support DM. Please run it in a server.")
 						except Forbidden:
@@ -113,7 +121,7 @@ class Commands:
 					else:
 
 						try:
-							resolved_args = await self.get_args(message, subcommand_attrs.get("arguments") or command.arguments, response, after, command, locale)
+							resolved_args = await self.get_args(message, subcommand_attrs.get("arguments") or command.arguments, response, after, command, locale, guild_data)
 						except CancelledPrompt as e:
 							if e.args:
 								await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
@@ -134,9 +142,7 @@ class Commands:
 									await response.send(f"**{locale('prompt.cancelledPrompt')}.**")
 							except Exception as e:
 								await response.error(locale("errors.commandError"))
-								print(e, flush=True)
-								traceback.print_exc()
-								# TODO: post error to channel
+								Bloxlink.error(e, title=f"Error from !{command_name}")
 
 
 	@staticmethod
