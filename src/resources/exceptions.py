@@ -6,3 +6,6 @@ class PermissionError(BloxlinkException):
 
 class CancelledPrompt(BloxlinkException):
     pass
+
+class BadUsage(BloxlinkException):
+    pass
