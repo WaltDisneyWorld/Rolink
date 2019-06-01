@@ -4,6 +4,9 @@ class Args:
     def __init__(self, **kwargs):
         self._items = {}
 
+        self.add(**kwargs)
+
+    def add(self, **kwargs):
         for name, value in kwargs.items():
             setattr(self, name, value)
             self._items[name] = str(value)
