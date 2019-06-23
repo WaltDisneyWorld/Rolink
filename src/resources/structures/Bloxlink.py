@@ -2,7 +2,7 @@ from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient
 from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
-from .Args import Args
+from . import Args, Permissions
 from rethinkdb import RethinkDB; r = RethinkDB(); r.set_loop_type("asyncio")
 from rethinkdb.errors import ReqlDriverError
 from ast import literal_eval
@@ -60,7 +60,7 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def module(module):
-		args = Args(
+		args = Args.Args(
 			r=r,
 			client=Bloxlink
 		)
@@ -80,7 +80,7 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def loader(module):
-		module_args = Args(
+		module_args = Args.Args(
 			r=r,
 			client=Bloxlink
 		)
@@ -103,7 +103,6 @@ class BloxlinkStructure(AutoShardedClient):
 			module = loaded_modules.get(name)
 		else:
 			import_name = f"{path}.{name}".replace("src/", "").replace("/",".").replace(".py","")
-
 			try:
 				module = import_module(import_name)
 			except (ModuleNotFoundError, ImportError) as e:
@@ -143,7 +142,7 @@ class BloxlinkStructure(AutoShardedClient):
 
 				return (*attrs_list,)
 
-		return (mod and (isinstance(mod, list) and mod[0]) or mod)  or module
+		return (mod and (isinstance(mod, list) and mod[0]) or mod) or module
 
 
 	@staticmethod
@@ -190,6 +189,8 @@ class BloxlinkStructure(AutoShardedClient):
 	@staticmethod
 	def flags(fn):
 		fn.__flags__ = True
+
+	Permissions = Permissions.Permissions
 
 	def __repr__(self):
 		return "< Bloxlink Instance >"
