@@ -1,7 +1,7 @@
 import re
 import traceback
 from discord.errors import Forbidden
-from ..exceptions import PermissionError, CancelledPrompt # pylint: disable=redefined-builtin
+from ..exceptions import PermissionError, CancelledPrompt, Message # pylint: disable=redefined-builtin
 from ..structures import Command, Bloxlink, Args
 
 
@@ -140,6 +140,11 @@ class Commands:
 									await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
 								else:
 									await response.send(f"**{locale('prompt.cancelledPrompt')}.**")
+							except Message as e:
+								if e.args:
+									await response.send(e)
+								else:
+									await response.send("This command closed unexpectedly.")
 							except Exception as e:
 								await response.error(locale("errors.commandError"))
 								Bloxlink.error(e, title=f"Error from !{command_name}")

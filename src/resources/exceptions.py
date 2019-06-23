@@ -1,6 +1,9 @@
 class BloxlinkException(Exception):
     pass
 
+class Message(BloxlinkException):
+    pass
+
 class PermissionError(BloxlinkException):
     pass
 
