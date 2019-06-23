@@ -16,7 +16,7 @@ LABEL = env.get("LABEL", "bloxlink")
 
 
 class Cluster:
-	def __init__(self, cluster_id, shard_range, network, total_shard_count, websocket_auth):
+	def __init__(self, cluster_id, shard_range, network, total_shard_count, websocket_secret):
 		self.id = cluster_id
 		self.shards = shard_range
 
@@ -25,7 +25,7 @@ class Cluster:
 		self.websocket = None
 
 		self.total_shard_count = total_shard_count
-		self.websocket_auth = websocket_auth
+		self.websocket_secret = websocket_secret
 
 	async def kill(self):
 		pass
@@ -53,7 +53,7 @@ class Cluster:
 					f"WEBSOCKET_PORT={WEBSOCKET_PORT}",
 					f"RELEASE={RELEASE}",
 					f"LABEL={LABEL}",
-					f"WEBSOCKET_AUTH={self.websocket_auth}",
+					f"WEBSOCKET_SECRET={self.websocket_secret}",
 				]
 			},
 			name=f"{LABEL}-child-{self.id}",

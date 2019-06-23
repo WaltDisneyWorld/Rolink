@@ -40,7 +40,7 @@ LABEL = os.environ.get("LABEL", "bloxlink")
 # shard stuff
 SHARDS_PER_CLUSTER = int(os.environ.get("SHARDS_PER_CLUSTER", 1))
 
-WEBSOCKET_AUTH = str(uuid.uuid4())
+WEBSOCKET_SECRET = str(uuid.uuid4())
 
 clusters = []
 pending = {}
@@ -64,7 +64,7 @@ async def get_shard_count():
 async def start_cluster(network, session, cluster_id, shard_range, total_shard_count):
 	print(f"Spawning a new cluster with shards: {shard_range}", flush=True)
 
-	cluster = Cluster(cluster_id, shard_range, network=network, total_shard_count=total_shard_count, websocket_auth=WEBSOCKET_AUTH)
+	cluster = Cluster(cluster_id, shard_range, network=network, total_shard_count=total_shard_count, websocket_secret=WEBSOCKET_SECRET)
 	clusters.append(cluster)
 
 	try:
@@ -102,7 +102,7 @@ async def start_clusters():
 
 	try:
 		network = await async_docker.networks.get("bloxlink-network")
-	except aiodocker.exceptions.DockerError as e:
+	except aiodocker.exceptions.DockerError:
 		network = await async_docker.networks.create({"Name": "bloxlink-network"})
 
 	shard_count = await get_shard_count()
@@ -139,7 +139,7 @@ async def start_clusters():
 
 async def cluster_timeout(future, websocket, message):
 	nonce = message["nonce"]
-	auth = message["auth"]
+	secret = message["secret"]
 
 	async with timeout(15):
 		try:
@@ -151,7 +151,7 @@ async def cluster_timeout(future, websocket, message):
 		finally:
 			await websocket.send(json.dumps({
 				"nonce": nonce,
-				"auth": auth,
+				"secret": secret,
 				"type": "RESULT",
 				"data": pending[nonce]["results"]
 			}))
@@ -171,10 +171,10 @@ async def websocket_connect(websocket, _):
 			break
 
 		nonce = message.get("nonce")
-		auth = message.get("auth")
+		secret = message.get("secret")
 
-		if auth != WEBSOCKET_AUTH:
-			await websocket.send("Invalid authorization.")
+		if secret != WEBSOCKET_SECRET:
+			await websocket.send("Invalid secret.")
 			break
 		elif not nonce:
 			await websocket.send("Missing nonce.")
@@ -218,7 +218,7 @@ async def websocket_connect(websocket, _):
 
 					await asyncio.wait([cluster.websocket.send(json.dumps({
 						"nonce": nonce,
-						"auth": auth,
+						"secret": secret,
 						"type": "EVAL",
 						"data": to_eval,
 						"parent": cluster_id

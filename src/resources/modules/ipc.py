@@ -9,7 +9,7 @@ eval = Bloxlink.get_module("eval", attrs="__call__")
 
 
 WEBSOCKET_PORT = env.get("WEBSOCKET_PORT")
-WEBSOCKET_AUTH = env.get("WEBSOCKET_AUTH")
+WEBSOCKET_SECRET = env.get("WEBSOCKET_SECRET")
 CLUSTER_ID = int(env.get("CLUSTER_ID", 0))
 LABEL = env.get("LABEL", "master").lower()
 
@@ -32,7 +32,7 @@ class IPC:
 
 		await self.websocket.send(json.dumps({
 			"nonce": nonce,
-			"auth": WEBSOCKET_AUTH,
+			"secret": WEBSOCKET_SECRET,
 			"cluster_id": CLUSTER_ID,
 			"type": "EVAL",
 			"data": message
@@ -57,7 +57,7 @@ class IPC:
 				await websocket.send(json.dumps({
 					"type": "IDENTIFY",
 					"cluster_id": CLUSTER_ID,
-					"auth": WEBSOCKET_AUTH,
+					"secret": WEBSOCKET_SECRET,
 					"nonce": str(uuid.uuid4())
 				}))
 
@@ -67,7 +67,7 @@ class IPC:
 				await websocket.send(json.dumps({
 					"type": "READY",
 					"cluster_id": CLUSTER_ID,
-					"auth": WEBSOCKET_AUTH,
+					"secret": WEBSOCKET_SECRET,
 					"nonce": str(uuid.uuid4()),
 					"data": {
 						"guilds": len(self.client.guilds),
@@ -76,7 +76,6 @@ class IPC:
 				}))
 
 				async for message in websocket:
-
 					try:
 						message = json.loads(message)
 					except json.JSONDecodeError:
@@ -84,10 +83,10 @@ class IPC:
 						break
 
 					nonce = message.get("nonce")
-					auth = message.get("auth")
+					secret = message.get("secret")
 
-					if auth != WEBSOCKET_AUTH:
-						await websocket.send("Invalid authorization.")
+					if secret != WEBSOCKET_SECRET:
+						await websocket.send("Invalid secret.")
 						break
 					elif not nonce:
 						await websocket.send("Missing nonce.")
@@ -104,7 +103,7 @@ class IPC:
 									"type": "RESULT",
 									"cluster_id": CLUSTER_ID,
 									"parent": message["parent"],
-									"auth": WEBSOCKET_AUTH,
+									"secret": WEBSOCKET_SECRET,
 									"nonce": nonce,
 									"data": res or "null"
 								}))
@@ -118,12 +117,7 @@ class IPC:
 			self.connected = False
 			Bloxlink.log("Disconnected from websocket")
 
-
 		return success
-
-
-	async def kill(self):
-		pass
 
 	async def __setup__(self):
 		if WEBSOCKET_PORT:
@@ -144,4 +138,3 @@ class IPC:
 
 		else:
 			Bloxlink.log("DEBUG | Not loading IPC")
-
