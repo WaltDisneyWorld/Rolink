@@ -25,7 +25,7 @@ class IPC:
 		self.client = args.client
 		self.loop = args.client.loop
 
-	async def broadcast(self, message, response=True):
+	async def broadcast(self, message, *, response=True, type="EVAL"):
 		"""broadcasts a message to all clusters"""
 
 		nonce = str(uuid.uuid4())
@@ -34,7 +34,7 @@ class IPC:
 			"nonce": nonce,
 			"secret": WEBSOCKET_SECRET,
 			"cluster_id": CLUSTER_ID,
-			"type": "EVAL",
+			"type": type,
 			"data": message
 		}))
 
@@ -42,7 +42,8 @@ class IPC:
 
 		pending_tasks[nonce] = future
 
-		return await future
+		if response:
+			return await future
 
 	async def connect(self):
 		success = False
