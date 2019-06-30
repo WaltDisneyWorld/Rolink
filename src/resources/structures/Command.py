@@ -37,7 +37,6 @@ class Command:
 
 		self.usage = " | ".join(self.usage) if self.usage else ""
 
-
 	def __str__(self):
 		return self.name
 
@@ -54,7 +53,6 @@ class Command:
 
 			if permissions.bloxlink_role:
 				role_name = permissions.bloxlink_role
-
 				author_perms = author.guild_permissions
 
 				if role_name == "Bloxlink Manager":
@@ -89,5 +87,3 @@ class Command:
 				raise PermissionError(e)
 
 			raise PermissionError("You do not meet the required permissions for this command.")
-
-
