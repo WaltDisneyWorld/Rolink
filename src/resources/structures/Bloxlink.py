@@ -3,7 +3,7 @@ from os import environ as env
 from discord import AutoShardedClient
 from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
 from . import Args, Permissions
-from rethinkdb import RethinkDB; r = RethinkDB(); r.set_loop_type("asyncio")
+from rethinkdb import RethinkDB; r = RethinkDB(); r.set_loop_type("asyncio") # pylint: disable=no-name-in-module
 from rethinkdb.errors import ReqlDriverError
 from ast import literal_eval
 import traceback
@@ -60,7 +60,7 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def module(module):
-		args = Args.Args(
+		args = Args.Args( # pylint: disable=no-member
 			r=r,
 			client=Bloxlink
 		)
@@ -80,7 +80,7 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def loader(module):
-		module_args = Args.Args(
+		module_args = Args.Args( # pylint: disable=no-member
 			r=r,
 			client=Bloxlink
 		)
@@ -190,7 +190,7 @@ class BloxlinkStructure(AutoShardedClient):
 	def flags(fn):
 		fn.__flags__ = True
 
-	Permissions = Permissions.Permissions
+	Permissions = Permissions.Permissions # pylint: disable=no-member
 
 	def __repr__(self):
 		return "< Bloxlink Instance >"
