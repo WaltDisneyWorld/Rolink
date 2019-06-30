@@ -6,9 +6,7 @@ class PingCommand(Bloxlink.Module):
 	"""test command"""
 
 	def __init__(self):
-		self.permissions = {
-			"roles": ["test"]
-		}
+		self.permissions = Bloxlink.Permissions().build(roles=["test"])
 		self.aliases = ["test"]
 		self.arguments = [
 			{
@@ -30,12 +28,12 @@ class PingCommand(Bloxlink.Module):
 			},
 		]
 
-	async def __main__(self, message, response, args):
-		await response.send(f"Arg 1: {args.parsed_args['test1']}")
-		await response.send(f"Arg 2: {args.parsed_args['test2']}")
-		await response.send(f"Arg 3: {args.parsed_args['test3']}")
+	async def __main__(self, CommandArgs):
+		await CommandArgs.response.send(f"Arg 1: {CommandArgs.parsed_args['test1']}")
+		await CommandArgs.response.send(f"Arg 2: {CommandArgs.parsed_args['test2']}")
+		await CommandArgs.response.send(f"Arg 3: {CommandArgs.parsed_args['test3']}")
 
 	@staticmethod
 	@Bloxlink.subcommand
-	async def echo(message, response, args):
-		await response.send("hello from a subcommand")
+	async def echo(CommandArgs):
+		await CommandArgs.response.send("hello from a subcommand")

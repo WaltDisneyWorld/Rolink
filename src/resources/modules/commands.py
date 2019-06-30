@@ -20,19 +20,14 @@ class Commands:
 	def __init__(self, args):
 		self.args = args
 
-	async def get_args(self, message, args, response, content, command, locale, guild_data):
-		new_args = Args(
-			message = message,
-			command_name = command,
-			guild_data = guild_data
-		)
-		arguments = Arguments(message, None, response, locale)
+	async def more_args(self, content_modified, arg_container, command_args):
+		arguments = Arguments(None, arg_container)
 		parsed_args = {}
 
-		if args:
-			arg_len = len(args)
+		if command_args:
+			arg_len = len(command_args)
 			skipped_args = []
-			split = content.split(" ")
+			split = content_modified.split(" ")
 			temp = []
 
 			for arg in split:
@@ -40,7 +35,7 @@ class Commands:
 					arg = arg.replace('"', "")
 
 				if len(skipped_args) + 1 == arg_len:
-					t = content.replace('"', "").replace(" ".join(skipped_args), "").strip()
+					t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip()
 					skipped_args.append(t)
 
 					break
@@ -56,17 +51,15 @@ class Commands:
 				else:
 					skipped_args.append(arg)
 
-			arguments = Arguments(message, skipped_args, response, locale)
-			parsed_args = await arguments.call_prompt(args)
+			arguments = Arguments(skipped_args, arg_container)
+			parsed_args = await arguments.call_prompt(command_args)
 			# TODO: catch PermissionError from resolver and post the event
 
-		new_args.add(
+		arg_container.add(
 			parsed_args = parsed_args,
-			string_args = content and content.split(" ") or [],
+			string_args = content_modified and content_modified.split(" ") or [],
 			call_prompt = arguments.call_prompt,
 		)
-
-		return new_args
 
 	async def parse_message(self, message, guild_data=None):
 		guild = message.guild
@@ -111,8 +104,16 @@ class Commands:
 							subcommand_attrs = fn.__subcommandattrs__
 							del args[0]
 
+					CommandArgs = Args(
+						command_name = command_name,
+						message = message,
+						guild_data = guild_data
+					)
+
 					locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
-					response = Response(message, locale=locale, guild_data=guild_data, command_name=command_name)
+					response = Response(CommandArgs)
+
+					CommandArgs.add(locale=locale, response=response)
 
 					try:
 						await command.check_permissions(author, locale, permissions=subcommand_attrs.get("permissions"))
@@ -121,7 +122,7 @@ class Commands:
 					else:
 
 						try:
-							resolved_args = await self.get_args(message, subcommand_attrs.get("arguments") or command.arguments, response, after, command, locale, guild_data)
+							await self.more_args(after, CommandArgs, subcommand_attrs.get("arguments") or command.arguments)
 						except CancelledPrompt as e:
 							if e.args:
 								await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
@@ -134,7 +135,7 @@ class Commands:
 								await response.error(locale("permissions.genericError"))
 						else:
 							try:
-								await fn(message, response, resolved_args)
+								await fn(CommandArgs)
 							except CancelledPrompt as e:
 								if e.args:
 									await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")

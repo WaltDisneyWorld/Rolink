@@ -8,12 +8,14 @@ class VerifyCommand(Bloxlink.Module):
 	def __init__(self):
 		pass
 
+	@staticmethod
 	@Bloxlink.flags
-	async def __main__(self, message, response, args, flags):
+	async def __main__(CommandArgs):
 		pass
 
+	@staticmethod
 	@Bloxlink.subcommand
-	async def add(self, message, response, args):
+	async def add(CommandArgs):
 		pass
 
 

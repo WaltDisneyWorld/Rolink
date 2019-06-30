@@ -9,12 +9,14 @@ get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
 
 @Bloxlink.loader
 class Arguments:
-	def __init__(self, meta_args, message, skipped_args, response, locale):
-		self.client = meta_args.client
-		self.message = message
-		self.response = response
+	def __init__(self, _, skipped_args, CommandArgs):
+		self.message = CommandArgs.message
+
+		self.response = CommandArgs.response
+		self.locale = CommandArgs.locale
+
 		self.skipped_args = skipped_args
-		self.locale = locale
+
 
 	async def say(self, text, type=None, is_prompt=True):
 		if type == "error":
@@ -50,7 +52,7 @@ class Arguments:
 			if not skipped_arg:
 				try:
 					await self.say(prompt["prompt"])
-					message = await self.client.wait_for("message", check=self.check_prompt(), timeout=200.0)
+					message = await Bloxlink.wait_for("message", check=self.check_prompt(), timeout=200.0)
 					my_arg = message.content
 
 				except TimeoutError:

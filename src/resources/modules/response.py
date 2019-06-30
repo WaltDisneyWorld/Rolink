@@ -8,7 +8,8 @@ from config import PREFIX # pylint: disable=E0611
 
 @Bloxlink.loader
 class Response:
-	def __init__(self, args, message, **kwargs):
+	def __init__(self, _, CommandArgs):
+		"""
 		self.args = args
 		self.message = message
 		self.guild_data = kwargs.get("guild_data", {})
@@ -19,14 +20,22 @@ class Response:
 
 		self.author = self.message.author
 		self.channel = self.message.channel
+		"""
+
+		self.webhook_only = CommandArgs.guild_data.get("customBot", {}).get("enabled")
+
+		self.message = CommandArgs.message
+		self.author = CommandArgs.message.author
+		self.channel = CommandArgs.message.channel
+		self.args = CommandArgs
 
 	async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None):
 		channel = dm and self.author or self.channel
 
 		verified_webhook = False
 		if self.webhook_only:
-			bot_name = self.guild_data["customBot"].get("name", "Bloxlink")
-			bot_avatar = self.guild_data["customBot"].get("avatar", "")
+			bot_name = self.args.guild_data["customBot"].get("name", "Bloxlink")
+			bot_avatar = self.args.guild_data["customBot"].get("avatar", "")
 
 			try:
 				for webhook in await self.channel.webhooks():
@@ -87,7 +96,7 @@ class Response:
 							await self.channel.send(content=self.author.mention + ", I was unable to DM you. "
 							"Please check your privacy settings and try again.")
 					else:
-						await self.author.send(f'You attempted to use command {self.command_name} in '
+						await self.author.send(f'You attempted to use command {self.args.command_name} in '
 						f'{self.channel.mention}, but I was unable to post there. ' \
 							"You may need to grant me the ``Embed Links`` permission.", files=files)
 					return False
