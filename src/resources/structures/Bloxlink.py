@@ -189,6 +189,7 @@ class BloxlinkStructure(AutoShardedClient):
 	@staticmethod
 	def flags(fn):
 		fn.__flags__ = True
+		return fn
 
 	Permissions = Permissions.Permissions # pylint: disable=no-member
 

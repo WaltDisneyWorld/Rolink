@@ -107,8 +107,16 @@ class Commands:
 					CommandArgs = Args(
 						command_name = command_name,
 						message = message,
-						guild_data = guild_data
+						guild_data = guild_data,
+						flags = {}
 					)
+
+					if getattr(fn, "__flags__", False):
+						flags, flags_str = command.parse_flags(after)
+						content = content.replace(flags_str, "")
+						message.content = content
+						after = after.replace(flags_str, "")
+						CommandArgs.flags = flags
 
 					locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
 					response = Response(CommandArgs)

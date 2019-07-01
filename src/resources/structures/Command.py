@@ -1,7 +1,9 @@
 from inspect import iscoroutinefunction
 from ..exceptions import PermissionError
 from .Permissions import Permissions
+from .Args import Args
 from discord.utils import find
+import re
 
 
 class Command:
@@ -17,7 +19,6 @@ class Command:
 		self.category = getattr(command, "category", "Miscellaneous")
 		self.examples = getattr(command, "examples", [])
 		self.hidden = getattr(command, "hidden", self.category == "Developer")
-		self.flags = getattr(command, "flags", {})
 		self.free_to_use = getattr(command, "free_to_use", False)
 		self.fn = command.__main__
 		self.cooldown = getattr(command, "cooldown", 0)
@@ -87,3 +88,17 @@ class Command:
 				raise PermissionError(e)
 
 			raise PermissionError("You do not meet the required permissions for this command.")
+
+	def parse_flags(self, content):
+		flags = {m.group(1): m.group(2) or True for m in re.finditer(r"--?(\w+)(?: ([^-]*)|$)", content)}
+
+		if flags:
+			try:
+				content = content[content.index("--"):]
+			except ValueError:
+				try:
+					content = content[content.index("-"):]
+				except ValueError:
+					return {}, ""
+
+		return flags, flags and content or ""
