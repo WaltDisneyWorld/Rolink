@@ -1,8 +1,8 @@
 from asyncio import TimeoutError
-# from discord.errors import Forbidden - Do I need this??
+from discord.errors import Forbidden
 from discord import Embed
 from ..structures.Bloxlink import Bloxlink
-from ..exceptions import CancelledPrompt
+from ..exceptions import CancelledPrompt, CancelCommand
 from ..constants import RED_COLOR, INVISIBLE_COLOR
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
@@ -15,7 +15,7 @@ class Arguments:
 		self.response = CommandArgs.response
 		self.locale = CommandArgs.locale
 
-		self.skipped_args = skipped_args
+		self.skipped_args = skipped_args or []
 
 
 	async def say(self, text, type=None, is_prompt=True):
@@ -35,11 +35,14 @@ class Arguments:
 			if is_prompt:
 				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning')}"
 
-			await self.response.send(text)
+			return await self.response.send(text)
 
-	async def call_prompt(self, arguments):
+		return msg
+
+	async def prompt(self, arguments, save_messages=False):
 		checked_args = 0
 		resolved_args = {}
+		messages = []
 
 		while checked_args != len(arguments):
 			prompt = arguments[checked_args]
@@ -49,17 +52,38 @@ class Arguments:
 			message = self.message
 			err_count = 0
 
-			if not skipped_arg:
-				try:
-					await self.say(prompt["prompt"])
-					message = await Bloxlink.wait_for("message", check=self.check_prompt(), timeout=200.0)
-					my_arg = message.content
+			try:
+				if not skipped_arg:
+					try:
+						client_message = await self.say(prompt["prompt"])
+						message = await Bloxlink.wait_for("message", check=self.check_prompt(), timeout=200.0)
+						my_arg = message.content
 
-				except TimeoutError:
-					raise CancelledPrompt("timeout (200s)")
+						if client_message:
+							messages.append(client_message)
 
-			if my_arg.lower() == "cancel":
-				raise CancelledPrompt
+						messages.append(message)
+
+						if my_arg.lower() == "cancel":
+							raise CancelledPrompt
+
+					except TimeoutError:
+						raise CancelledPrompt("timeout (200s)")
+
+			except CancelledPrompt as e:
+				messages.append(self.message)
+
+				for message in messages:
+					try:
+						await message.delete()
+						message.nonce = "deleted"
+					except Forbidden:
+						pass
+
+				if self.message.nonce != "deleted":
+					raise CancelledPrompt(e)
+
+				raise CancelCommand
 
 			resolver = get_resolver(prompt.get("type", "string"))
 			resolved, err_msg = await resolver(message, prompt, my_arg)
@@ -76,6 +100,9 @@ class Arguments:
 					pass
 
 				err_count += 1
+
+		if save_messages:
+			return resolved_args, messages
 
 		return resolved_args
 
