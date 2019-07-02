@@ -1,13 +1,16 @@
 class BloxlinkException(Exception):
     pass
 
-class Message(BloxlinkException):
+class CancelCommand(BloxlinkException):
+    pass
+
+class Message(CancelCommand):
+    pass
+
+class CancelledPrompt(CancelCommand):
     pass
 
 class PermissionError(BloxlinkException):
-    pass
-
-class CancelledPrompt(BloxlinkException):
     pass
 
 class BadUsage(BloxlinkException):

@@ -1,7 +1,7 @@
 import re
 import traceback
 from discord.errors import Forbidden
-from ..exceptions import PermissionError, CancelledPrompt, Message # pylint: disable=redefined-builtin
+from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand # pylint: disable=redefined-builtin
 from ..structures import Command, Bloxlink, Args
 
 
@@ -52,13 +52,13 @@ class Commands:
 					skipped_args.append(arg)
 
 			arguments = Arguments(skipped_args, arg_container)
-			parsed_args = await arguments.call_prompt(command_args)
+			parsed_args = await arguments.prompt(command_args)
 			# TODO: catch PermissionError from resolver and post the event
 
 		arg_container.add(
 			parsed_args = parsed_args,
 			string_args = content_modified and content_modified.split(" ") or [],
-			call_prompt = arguments.call_prompt,
+			prompt = arguments.prompt,
 		)
 
 	async def parse_message(self, message, guild_data=None):
@@ -156,6 +156,9 @@ class Commands:
 									await response.send(e)
 								else:
 									await response.send("This command closed unexpectedly.")
+							except CancelCommand as e:
+								if e.args:
+									await response.send(e)
 							except Exception as e:
 								await response.error(locale("errors.commandError"))
 								Bloxlink.error(e, title=f"Error from !{command_name}")
