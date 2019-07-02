@@ -177,6 +177,7 @@ class BloxlinkStructure(AutoShardedClient):
 	def subcommand(a=None):
 		if callable(a):
 			a.__issubcommand__ = True
+			a.__subcommandattrs__ = {}
 			return a
 		else:
 			def wrapper(fn):

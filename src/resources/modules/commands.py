@@ -81,7 +81,6 @@ class Commands:
 		args = after.split(" ")
 		command_name = args[0] and args[0].lower()
 		del args[0]
-		after = args and " ".join(args) or ""
 
 		if command_name:
 			for index, command in dict(commands).items():
@@ -101,14 +100,17 @@ class Commands:
 						# subcommand checking
 						if command.subcommands.get(args[0]):
 							fn = command.subcommands.get(args[0])
-							subcommand_attrs = fn.__subcommandattrs__
+							subcommand_attrs = getattr(fn, "__subcommandattrs__", None)
 							del args[0]
+
+					after = args and " ".join(args) or ""
 
 					CommandArgs = Args(
 						command_name = command_name,
 						message = message,
 						guild_data = guild_data,
-						flags = {}
+						flags = {},
+						prefix = prefix
 					)
 
 					if getattr(fn, "__flags__", False):
