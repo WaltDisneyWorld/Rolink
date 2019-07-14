@@ -89,7 +89,8 @@ class IPC:
 					if secret != WEBSOCKET_SECRET:
 						await websocket.send("Invalid secret.")
 						break
-					elif not nonce:
+
+					if not nonce:
 						await websocket.send("Missing nonce.")
 						break
 
