@@ -207,5 +207,6 @@ Bloxlink = BloxlinkStructure(
 class Module: # all of this is cancerous and will change when I think of a better way
 	client = Bloxlink
 	r = r
+	session = aiohttp.ClientSession(loop=asyncio.get_event_loop())
 
 Bloxlink.Module = Module
