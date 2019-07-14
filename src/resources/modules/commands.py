@@ -1,5 +1,6 @@
 import re
 import traceback
+from concurrent.futures._base import CancelledError
 from discord.errors import Forbidden
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand # pylint: disable=redefined-builtin
 from ..structures import Command, Bloxlink, Args
@@ -133,6 +134,7 @@ class Commands:
 
 						try:
 							await self.more_args(after, CommandArgs, subcommand_attrs.get("arguments") or command.arguments)
+							response.prompt = CommandArgs.prompt # pylint: disable=no-member
 						except CancelledPrompt as e:
 							if e.args:
 								await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
@@ -159,6 +161,11 @@ class Commands:
 							except CancelCommand as e:
 								if e.args:
 									await response.send(e)
+							except NotImplementedError:
+								await response.error("The option you specified is currently not implemented, but will be coming soon!")
+							except CancelledError:
+								# TODO: save command and args to a database and then re-execute it when the bot restarts
+								await response.send("We're sorry, but Bloxlink is currently restarting for updates. You may retry this command in 5-10 minutes.")
 							except Exception as e:
 								await response.error(locale("errors.commandError"))
 								Bloxlink.error(e, title=f"Error from !{command_name}")
