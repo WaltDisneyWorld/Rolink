@@ -20,7 +20,7 @@ class Resolver:
 			if min <= len(content) <= max:
 				return str(content), None
 			else:
-				return False, f'String character count not in range: {min}-{max}'
+				return False, f"String character count not in range: {min}-{max}"
 
 		return str(content), None
 
@@ -48,11 +48,15 @@ class Resolver:
 		if not content:
 			content = message.content
 
+		content = content.lower()
+
 		for choice in arg["choices"]:
-			if choice.lower() == content.lower():
+			choice_lower = choice.lower()
+
+			if choice_lower == content or choice_lower[0] == content[0]:
 				return choice, None
 
-		return False, f'Choice must be of either: {str(arg["choices"])}'
+		return False, f"Choice must be of either: {str(arg['choices'])}"
 
 	async def user_resolver(self, message, arg, content=None):
 		if not content:
