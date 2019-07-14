@@ -1,8 +1,70 @@
 from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException
 from discord import File
+from ..exceptions import PermissionError
 from ..structures.Bloxlink import Bloxlink
-from config import PREFIX # pylint: disable=E0611
+from config import PREFIX, REACTIONS # pylint: disable=E0611
+import asyncio
+
+loop = asyncio.get_event_loop()
+
+
+class ResponseLoading:
+	def __init__(self, response, backup_text):
+		self.response = response
+		self.original_message = response.message
+		self.reaction = None
+		self.channel = response.message.channel
+
+		self.reaction_success = False
+		self.from_reaction_fail_msg = None
+
+		self.backup_text = backup_text
+
+	@staticmethod
+	def _check_reaction(reaction, user):
+		return reaction.me and str(reaction) == REACTIONS["LOADING"] # TODO: add this in a config
+
+	async def _send_loading(self):
+		try:
+			await self.original_message.add_reaction(REACTIONS["LOADING"]) # TODO: add this in a config
+		except (Forbidden, HTTPException):
+			try:
+				self.from_reaction_fail_msg = await self.channel.send(self.backup_text)
+			except Forbidden:
+				raise PermissionError
+		else:
+			self.reaction_success = True
+			reaction, _ = await Bloxlink.wait_for("reaction_add", check=self._check_reaction, timeout=60)
+			self.reaction = reaction
+
+
+
+
+	async def _remove_loading(self):
+		if self.reaction_success:
+			for reaction in self.original_message.reactions:
+				if reaction == self.reaction:
+					async for user in reaction.users():
+						await self.original_message.remove_reaction(self.reaction, user)
+
+			await self.original_message.add_reaction(REACTIONS["DONE"]) # TODO: add this in a config
+		elif self.from_reaction_fail_msg is not None:
+			await self.from_reaction_fail_msg.delete()
+
+	def __enter__(self):
+		loop.create_task(self._send_loading())
+		return self
+
+	def __exit__(self, tb_type, tb_value, traceback):
+		loop.create_task(self._remove_loading())
+
+	async def __aenter__(self):
+		await self._send_loading()
+
+	async def __aexit__(self, tb_type, tb_value, traceback):
+		await self._remove_loading()
+
 
 
 
@@ -27,7 +89,11 @@ class Response:
 		self.message = CommandArgs.message
 		self.author = CommandArgs.message.author
 		self.channel = CommandArgs.message.channel
+		self.prompt = None
 		self.args = CommandArgs
+
+	def loading(self, text="Please wait until the operation completes."):
+		return ResponseLoading(self, text)
 
 	async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None):
 		channel = dm and self.author or self.channel
