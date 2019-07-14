@@ -1,5 +1,5 @@
 from asyncio import TimeoutError
-from discord.errors import Forbidden
+from discord.errors import Forbidden, NotFound
 from discord import Embed
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import CancelledPrompt, CancelCommand
@@ -18,28 +18,35 @@ class Arguments:
 		self.skipped_args = skipped_args or []
 
 
-	async def say(self, text, type=None, is_prompt=True):
+	async def say(self, text, type=None, is_prompt=True, embed=True):
+		if not embed:
+			if is_prompt:
+				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=200)}"
+
+			return await self.response.send(text)
+
 		if type == "error":
-			embed = Embed(title=self.locale("prompt.errors.title"))
-			embed.colour = RED_COLOR
+			new_embed = Embed(title=self.locale("prompt.errors.title"))
+			new_embed.colour = RED_COLOR
 		else:
-			embed = Embed(title=self.locale("prompt.title"))
-			embed.colour = INVISIBLE_COLOR
+			new_embed = Embed(title=self.locale("prompt.title"))
+			new_embed.colour = INVISIBLE_COLOR
 
-		embed.description = f"{text}\n\n{self.locale('prompt.toCancel')}"
-		embed.set_footer(text=self.locale("prompt.timeoutWarning", timeout=200))
+		new_embed.description = f"{text}\n\n{self.locale('prompt.toCancel')}"
+		new_embed.set_footer(text=self.locale("prompt.timeoutWarning", timeout=200))
 
-		msg = await self.response.send(embed=embed)
+		msg = await self.response.send(embed=new_embed)
 
 		if not msg:
 			if is_prompt:
-				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning')}"
+				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=200)}"
 
 			return await self.response.send(text)
 
 		return msg
 
-	async def prompt(self, arguments, save_messages=False):
+	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True):
+		skipped_args = skipped_args or self.skipped_args
 		checked_args = 0
 		resolved_args = {}
 		messages = []
@@ -55,7 +62,7 @@ class Arguments:
 			try:
 				if not skipped_arg:
 					try:
-						client_message = await self.say(prompt["prompt"])
+						client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed)
 						message = await Bloxlink.wait_for("message", check=self.check_prompt(), timeout=200.0)
 						my_arg = message.content
 
@@ -77,7 +84,7 @@ class Arguments:
 					try:
 						await message.delete()
 						message.nonce = "deleted"
-					except Forbidden:
+					except (Forbidden, NotFound):
 						pass
 
 				if self.message.nonce != "deleted":
@@ -92,7 +99,7 @@ class Arguments:
 				checked_args += 1
 				resolved_args[prompt["name"]] = resolved
 			else:
-				await self.say(f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{err_msg}``", type="error")
+				await self.say(f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{err_msg}``", type="error", embed=embed)
 
 				try:
 					self.skipped_args[checked_args] = None
@@ -101,7 +108,7 @@ class Arguments:
 
 				err_count += 1
 
-		if save_messages:
+		if return_messages:
 			return resolved_args, messages
 
 		return resolved_args
