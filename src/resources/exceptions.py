@@ -1,5 +1,5 @@
 class BloxlinkException(Exception):
-    def __init__(self, arg, type="error"):
+    def __init__(self, arg=None, type="error"):
         self.type = type
 
 
