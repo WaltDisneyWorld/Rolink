@@ -63,34 +63,36 @@ class Arguments:
 				if not skipped_arg:
 					try:
 						client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed)
-						message = await Bloxlink.wait_for("message", check=self.check_prompt(), timeout=200.0)
-						my_arg = message.content
 
 						if client_message:
 							messages.append(client_message)
 
+						message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=200.0)
+						my_arg = message.content
+
 						messages.append(message)
 
 						if my_arg.lower() == "cancel":
-							raise CancelledPrompt
+							raise CancelledPrompt(type="delete")
 
 					except TimeoutError:
 						raise CancelledPrompt("timeout (200s)")
 
 			except CancelledPrompt as e:
-				messages.append(self.message)
-
-				for message in messages:
-					try:
-						await message.delete()
-						message.nonce = "deleted"
-					except (Forbidden, NotFound):
-						pass
-
-				if self.message.nonce != "deleted":
-					raise CancelledPrompt(e)
-
-				raise CancelCommand
+				try:
+					if e.type == "delete":
+						# delete everything
+						messages.append(self.message)
+						raise CancelCommand
+					else:
+						# delete (]
+						raise CancelledPrompt(e)
+				finally:
+					for message in messages:
+						try:
+							await message.delete()
+						except (Forbidden, NotFound):
+							pass
 
 			resolver = get_resolver(prompt.get("type", "string"))
 			resolved, err_msg = await resolver(message, prompt, my_arg)
@@ -113,7 +115,7 @@ class Arguments:
 
 		return resolved_args
 
-	def check_prompt(self):
+	def _check_prompt(self):
 		def wrapper(message):
 			return message.author.id  == self.message.author.id and \
 				   message.channel.id == self.message.channel.id
