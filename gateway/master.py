@@ -48,7 +48,7 @@ pending = {}
 
 
 async def get_shard_count():
-	SHARD_COUNT = os.environ.get("SHARD_COUNT", 0)
+	SHARD_COUNT = os.environ.get("SHARDS", 0)
 
 	if SHARD_COUNT:
 		return int(SHARD_COUNT)
@@ -119,6 +119,8 @@ async def start_clusters():
 		if shard_range:
 			# append cluster spawning task
 			tasks.append(start_cluster(network, session, cluster_id, tuple(shard_range), shard_count))
+			#loop.create_task(start_cluster(network, session, cluster_id, tuple(shard_range), shard_count))
+			#await asyncio.sleep((len(shard_range) * 5) + 1)
 
 		cluster_id += 1
 
