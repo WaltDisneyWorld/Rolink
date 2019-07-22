@@ -78,6 +78,8 @@ class BloxlinkStructure(AutoShardedClient):
 			Bloxlink.log(f"Loaded {module.__name__}")
 			loaded_modules[module.__name__.lower()] = new_module
 
+		return new_module
+
 	@staticmethod
 	def loader(module):
 		module_args = Args.Args( # pylint: disable=no-member
