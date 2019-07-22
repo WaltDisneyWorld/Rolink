@@ -22,20 +22,23 @@ class ResponseLoading:
 		self.backup_text = backup_text
 
 	@staticmethod
-	def _check_reaction(reaction, user):
-		return reaction.me and str(reaction) == REACTIONS["LOADING"] # TODO: add this in a config
+	def _check_reaction(message):
+		def _wrapper(reaction, user):
+			return reaction.me and str(reaction) == REACTIONS["LOADING"] and message.id == reaction.message.id
 
 	async def _send_loading(self):
+		future = Bloxlink.wait_for("reaction_add", check=self._check_reaction(self.original_message), timeout=60)
+
 		try:
-			await self.original_message.add_reaction(REACTIONS["LOADING"]) # TODO: add this in a config
+			await self.original_message.add_reaction(REACTIONS["LOADING"])
 		except (Forbidden, HTTPException):
 			try:
 				self.from_reaction_fail_msg = await self.channel.send(self.backup_text)
 			except Forbidden:
 				raise PermissionError
 		else:
+			reaction, _ = await future
 			self.reaction_success = True
-			reaction, _ = await Bloxlink.wait_for("reaction_add", check=self._check_reaction, timeout=60)
 			self.reaction = reaction
 
 
@@ -48,7 +51,7 @@ class ResponseLoading:
 					async for user in reaction.users():
 						await self.original_message.remove_reaction(self.reaction, user)
 
-			await self.original_message.add_reaction(REACTIONS["DONE"]) # TODO: add this in a config
+			await self.original_message.add_reaction(REACTIONS["DONE"])
 		elif self.from_reaction_fail_msg is not None:
 			await self.from_reaction_fail_msg.delete()
 
@@ -71,19 +74,6 @@ class ResponseLoading:
 @Bloxlink.loader
 class Response:
 	def __init__(self, _, CommandArgs):
-		"""
-		self.args = args
-		self.message = message
-		self.guild_data = kwargs.get("guild_data", {})
-		self.webhook_only = self.guild_data.get("customBot", {}).get("enabled")
-		self.locale = kwargs.get("locale")
-		self.command_name = kwargs.get("command_name")
-		self.prefix = kwargs.get("prefix", PREFIX)
-
-		self.author = self.message.author
-		self.channel = self.message.channel
-		"""
-
 		self.webhook_only = CommandArgs.guild_data.get("customBot", {}).get("enabled")
 
 		self.message = CommandArgs.message
