@@ -1,9 +1,9 @@
 from ..structures.Bloxlink import Bloxlink
-from ..exceptions import BadUsage, RobloxAPIError, CancelledPrompt, Message
+from ..exceptions import BadUsage, RobloxAPIError, CancelledPrompt, Message, CancelCommand
 from typing import Tuple
 from discord.errors import Forbidden, NotFound
 from discord.utils import find
-from discord import Embed
+from discord import Embed, Member
 from bs4 import BeautifulSoup
 from datetime import datetime
 from config import WORDS, RELEASE # pylint: disable=no-name-in-module
@@ -21,7 +21,7 @@ BASE_URL = "https://roblox.com"
 
 @Bloxlink.module
 class Roblox(Bloxlink.Module):
-	cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}}
+	cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}}
 
 	def __init__(self, _):
 		pass
@@ -46,7 +46,6 @@ class Roblox(Bloxlink.Module):
 
 			if correct_username:
 				Roblox.cache["usernames_to_ids"][username_lower] = data
-				#self.cache["roblox_ids_to_usernames"][id] = data
 
 			return data
 
@@ -158,6 +157,7 @@ class Roblox(Bloxlink.Module):
 		).run()
 
 		return success
+
 
 	"""
 	async def get_roles(self, author, roblox_user=None, *, guild=None, complete=True):
@@ -503,7 +503,61 @@ class Roblox(Bloxlink.Module):
 	"""
 
 
+	async def update_member(self, author, *, nickname=True, roles=True, guild=None, roblox_user=None, author_data=None, guild_data=None):
+		guild = guild or getattr(author, "guild", None)
+		guild_id = guild and str(guild.id)
 
+		added, removed = [], []
+
+		if guild:
+			if not isinstance(author, Member):
+				author = await guild.fetch_member(author.id)
+
+				if not author:
+					raise CancelCommand
+
+		if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
+			return added, removed
+
+		if not roblox_user:
+			roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
+
+		if not (roblox_user or roblox_user.verified):
+			# TODO: give unverified role
+			return
+
+
+
+
+
+
+
+
+
+
+	async def get_group(self, group_id):
+		group_id = str(group_id)
+		group = self.cache["groups"].get(group_id)
+
+		if group and group.roles:
+			return group
+
+		text, _ = await fetch(f"{API_URL}/groups/{group_id}", raise_on_failure=False)
+
+		try:
+			json_data = json.loads(text)
+		except json.decoder.JSONDecodeError:
+			raise RobloxAPIError
+		else:
+			if json_data.get("Id"):
+				if not group:
+					group = Group(id=group_id, **json_data)
+				else:
+					group.load_json(json_data)
+
+				self.cache["groups"][group_id] = group
+
+				return group
 
 	async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, send_embed=False, response=None):
 		guild = guild or getattr(author, "guild", False)
@@ -514,7 +568,7 @@ class Roblox(Bloxlink.Module):
 
 		if send_embed:
 			if not response:
-				raise BadUsage("must supply response object for embed sending")
+				raise BadUsage("Must supply response object for embed sending")
 
 			embed = [Embed(title="Loading..."), response]
 
@@ -685,8 +739,8 @@ class Roblox(Bloxlink.Module):
 				return None, []
 	"""
 
-
-	async def get_roles(self, author, roblox_user=None, *, guild=None, complete=True):
+	"""
+	async def add_roles(self, author, roblox_user=None, *, guild=None, complete=True):
 		if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
 			return [], [], []
 
@@ -712,6 +766,7 @@ class Roblox(Bloxlink.Module):
 		else:
 			# TODO: give unverified role
 			pass
+	"""
 
 
 
@@ -801,7 +856,6 @@ class Roblox(Bloxlink.Module):
 									return True
 
 							if failed:
-								#await response.error(f"{author}, too many failed attempts. Please run this command again and retry.")
 								raise Message(f"{author.mention}, too many failed attempts. Please run this command again and retry.", type="error")
 
 						elif args["verification_choice"] == "game":
@@ -851,7 +905,37 @@ class DiscordProfile:
 	def __eq__(self, other):
 		return self.id == getattr(other, "id", None)
 
+class Group(Bloxlink.Module):
+	__slots__ = ("name", "description", "roles", "owner", "member_count",
+				 "embed_url", "url", "user_rank", "user_role")
 
+	def __init__(self, group_id=None, **kwargs):
+		self.group_id = str(group_id)
+		self.name = None
+		self.description = None
+		self.roles = None
+		self.owner = None
+		self.member_count = None
+		self.embed_url = None
+		self.url = self.group_id and f"https://www.roblox.com/My/Groups.aspx?gid={self.group_id}"
+
+		self.user_rank = None
+		self.user_role = None
+
+		self.load_json(kwargs)
+
+	def load_json(self, json_data):
+		self.group_id = self.group_id or str(json_data["Id"])
+		self.name = self.name or json_data.get("Name")
+		self.description = self.description or json_data.get("Description") or json_data.get("description", "N/A")
+		self.roles = self.rolesets = self.roles or json_data.get("Roles")
+		self.owner = self.owner or json_data.get("Owner") or json_data.get("owner")
+		self.member_count = self.member_count or json_data.get("memberCount")
+		self.embed_url = self.embed_url or json_data.get("EmblemUrl")
+		self.url = self.url or (self.group_id and f"https://www.roblox.com/My/Groups.aspx?gid={self.group_id}")
+
+		self.user_rank = self.user_rank or (json_data.get("Rank") and str(json_data.get("Rank")).strip())
+		self.user_role = self.user_role or (json_data.get("Role") and str(json_data.get("Role")).strip())
 
 class RobloxUser(Bloxlink.Module):
 	__slots__ = ("username", "id", "discord_id", "verified", "complete", "more_details", "groups",
@@ -1000,16 +1084,19 @@ class RobloxUser(Bloxlink.Module):
 				except json.decoder.JSONDecodeError:
 					raise RobloxAPIError
 				else:
-					presence = presence.get("LastLocation")
+					presence_type = presence.get("UserPresenceType")
 
-					if presence == "Playing":
-						presence = "playing a game"
-					elif presence == "Online":
-						presence = "browsing the website"
-					elif presence == "Creating":
-						presence = "in studio"
-					else:
+					if presence_type is 0:
 						presence = "offline"
+					elif presence_type is 1:
+						presence = "browsing the website"
+					elif presence_type is 2:
+						if presence.get("PlaceID") is not None:
+							presence = f"playing [{presence.get('LastLocation')}](https://www.roblox.com/games/{presence.get('PlaceId')}/-"
+						else:
+							presence = "in game"
+					elif presence_type is 3:
+						presence = "creating"
 
 				if roblox_user:
 					roblox_user.presence = presence
@@ -1020,13 +1107,14 @@ class RobloxUser(Bloxlink.Module):
 				embed[0].add_field(name="Presence", value=presence)
 
 		async def membership_and_badges():
-			if roblox_data.get("membership") or roblox_data.get("badges"):
-				membership = roblox_data.get("membership")
-				badges = roblox_data.get("badges")
+			badges = roblox_data["badges"]
+
+			if roblox_data["membership"]:
+				membership = roblox_data["membership"]
 			else:
 				data, _ = await fetch(f"{BASE_URL}/badges/roblox?userId={roblox_data['id']}")
 
-				badges, membership = [], None
+				membership = None
 
 				try:
 					data = json.loads(data)
@@ -1044,8 +1132,8 @@ class RobloxUser(Bloxlink.Module):
 						membership = "NBC"
 						badges.append(badge["Name"])
 
-					roblox_data["badges"] = badges
-					roblox_data["membership"] = membership
+				#roblox_data["badges"] = badges
+				roblox_data["membership"] = membership
 
 				if roblox_user:
 					roblox_user.badges = badges
@@ -1056,6 +1144,29 @@ class RobloxUser(Bloxlink.Module):
 					embed[0].add_field(name="Membership", value=membership)
 
 				embed[0].add_field(name="Badges", value=", ".join(badges))
+
+		async def groups():
+			groups = roblox_data["groups"]
+
+			if roblox_data.get("groups"):
+				groups = roblox_data["groups"]
+			else:
+				group_json, _ = await fetch(f"{API_URL}/users/{roblox_data['id']}/groups")
+
+				try:
+					group_json = json.loads(group_json)
+				except json.decoder.JSONDecodeError:
+					raise RobloxAPIError
+				else:
+					for group_data in group_json:
+						group_id = str(group_data["Id"])
+						groups[group_id] = Group(group_id, **group_data)
+
+					if roblox_user:
+						roblox_user.groups = groups
+
+			if embed:
+				embed[0].add_field(name="Groups", value=(", ".join(x.name for x in groups.values()))[:1000])
 
 
 		async def profile():
@@ -1071,7 +1182,7 @@ class RobloxUser(Bloxlink.Module):
 					data, _ = await fetch(f"{BASE_URL}/users/{roblox_data['id']}/profile")
 					soup = BeautifulSoup(data, "html.parser")
 
-					for text in soup.body.find_all('p', attrs={'class':'text-lead'}):
+					for text in soup.body.find_all("p", attrs={"class":"text-lead"}):
 						text = text.text
 
 						if "/" in text:
@@ -1085,7 +1196,7 @@ class RobloxUser(Bloxlink.Module):
 							age = (today - datetime_object).days
 							roblox_data["extras"]["age"] = age
 
-							#break
+							# break
 
 						desc = soup.body.find('div', attrs={'class':'profile-about-content'})
 						description = desc and desc.text.strip("Read More")
@@ -1129,6 +1240,9 @@ class RobloxUser(Bloxlink.Module):
 		if basic_details or "membership" in args or "badges" in args:
 			await membership_and_badges()
 
+		if basic_details or "groups" in args:
+			await groups()
+
 		if not everything:
 			embed[0].title = None
 
@@ -1141,14 +1255,6 @@ class RobloxUser(Bloxlink.Module):
 			await profile()
 
 		return roblox_data
-
-
-
-	@staticmethod
-	async def get_groups(author=None, *, roblox_id=None, roblox_user=None, raise_on_failure=True):
-		pass
-
-
 
 	async def sync(self, *args, author=None, basic_details=False, embed=None, everything=False):
 		try:
@@ -1163,7 +1269,9 @@ class RobloxUser(Bloxlink.Module):
 				author=author
 			)
 
-			self.set_groups(await self.get_groups(roblox_id=self.id))
+			#if not self.groups:
+			#	self.set_groups(await self.get_groups(roblox_id=self.id))
+
 		except RobloxAPIError:
 			self.complete = False
 
@@ -1179,14 +1287,14 @@ class RobloxUser(Bloxlink.Module):
 			self.profile_link = self.profile_link or f"https://www.roblox.com/users/{self.id}/profile"
 
 
-
-
+	"""
 	def set_groups(self, groups):
 		self.groups = groups
 
 	def add_group(self, group):
 		if not self.groups.get(group.name):
 			self.groups[group.name] = group
+	"""
 
 	def __eq__(self, other):
 		return self.id == getattr(other, "id", None) or self.username == getattr(other, "username", None)
