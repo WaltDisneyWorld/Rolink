@@ -38,25 +38,28 @@ class BloxlinkStructure(AutoShardedClient):
 			print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
 
 
-	def error(self, text, title="Error"):
+	def error(self, text, title=None):
 		logger.exception(text)
 		loop.create_task(self._error(text, title=title))
 
 	async def _error(self, text, title=None):
-		try:
-			await self.session.post(WEBHOOKS["LOGS"], json={
-				"username": f"Cluster {CLUSTER_ID} {title}",
-				"embeds": [{
-					"timestamp": datetime.datetime.now().isoformat(),
-					"fields": [
-						{"name": "Traceback", "value": text[0:2000]},
-						{"name": "Affected Shards", "value": SHARD_RANGE}
-					],
-					"color": 13319470,
-				}]
-			})
-		except:
-			pass
+		webhook_data = {
+			"username": "Cluster Instance",
+
+			"embeds": [{
+				"timestamp": datetime.datetime.now().isoformat(),
+				"description": f"**Cluster:** {CLUSTER_ID}\n**Shards:** {str(SHARD_RANGE)}",
+				"fields": [
+					{"name": "Traceback", "value": text[0:2000]}
+				],
+				"color": 13319470,
+			}]
+		}
+
+		if title:
+			webhook_data["embeds"][0]["title"] = title
+
+		await self.session.post(WEBHOOKS["ERRORS"], json=webhook_data)
 
 	@staticmethod
 	def module(module):

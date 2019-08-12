@@ -5,5 +5,5 @@ import traceback
 @Bloxlink.event
 async def on_error(event, *args, **kwargs):
     error = traceback.format_exc()
-    Bloxlink.error(error)
+    Bloxlink.error(error, title=f"Error source: {event}.py")
 
