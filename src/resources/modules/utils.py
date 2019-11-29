@@ -1,7 +1,7 @@
 from os import listdir
 from re import compile
 from ..structures.Bloxlink import Bloxlink
-from ..exceptions import RobloxAPIError, RobloxDown
+from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound
 from config import RELEASE, PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
 from aiohttp.client_exceptions import ClientOSError
 import asyncio
@@ -31,6 +31,9 @@ class Utils(Bloxlink.Module):
 							return await self.fetch(url, raise_on_failure=raise_on_failure, retry=retry)
 
 						raise RobloxAPIError
+
+					elif response.status >= 400:
+						raise RobloxNotFound
 
 				if text == "The service is unavailable.":
 					raise RobloxDown
