@@ -2,7 +2,7 @@ from os import environ
 import asyncio
 import config
 import logging
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
