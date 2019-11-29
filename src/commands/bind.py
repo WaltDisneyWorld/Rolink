@@ -1,7 +1,7 @@
 import re
-from resources.structures.Bloxlink import Bloxlink
-from resources.exceptions import PermissionError, Message
-from resources.constants import NICKNAME_TEMPLATES
+from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
+from resources.exceptions import PermissionError, Message  # pylint: disable=import-error
+from resources.constants import NICKNAME_TEMPLATES  # pylint: disable=import-error
 from discord import Embed
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
@@ -68,11 +68,23 @@ class BindCommand(Bloxlink.Module):
 
 		nickname_lower = nickname.lower()
 
+		group_ids = guild_data.get("groupIDs", {})
+
 		try:
-			if group_id in guild_data.get("groupIDs", []):
-				raise Message("This group is already linked.", type="silly")
+			found_group = group_ids.get(group_id)
 
 			if args["type"] == "entire group":
+				if found_group:
+					if nickname and found_group["nickname"] != nickname:
+						found_group["nickname"] = nickname
+						guild_data["groupIDs"][group_id] = found_group
+
+						await self.r.table("guilds").insert(guild_data, conflict="update").run()
+
+						raise Message("Since your group is already linked, the nickname was updated.", type="success")
+					else:
+						raise Message("This group is already linked.", type="silly")
+
 				for roleset in group.rolesets:
 					discord_role = find(lambda r: r.name == roleset["Name"], guild.roles)
 
@@ -83,8 +95,8 @@ class BindCommand(Bloxlink.Module):
 							raise PermissionError("I was unable to create the Discord role. Please ensure my role has the ``Manage Roles`` permission.")
 
 				# add group to guild_data.groupIDs
-				guild_data["groupIDs"] = guild_data.get("groupIDs", [])
-				guild_data["groupIDs"].append(group_id)
+				group_ids[group_id] = {"nickname": nickname}
+				guild_data["groupIDs"] = group_ids
 
 				await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
@@ -106,19 +118,21 @@ class BindCommand(Bloxlink.Module):
 				discord_role = discord_role["role"]
 				role_id = str(discord_role.id)
 
-				new_ranks = {"ranks":[], "ranges": []}
+				new_ranks = {"binds":[], "ranges": []}
 
 				role_binds = CommandArgs.guild_data.get("roleBinds") or {}
 
 				if isinstance(role_binds, list):
 					role_binds = role_binds[0]
 
-				role_binds[group_id] = role_binds.get(group_id) or {}
-				role_binds[group_id]["ranks"] = role_binds[group_id].get("ranks") or {}
+				role_binds["groups"] = role_binds.get("groups") or {} # {"groups": {"ranges": {}, "binds": {}}}
+				role_binds["groups"][group_id] = role_binds.get(group_id) or {}
+				role_binds["groups"][group_id]["binds"] = role_binds["groups"][group_id].get("binds") or {}
+				role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or {}
 
 				prompt_messages += messages
 
-				rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"{x['Name']} \u2192 {x['Rank']}" for x in group.rolesets))
+				rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x['Name']}** \u2192 {x['Rank']}" for x in group.rolesets))
 
 				rolesets_embed = await CommandArgs.response.send(embed=rolesets_embed)
 
@@ -130,8 +144,12 @@ class BindCommand(Bloxlink.Module):
 						{
 							"prompt": f"Please select the rolesets that should receive the role **{discord_role}**. "
 									  "You may specify the roleset name or ID. You may provide them in a list, "
-									  "or as a range. Example: ``1,4,6,VIP, 10, 50-100, Staff Members, 255``.\n\n"
-									  "For your convenience, your Rolesets' names and IDs were sent previously.",
+									  "or as a range. You may also say ``everyone`` to capture everyone in the group; "
+									  "and you can negate the number to catch everyone with the rank _and above._\n"
+									  "Example 1: ``1,4,6,VIP, 10, 50-100, Staff Members, 255``.\nExample 2: ``"
+									  "-100`` means everyone with rank 100 _and above._\nExample 3: ``everyone`` "
+									  "means everyone in the group.\n\n"
+									  "For your convenience, your Rolesets' names and IDs were sent above.",
 							"name": "ranks",
 							"formatting": False
 
@@ -144,18 +162,18 @@ class BindCommand(Bloxlink.Module):
 
 					for rank in selected_ranks["ranks"].replace(" ", "").split(","):
 						if rank.isdigit():
-							new_ranks["ranks"].append(str(rank))
-						elif rank == "all":
-							new_ranks["ranks"].append("all")
+							new_ranks["binds"].append(str(rank))
+						elif rank in ("all", "everyone"):
+							new_ranks["binds"].append("all")
 						elif rank in ("0", "guest"):
-							new_ranks["ranks"].append("0")
+							new_ranks["binds"].append("0")
 						elif rank[:1] == "-":
 							try:
 								int(rank)
 							except ValueError:
 								pass
 							else:
-								new_ranks["ranks"].append(rank)
+								new_ranks["binds"].append(rank)
 						else:
 							range_search = bind_num_range.search(rank)
 
@@ -170,8 +188,8 @@ class BindCommand(Bloxlink.Module):
 						found = False
 
 						for roleset in group.rolesets:
-							if roleset["Name"] in pending_roleset_names and roleset["Rank"] not in new_ranks["ranks"]:
-								new_ranks["ranks"].append(str(roleset["Rank"]))
+							if roleset["Name"] in pending_roleset_names and roleset["Rank"] not in new_ranks["binds"]:
+								new_ranks["binds"].append(str(roleset["Rank"]))
 								found = True
 
 						if not found:
@@ -180,9 +198,9 @@ class BindCommand(Bloxlink.Module):
 
 					break
 
-				if new_ranks["ranks"]:
-					for x in new_ranks["ranks"]:
-						rank = role_binds[group_id].get("ranks", {}).get(x, {})
+				if new_ranks["binds"]:
+					for x in new_ranks["binds"]:
+						rank = role_binds["groups"][group_id].get("binds", {}).get(x, {})
 
 						if not isinstance(rank, dict):
 							rank = {"nickname": nickname_lower not in ("skip", "done") and nickname or None, "roles": [str(rank)]}
@@ -200,14 +218,14 @@ class BindCommand(Bloxlink.Module):
 									if not rank.get("nickname"):
 										rank["nickname"] = None
 
-						role_binds[group_id]["ranks"][x] = rank
+						role_binds["groups"][group_id]["binds"][x] = rank
 
 
 				if new_ranks["ranges"]:
-					role_binds[group_id]["ranges"] = role_binds[group_id].get("ranges") or []
+					role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or []
 
 					for x in new_ranks["ranges"]: # list of dictionaries; [{"high": 10, "low": 1, "nickname": ...}]
-						range_, num = self.find_range(x, role_binds[group_id]["ranges"])
+						range_, num = self.find_range(x, role_binds["groups"][group_id]["ranges"])
 
 						if not role_id in range_.get("roles", []):
 							range_["roles"] = range_.get("roles") or []
@@ -220,9 +238,9 @@ class BindCommand(Bloxlink.Module):
 									range_["nickname"] = None
 
 						if not num:
-							range_["low"] = x[0]
-							range_["high"] = x[1]
-							role_binds[group_id]["ranges"].append(range_)
+							range_["low"] = int(x[0])
+							range_["high"] = int(x[1])
+							role_binds["groups"][group_id]["ranges"].append(range_)
 
 			await self.r.table("guilds").insert({
 				"id": str(guild.id),
@@ -230,11 +248,16 @@ class BindCommand(Bloxlink.Module):
 			}, conflict="update").run()
 
 			text = ["Successfully **bound** rank ID(s): ``"]
-			if new_ranks["ranks"]:
-				text.append(", ".join(new_ranks["ranks"]))
+			if new_ranks["binds"]:
+				text.append(", ".join(new_ranks["binds"]))
 
 			if new_ranks["ranges"]:
-				text.append(f"; ranges: {', '.join([r[0] + ' - ' + r[1] for r in new_ranks['ranges']])}")
+				text2 = ""
+
+				if new_ranks["binds"]:
+					text2 = "; "
+
+				text.append(f"{text2}ranges: {', '.join([r[0] + ' - ' + r[1] for r in new_ranks['ranges']])}")
 
 			text.append(f"`` with discord role **{discord_role}**.")
 
