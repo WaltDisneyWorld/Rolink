@@ -1,7 +1,7 @@
 from io import StringIO
-from discord.errors import Forbidden, HTTPException, DiscordException
+from discord.errors import Forbidden, HTTPException, DiscordException, NotFound
 from discord import File
-from ..exceptions import PermissionError
+from ..exceptions import PermissionError, Message
 from ..structures.Bloxlink import Bloxlink
 from config import PREFIX, REACTIONS # pylint: disable=E0611
 import asyncio
@@ -27,46 +27,62 @@ class ResponseLoading:
 			return reaction.me and str(reaction) == REACTIONS["LOADING"] and message.id == reaction.message.id
 
 	async def _send_loading(self):
-		future = Bloxlink.wait_for("reaction_add", check=self._check_reaction(self.original_message), timeout=60)
-
 		try:
-			await self.original_message.add_reaction(REACTIONS["LOADING"])
-		except (Forbidden, HTTPException):
+			future = Bloxlink.wait_for("reaction_add", check=self._check_reaction(self.original_message), timeout=60)
+
 			try:
-				self.from_reaction_fail_msg = await self.channel.send(self.backup_text)
-			except Forbidden:
-				raise PermissionError
-		else:
-			reaction, _ = await future
-			self.reaction_success = True
-			self.reaction = reaction
+				await self.original_message.add_reaction(REACTIONS["LOADING"])
+			except (Forbidden, HTTPException):
+				try:
+					self.from_reaction_fail_msg = await self.channel.send(self.backup_text)
+				except Forbidden:
+					raise PermissionError
+			else:
+				reaction, _ = await future
+				self.reaction_success = True
+				self.reaction = reaction
 
+		except NotFound:
+			pass
 
+	async def _remove_loading(self, errored):
+		try:
+			if self.reaction_success:
+				for reaction in self.original_message.reactions:
+					if reaction == self.reaction:
+						try:
+							async for user in reaction.users():
+								await self.original_message.remove_reaction(self.reaction, user)
+						except NotFound:
+							pass
 
-
-	async def _remove_loading(self):
-		if self.reaction_success:
-			for reaction in self.original_message.reactions:
-				if reaction == self.reaction:
-					async for user in reaction.users():
-						await self.original_message.remove_reaction(self.reaction, user)
-
-			await self.original_message.add_reaction(REACTIONS["DONE"])
-		elif self.from_reaction_fail_msg is not None:
-			await self.from_reaction_fail_msg.delete()
+				if errored:
+					await self.original_message.add_reaction(REACTIONS["ERROR"])
+				else:
+					await self.original_message.add_reaction(REACTIONS["DONE"])
+			elif self.from_reaction_fail_msg is not None:
+				await self.from_reaction_fail_msg.delete()
+		except NotFound:
+			pass
 
 	def __enter__(self):
 		loop.create_task(self._send_loading())
 		return self
 
 	def __exit__(self, tb_type, tb_value, traceback):
-		loop.create_task(self._remove_loading())
+		if (tb_type is None) or (tb_type == Message):
+			loop.create_task(self._remove_loading(errored=False))
+		else:
+			loop.create_task(self._remove_loading(errored=True))
 
 	async def __aenter__(self):
 		await self._send_loading()
 
 	async def __aexit__(self, tb_type, tb_value, traceback):
-		await self._remove_loading()
+		if (tb_type is None) or (tb_type == Message):
+			await self._remove_loading(errored=False)
+		else:
+			await self._remove_loading(errored=True)
 
 
 
