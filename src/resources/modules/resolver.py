@@ -82,7 +82,7 @@ class Resolver:
 				return user, None
 			else:
 				try:
-					user = await self.client.get_user_info(int(is_int))
+					user = await self.client.fetch_user(int(is_int))
 					return user, None
 				except NotFound:
 					return False, "A user with this discord ID does not exist"
