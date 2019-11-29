@@ -113,6 +113,7 @@ config.py
 assets/
 .env
 docker-build.py
+compile.py
 archive/
 clean.py
 docker-compose.yml
