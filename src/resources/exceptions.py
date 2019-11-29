@@ -13,6 +13,9 @@ class Message(CancelCommand):
 class CancelledPrompt(CancelCommand):
     pass
 
+class Error(CancelCommand):
+    pass
+
 class PermissionError(BloxlinkException):
     pass
 
@@ -22,5 +25,11 @@ class BadUsage(BloxlinkException):
 class RobloxAPIError(BloxlinkException):
     pass
 
+class RobloxNotFound(BloxlinkException):
+    pass
+
 class RobloxDown(BloxlinkException):
+    pass
+
+class UserNotVerified(BloxlinkException):
     pass
