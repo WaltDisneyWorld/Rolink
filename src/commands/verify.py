@@ -1,8 +1,9 @@
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
-from resources.exceptions import Message
+from discord import Embed
+from resources.exceptions import Message # pylint: disable=import-error
 
-verify_as = Bloxlink.get_module("roblox", attrs="verify_as")
+verify_as, update_member, get_user = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user"])
 
 
 @Bloxlink.command
@@ -18,15 +19,19 @@ class VerifyCommand(Bloxlink.Module):
 			await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
 											 f"Please use ``{CommandArgs.prefix}verify add`` instead.")
 
-		# check if they are linked, then welcome user to server.
+		_, _, _, _, roblox_user = await update_member(
+				CommandArgs.message.author,
+				guild      = CommandArgs.message.guild,
+				guild_data = CommandArgs.guild_data,
+				roles      = True,
+				nickname   = True)
 
-		linked = False
-		if not linked:
+		if not roblox_user:
 			await self.add(CommandArgs)
 		else:
-			# welcome the user
-			pass
-
+			await CommandArgs.response.success(CommandArgs.guild_data.get("welcomeMessage",
+											   f"Welcome to **{CommandArgs.message.guild.name}**, "
+											   f"{roblox_user.username}!"))
 
 	@staticmethod
 	@Bloxlink.subcommand()
@@ -34,6 +39,7 @@ class VerifyCommand(Bloxlink.Module):
 		"""link a new account to Bloxlink"""
 
 		guild_data = CommandArgs.guild_data
+		author = CommandArgs.message.author
 
 		username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
 
@@ -47,24 +53,25 @@ class VerifyCommand(Bloxlink.Module):
 			})
 
 		args.append({
-			"prompt": "Would you like to set this as your default Roblox account for new servers? yes/no",
+			"prompt": "Would you like to set this as your default Roblox account for new servers? ``yes/no``",
 			"name": "default",
 			"type": "choice",
 			"choices": ["yes", "no"]
 		})
 
 		args, messages = await CommandArgs.prompt(args, return_messages=True)
+		username = username or args["username"]
 
-		# if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
+		# TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
 		# groupVerify = [group_ids...]
 
 		try:
-			await verify_as(
+			username = await verify_as(
 				CommandArgs.message.author,
 				CommandArgs.message.guild,
 				response = CommandArgs.response,
 				primary = args["default"] == "yes",
-				username = username or args["username"])
+				username = username)
 
 		except Message as e:
 			if e.type == "error":
@@ -73,9 +80,33 @@ class VerifyCommand(Bloxlink.Module):
 				await CommandArgs.response.success(e)
 
 		else:
-			await CommandArgs.response.success(CommandArgs.guild_data.get("welcomeMessage",
+			await CommandArgs.response.success(guild_data.get("welcomeMessage",
 											   f"Welcome to **{CommandArgs.message.guild.name}**, "
-											   f"{CommandArgs.message.author.name}!"))
+											   f"{username}!"))
+
+			added, removed, nickname, errors, roblox_user = await update_member(
+				CommandArgs.message.author,
+				guild      = CommandArgs.message.guild,
+				guild_data = CommandArgs.guild_data,
+				roles      = True,
+				nickname   = True)
+
+			embed = Embed(title=f"Roblox Profile for {roblox_user.username}")
+			embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
+
+			if added:
+				embed.add_field(name="Added Roles", value=", ".join(added))
+			if removed:
+				embed.add_field(name="Removed Roles", value=", ".join(removed))
+			if nickname:
+				embed.description = f"**Nickname:** ``{nickname}``"
+			if errors:
+				embed.add_field(name="Errors", value=", ".join(errors))
+
+			embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
+
+			await CommandArgs.response.send(embed=embed)
+
 		finally:
 			messages.append(CommandArgs.message)
 
@@ -92,11 +123,11 @@ class VerifyCommand(Bloxlink.Module):
 	async def view(CommandArgs):
 		"""view your linked account(s)"""
 
-		pass
+		raise NotImplementedError
 
 	@staticmethod
 	@Bloxlink.subcommand
 	async def unlink(CommandArgs):
 		"""unlink an account from Bloxlink"""
 
-		pass
+		raise NotImplementedError
