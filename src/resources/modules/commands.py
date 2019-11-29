@@ -2,7 +2,7 @@ import re
 import traceback
 from concurrent.futures._base import CancelledError
 from discord.errors import Forbidden, NotFound, HTTPException
-from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown # pylint: disable=redefined-builtin
+from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Command, Bloxlink, Args
 
 
@@ -147,6 +147,11 @@ class Commands:
 								await response.error(e)
 							else:
 								await response.error(locale("permissions.genericError"))
+						except Forbidden:
+							if e.args:
+								await response.error(e)
+							else:
+								await response.error(locale("permissions.genericError"))
 						except RobloxAPIError:
 							await response.error("The Roblox API returned an error; are you supplying the correct ID to this command?")
 						except RobloxDown:
@@ -172,6 +177,11 @@ class Commands:
 								await response_fn(e)
 							else:
 								await response_fn("This command closed unexpectedly.")
+						except Error as e:
+							if e.args:
+								await response.error(e)
+							else:
+								await response.error("This command has unexpectedly errored.")
 						except CancelCommand as e:
 							if e.args:
 								await response.send(e)
