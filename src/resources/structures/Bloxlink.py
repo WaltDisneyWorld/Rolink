@@ -3,14 +3,21 @@ from os import environ as env
 from discord import AutoShardedClient
 from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
 from . import Args, Permissions
-from rethinkdb import RethinkDB; r = RethinkDB(); r.set_loop_type("asyncio") # pylint: disable=no-name-in-module
-from rethinkdb.errors import ReqlDriverError
 from ast import literal_eval
 import traceback
 import datetime
 import logging
 import aiohttp
 import asyncio; loop = asyncio.get_event_loop()
+
+from rethinkdb.errors import ReqlDriverError
+
+try:
+	from rethinkdb import RethinkDB; r = RethinkDB() # pylint: disable=no-name-in-module
+except ImportError:
+	import rethinkdb as r
+finally:
+	r.set_loop_type("asyncio")
 
 CLUSTER_ID = env.get("CLUSTER_ID", "0")
 SHARD_COUNT = int(env.get("SHARD_COUNT", 1))
@@ -30,6 +37,9 @@ class BloxlinkStructure(AutoShardedClient):
 
 	def __init__(self, *args, **kwargs): # pylint: disable=W0235
 		super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
+		loop.run_until_complete(self.get_session())
+
+	async def get_session(self):
 		self.session = aiohttp.ClientSession()
 
 	@staticmethod
@@ -42,7 +52,7 @@ class BloxlinkStructure(AutoShardedClient):
 		logger.exception(text)
 		loop.create_task(self._error(text, title=title))
 
-	async def _error(self, text, title=None):
+	async def _error (self, text, title=None):
 		webhook_data = {
 			"username": "Cluster Instance",
 
@@ -157,7 +167,8 @@ class BloxlinkStructure(AutoShardedClient):
 				host,
 				RETHINKDB["PORT"],
 				RETHINKDB["DB"],
-				password=RETHINKDB["PASSWORD"]
+				password=RETHINKDB["PASSWORD"],
+				timeout=5
 			)
 			Bloxlink.db_host_validated = True
 		except ReqlDriverError as e:
@@ -200,7 +211,7 @@ class BloxlinkStructure(AutoShardedClient):
 	Permissions = Permissions.Permissions # pylint: disable=no-member
 
 	def __repr__(self):
-		return "< Bloxlink Instance >"
+		return "< Bloxlink Client >"
 
 
 Bloxlink = BloxlinkStructure(
