@@ -2,7 +2,7 @@ class Permissions:
 	"""Contains permission attributes for commands"""
 
 	def __init__(self, roles=None, **kwargs):
-		self.allowed = {"roles":[], "discord_perms": []}
+		self.allowed = {"roles":[], "discord_perms": [], "functions": []}
 		self.exceptions = {"roles":[], }
 
 		self.bloxlink_role = False
@@ -10,9 +10,12 @@ class Permissions:
 		if roles:
 			self.allowed["roles"] = roles
 
-	def build(self, *args, roles=None):
+	def build(self, *args, function=None, roles=None):
 		if roles:
 			self.allowed["roles"] += roles
+
+		if function:
+			self.allowed["functions"].append(function)
 
 		for arg in args:
 			if arg in ("BLOXLINK_ADMIN", "BLOXLINK_MANAGER", "BLOXLINK_UPDATER", "BLOXLINK_MODERATOR"):

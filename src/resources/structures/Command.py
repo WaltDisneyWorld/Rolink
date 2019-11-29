@@ -79,9 +79,25 @@ class Command:
 						if not getattr(author_perms, perm, False) and not perm.administrator:
 							raise PermissionError(f"You need the ``{perm}`` permission to run this command.")
 
+
 			for role in permissions.allowed["roles"]:
 				if not find(lambda r: r.name == role, author.roles):
 					raise PermissionError(f"Missing role: ``{role}``")
+
+			if permissions.allowed.get("functions"):
+				for function in permissions.allowed["functions"]:
+
+					if iscoroutinefunction(function):
+						data = [await function(author)]
+					else:
+						data = [function(author)]
+
+					if not data[0]:
+						raise PermissionError
+
+					if isinstance(data[0], tuple):
+						if not data[0][0]:
+							raise PermissionError(data[0][1])
 
 		except PermissionError as e:
 			if e.args:
