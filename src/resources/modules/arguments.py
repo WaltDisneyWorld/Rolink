@@ -8,10 +8,13 @@ from config import PROMPT_TIMEOUT # pylint: disable=no-name-in-module
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
 
+prompts = {}
+
 @Bloxlink.loader
 class Arguments:
 	def __init__(self, _, skipped_args, CommandArgs):
 		self.message = CommandArgs.message
+		self.author = CommandArgs.message.author
 
 		self.response = CommandArgs.response
 		self.locale = CommandArgs.locale
@@ -46,83 +49,99 @@ class Arguments:
 
 		return msg
 
+	@staticmethod
+	def in_prompt(author):
+		return prompts.get(author.id)
+
 	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True):
+		prompts[self.author.id] = True
+
 		skipped_args = skipped_args or self.skipped_args
 		checked_args = 0
 		resolved_args = {}
 		messages = []
 
-		while checked_args != len(arguments):
-			prompt = arguments[checked_args]
-			skipped_arg = self.skipped_args[checked_args:checked_args+1]
-			skipped_arg = skipped_arg and skipped_arg[0] or None
-			my_arg = skipped_arg
-			message = self.message
-			err_count = 0
+		try:
+			while checked_args != len(arguments):
+				prompt = arguments[checked_args]
+				skipped_arg = self.skipped_args[checked_args:checked_args+1]
+				skipped_arg = skipped_arg and skipped_arg[0] or None
+				my_arg = skipped_arg
+				message = self.message
+				err_count = 0
 
-			formatting = prompt.get("formatting", True)
+				if prompt.get("optional") and not skipped_arg:
+					resolved_args[prompt["name"]] = None
+					checked_args += 1
 
-			try:
-				if not skipped_arg:
-					try:
-						if formatting:
-							prompt["prompt"] = prompt["prompt"].format(**resolved_args)
+					continue
 
-						client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed)
+				formatting = prompt.get("formatting", True)
+
+				try:
+					if not skipped_arg:
+						try:
+							if formatting:
+								prompt["prompt"] = prompt["prompt"].format(**resolved_args)
+
+							client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed)
+
+							if client_message:
+								messages.append(client_message)
+
+							message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT_TIMEOUT)
+							my_arg = message.content
+
+							messages.append(message)
+
+							if my_arg.lower() == "cancel":
+								raise CancelledPrompt(type="delete")
+
+						except TimeoutError:
+							raise CancelledPrompt(f"timeout ({PROMPT_TIMEOUT}s)")
+
+					resolver = get_resolver(prompt.get("type", "string"))
+					resolved, err_msg = await resolver(message, prompt, my_arg)
+
+					if resolved:
+						checked_args += 1
+						resolved_args[prompt["name"]] = resolved
+					else:
+						client_message = await self.say(f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{err_msg}``", type="error", embed=embed)
 
 						if client_message:
 							messages.append(client_message)
 
-						message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT_TIMEOUT)
-						my_arg = message.content
-
-						messages.append(message)
-
-						if my_arg.lower() == "cancel":
-							raise CancelledPrompt(type="delete")
-
-					except TimeoutError:
-						raise CancelledPrompt(f"timeout ({PROMPT_TIMEOUT}s)")
-
-				resolver = get_resolver(prompt.get("type", "string"))
-				resolved, err_msg = await resolver(message, prompt, my_arg)
-
-				if resolved:
-					checked_args += 1
-					resolved_args[prompt["name"]] = resolved
-				else:
-					client_message = await self.say(f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{err_msg}``", type="error", embed=embed)
-
-					if client_message:
-						messages.append(client_message)
-
-					try:
-						self.skipped_args[checked_args] = None
-					except IndexError:
-						pass
-
-					err_count += 1
-
-			except CancelledPrompt as e:
-				try:
-					if e.type == "delete":
-						# delete everything
-						messages.append(self.message)
-						raise CancelCommand
-					else:
-						# delete (]
-						raise CancelledPrompt(e)
-				finally:
-					for message in messages:
 						try:
-							await message.delete()
-						except (Forbidden, NotFound, HTTPException):
+							self.skipped_args[checked_args] = None
+						except IndexError:
 							pass
 
-		if return_messages:
-			return resolved_args, messages
+						err_count += 1
 
-		return resolved_args
+				except CancelledPrompt as e:
+					try:
+						if e.type == "delete":
+							# delete everything
+							messages.append(self.message)
+							raise CancelCommand
+						else:
+							# delete (]
+							raise CancelledPrompt(e)
+					finally:
+						for message in messages:
+							try:
+								await message.delete()
+							except (Forbidden, NotFound, HTTPException):
+								pass
+
+			if return_messages:
+				return resolved_args, messages
+
+			return resolved_args
+
+		finally:
+			del prompts[self.author.id]
 
 	def _check_prompt(self):
 		def wrapper(message):
