@@ -1,4 +1,5 @@
-discord.py[voice]==1.2.3
+discord.py==1.2.5
+#git+https://github.com/Rapptz/discord.py@master#egg=discord.py[voice]
 rethinkdb==2.4.0
 aiodns==2.0.0
 cchardet==2.1.4
@@ -12,3 +13,4 @@ git+https://github.com/tigerism/aiodocker
 jsonpath_ng==1.4.3
 async_timeout==3.0.1
 aiotrello==0.0.3
+py-dateutil==2.2
