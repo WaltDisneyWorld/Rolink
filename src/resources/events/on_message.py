@@ -14,11 +14,7 @@ class MessageEvent:
 		async def on_message(message):
 			author = message.author
 
-			if author.bot:
-				return
-			elif not message.channel:
-				return
-			elif in_prompt(author):
+			if author.bot or not message.channel or in_prompt(author):
 				return
 
 			await parse_message(message)
