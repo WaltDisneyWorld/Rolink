@@ -129,7 +129,7 @@ class Commands:
 					locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
 					response = Response(CommandArgs)
 
-					CommandArgs.add(locale=locale, response=response)
+					CommandArgs.add(locale=locale, response=response, trello_board=trello_board)
 
 					try:
 						await command.check_permissions(author, locale, permissions=subcommand_attrs.get("permissions"))
