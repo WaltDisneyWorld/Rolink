@@ -10,7 +10,7 @@ TABLE_STRUCTURE = {
 }
 
 @Bloxlink.module
-class RebuildDB:
+class DatabaseTools:
 	def __init__(self, args):
 		self.r = args.r
 
@@ -23,3 +23,10 @@ class RebuildDB:
 					await self.r.db(missing_database).table_create(table).run()
 			else:
 				print(f"CRITICAL: Missing database: {missing_database}", flush=True)
+
+	async def wait(self):
+		for db_name, table_names in TABLE_STRUCTURE.items():
+			await self.r.db(db_name).wait().run()
+
+			for table_name in table_names:
+				await self.r.db(db_name).table(table_name).wait().run()
