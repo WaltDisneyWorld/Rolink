@@ -91,7 +91,7 @@ class VerifyCommand(Bloxlink.Module):
 				roles      = True,
 				nickname   = True)
 
-			embed = Embed(title=f"Roblox Profile for {roblox_user.username}")
+			embed = Embed(title=f"Discord Profile for {roblox_user.username}")
 			embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
 
 			if added:
