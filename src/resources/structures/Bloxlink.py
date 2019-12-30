@@ -164,11 +164,11 @@ class BloxlinkStructure(AutoShardedClient):
 	async def load_database(host=RETHINKDB["HOST"]):
 		try:
 			conn = await r.connect(
-				host,
-				RETHINKDB["PORT"],
-				RETHINKDB["DB"],
+				host=host,
+				port=RETHINKDB["PORT"],
+				db=RETHINKDB["DB"],
 				password=RETHINKDB["PASSWORD"],
-				timeout=5
+				timeout=20
 			)
 			Bloxlink.db_host_validated = True
 		except ReqlDriverError as e:
