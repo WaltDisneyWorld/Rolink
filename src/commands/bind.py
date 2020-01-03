@@ -1,7 +1,7 @@
 import re
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
 from resources.exceptions import PermissionError, Error, RobloxNotFound, Message  # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES  # pylint: disable=import-error
+from resources.constants import NICKNAME_TEMPLATES, ARROW  # pylint: disable=import-error
 from discord import Embed
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
@@ -41,6 +41,7 @@ class BindCommand(Bloxlink.Module):
         ]
 
         self.aliases = ["newbind"]
+        self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
 
     @staticmethod
     def find_range(tuple_set, ranges):
@@ -61,7 +62,7 @@ class BindCommand(Bloxlink.Module):
         try:
             group = await get_group(group_id)
         except RobloxNotFound:
-            raise Error(f"A group with ID ``{group_id}`` does not exist. Please retry this command.")
+            raise Error(f"A group with ID ``{group_id}`` does not exist. Please try again.")
 
         prompt_messages = CommandArgs.prompt_messages
 
@@ -100,7 +101,7 @@ class BindCommand(Bloxlink.Module):
             if args["type"] == "entire group":
                 if found_group:
                     if nickname and found_group["nickname"] != nickname:
-                        guild_data["groupIDs"][group_id] = {"nickname": nickname}
+                        guild_data["groupIDs"][group_id] = {"nickname": nickname, "groupName": group.name}
 
                         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
@@ -145,7 +146,7 @@ class BindCommand(Bloxlink.Module):
                             raise PermissionError("I was unable to create the Discord role. Please ensure my role has the ``Manage Roles`` permission.")
 
                 # add group to guild_data.groupIDs
-                group_ids[group_id] = {"nickname": nickname}
+                group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
                 guild_data["groupIDs"] = group_ids
 
                 await self.r.table("guilds").insert(guild_data, conflict="update").run()
@@ -188,10 +189,11 @@ class BindCommand(Bloxlink.Module):
                 role_binds["groups"][group_id] = role_binds.get(group_id) or {}
                 role_binds["groups"][group_id]["binds"] = role_binds["groups"][group_id].get("binds") or {}
                 role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or {}
+                role_binds["groups"][group_id]["groupName"] = group.name
 
                 prompt_messages += messages
 
-                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x['Name']}** \u2192 {x['Rank']}" for x in group.rolesets))
+                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x['Name']}** {ARROW} {x['Rank']}" for x in group.rolesets))
 
                 rolesets_embed = await CommandArgs.response.send(embed=rolesets_embed)
 

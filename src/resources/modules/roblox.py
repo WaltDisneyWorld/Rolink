@@ -719,8 +719,16 @@ class Roblox(Bloxlink.Module):
                                 card_binds["binds"][new_bind["group"]]["binds"]["all"] = new_rank
 
                         elif is_main_group:
+                            try:
+                                group = await self.get_group(new_bind["group"])
+                            except RobloxNotFound:
+                                group_name = f"Invalid Group: {new_bind['group']}"
+                            else:
+                                group_name = group.name
+
                             new_rank = {
                                 "nickname": bind_nickname,
+                                "groupName": group_name,
                                 "trello": {
                                     "cards": [{
                                         "card": card,
@@ -741,6 +749,24 @@ class Roblox(Bloxlink.Module):
                     trello_binds_list.parsed_bind_data = card_binds
 
         return card_binds
+
+
+    async def get_binds(self, guild=None, guild_data=None, trello_board=None, trello_bind_list=None):
+        card_binds = await self.parse_trello_binds(trello_board=trello_board, trello_bind_list=trello_bind_list)
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+
+        role_binds = guild_data.get("roleBinds") or {}
+        group_ids = guild_data.get("groupIDs") or {}
+
+        role_binds["groups"] = role_binds.get("groups", {})
+
+        if card_binds:
+            role_binds["groups"].update(card_binds["binds"])
+            group_ids.update(card_binds["entire group"])
+
+
+        return role_binds, group_ids
+
 
     async def update_member(self, author, *, nickname=True, roles=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_bind_list=None):
         my_permissions = guild.me.guild_permissions
@@ -772,9 +798,6 @@ class Roblox(Bloxlink.Module):
 
         if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
             raise UserNotVerified
-
-
-        card_binds = await self.parse_trello_binds(trello_board=trello_board, trello_bind_list=trello_bind_list)
 
         guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
@@ -828,12 +851,8 @@ class Roblox(Bloxlink.Module):
                         if not verified_role in author.roles:
                             add_roles.add(verified_role)
 
-            role_binds = guild_data.get("roleBinds") or {}
-            group_ids = guild_data.get("groupIDs") or {}
 
-            if card_binds:
-                role_binds["groups"].update(card_binds["binds"])
-                group_ids.update(card_binds["entire group"])
+            role_binds, group_ids = await self.get_binds(guild_data=guild_data, trello_board=trello_board)
 
             top_role_nickname = None
 
