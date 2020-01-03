@@ -6,3 +6,5 @@ NICKNAME_TEMPLATES = (
     "{roblox-id} \u2192 changes to their Roblox user ID\n"
     "{group-rank} \u2192 changes to their group rank"
 )
+
+ARROW = "\u2192"
