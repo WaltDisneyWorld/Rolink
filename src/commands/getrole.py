@@ -30,20 +30,20 @@ class GetRoleCommand(Bloxlink.Module):
                     raise Message("Your Trello board has no bounded roles! Please create binds under a "
                                   f"list called ``Bloxlink Binds``, or use ``{CommandArgs.prefix}bind`` to make a new bind.",
                                   type="silly")
-
-            raise Message(f"This server has no bind configuration! Please run ``{CommandArgs.prefix}bind`` to make a new bind.",
-                          type="silly")
+            else:
+                raise Message(f"This server has no bind configuration! Please run ``{CommandArgs.prefix}bind`` to make a new bind.",
+                              type="silly")
 
         async with CommandArgs.response.loading():
             try:
                 added, removed, nickname, errors, roblox_user = await update_member(
                     CommandArgs.message.author,
-                    guild      = CommandArgs.message.guild,
-                    guild_data = CommandArgs.guild_data,
-                    trello_board = trello_board,
+                    guild            = CommandArgs.message.guild,
+                    guild_data       = CommandArgs.guild_data,
+                    trello_board     = trello_board,
                     trello_bind_list = trello_bind_list,
-                    roles      = True,
-                    nickname   = True)
+                    roles            = True,
+                    nickname         = True)
 
                 embed = Embed(title=f"Discord Profile for {roblox_user.username}")
                 embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
