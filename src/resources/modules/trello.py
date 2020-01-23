@@ -9,8 +9,7 @@ from config import TRELLO # pylint: disable=E0611
 
 @Bloxlink.module
 class Trello(Bloxlink.Module):
-	def __init__(self, args):
-		self.args = args
+	def __init__(self):
 		self.trello_boards = {}
 		self.trello = TrelloClient(key=TRELLO.get("KEY"), token=TRELLO.get("TOKEN"), cache_mode="none")
 

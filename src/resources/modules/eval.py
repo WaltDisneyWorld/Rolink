@@ -8,10 +8,8 @@ from ..constants import RED_COLOR, INVISIBLE_COLOR
 # A lot of code adapted from https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py
 
 @Bloxlink.module
-class Eval:
-	def __init__(self, args):
-		self.client = args.client
-		self.r = args.r
+class Eval(Bloxlink.Module):
+	def __init__(self):
 		self._last_result = None
 
 	def cleanup_code(self, content):

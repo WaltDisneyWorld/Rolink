@@ -5,7 +5,7 @@ in_prompt = Bloxlink.get_module("arguments", attrs="in_prompt")
 
 @Bloxlink.module
 class MessageEvent:
-	def __init__(self, args):
+	def __init__(self):
 		pass
 
 	async def __setup__(self):

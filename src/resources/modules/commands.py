@@ -17,9 +17,9 @@ commands = {}
 trello_boards = {}
 
 @Bloxlink.module
-class Commands:
-	def __init__(self, args):
-		self.args = args
+class Commands(Bloxlink.Module):
+	def __init__(self):
+		pass
 
 	async def more_args(self, content_modified, arg_container, command_args):
 		arguments = Arguments(None, arg_container)
@@ -73,11 +73,11 @@ class Commands:
 		author = message.author
 		channel = message.channel
 
-		guild_data = guild_data or (guild and (await self.args.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)})) or {}
+		guild_data = guild_data or (guild and (await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)})) or {}
 		trello_board = await get_board(guild_data=guild_data, guild=guild)
 		prefix = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
-		client_match = re.search(f"<@!?{self.args.client.user.id}>", content)
+		client_match = re.search(f"<@!?{self.client.user.id}>", content)
 		check = client_match and client_match.group(0) or (content[:len(prefix)].lower() == prefix.lower() and prefix)
 
 		if not check:

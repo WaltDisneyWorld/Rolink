@@ -17,7 +17,7 @@ for file_name in get_files("src/locales"):
 
 @Bloxlink.loader
 class Locale:
-	def __init__(self, _, lang="en"):
+	def __init__(self, lang="en"):
 		self.lang = lang
 
 	def __call__(self, locale_path, *args, **kwargs):

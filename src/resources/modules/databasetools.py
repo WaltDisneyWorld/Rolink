@@ -11,9 +11,9 @@ TABLE_STRUCTURE = {
 }
 
 @Bloxlink.module
-class DatabaseTools:
-	def __init__(self, args):
-		self.r = args.r
+class DatabaseTools(Bloxlink.Module):
+	def __init__(self):
+		pass
 
 	async def __setup__(self):
 		for missing_database in set(TABLE_STRUCTURE.keys()).difference(await self.r.db_list().run()):

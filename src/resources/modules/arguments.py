@@ -14,7 +14,7 @@ prompts = {}
 
 @Bloxlink.loader
 class Arguments:
-	def __init__(self, _, skipped_args, CommandArgs):
+	def __init__(self, skipped_args, CommandArgs):
 		self.message = CommandArgs.message
 		self.author = CommandArgs.message.author
 

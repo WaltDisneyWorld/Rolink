@@ -77,7 +77,7 @@ class BloxlinkStructure(AutoShardedClient):
 			r=r,
 			client=Bloxlink
 		)
-		new_module = module(args)
+		new_module = module()
 
 		failed = False
 		if hasattr(new_module, "__setup__"):
@@ -101,7 +101,7 @@ class BloxlinkStructure(AutoShardedClient):
 		)
 
 		def load(*args, **kwargs):
-			return module(module_args, *args, **kwargs)
+			return module(*args, **kwargs)
 
 		stuff = {}
 
@@ -220,9 +220,10 @@ Bloxlink = BloxlinkStructure(
 	shard_ids=SHARD_RANGE
 )
 
-class Module: # all of this is cancerous and will change when I think of a better way
+class Module:
 	client = Bloxlink
 	r = r
-	session = aiohttp.ClientSession(loop=asyncio.get_event_loop())
+	session = aiohttp.ClientSession(loop=loop)
+	loop = loop
 
 Bloxlink.Module = Module

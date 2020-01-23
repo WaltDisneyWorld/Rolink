@@ -28,7 +28,7 @@ BASE_URL = "https://roblox.com"
 class Roblox(Bloxlink.Module):
     cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}}
 
-    def __init__(self, _):
+    def __init__(self):
         pass
 
     @staticmethod

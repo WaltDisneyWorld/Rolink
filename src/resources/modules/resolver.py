@@ -5,9 +5,9 @@ from ..structures.Bloxlink import Bloxlink
 from ..exceptions import PermissionError
 
 @Bloxlink.module
-class Resolver:
-	def __init__(self, args):
-		self.client = args.client
+class Resolver(Bloxlink.Module):
+	def __init__(self):
+		pass
 
 	async def string_resolver(self, message, arg, content=None):
 		if not content:

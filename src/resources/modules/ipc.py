@@ -19,13 +19,10 @@ SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
 pending_tasks = {}
 
 @Bloxlink.module
-class IPC:
-	def __init__(self, args):
+class IPC(Bloxlink.Module):
+	def __init__(self):
 		self.connected = False
 		self.websocket = None
-
-		self.client = args.client
-		self.loop = args.client.loop
 
 	async def broadcast(self, message, *, response=True, type="EVAL"):
 		"""broadcasts a message to all clusters"""

@@ -9,8 +9,7 @@ import asyncio
 
 @Bloxlink.module
 class Utils(Bloxlink.Module):
-	def __init__(self, args):
-		self.args = args
+	def __init__(self):
 		self.prefix_regex = compile("(.+):(.+)")
 
 	@staticmethod
@@ -70,7 +69,7 @@ class Utils(Bloxlink.Module):
 
 
 
-		guild_data = guild_data or await self.args.r.table("guilds").get(str(guild.id)).run() or {}
+		guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 		prefix = guild_data.get("prefix")
 
 		if prefix and prefix != "!":
