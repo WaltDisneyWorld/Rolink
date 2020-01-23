@@ -2,13 +2,15 @@ from asyncio import TimeoutError
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord import Embed
 from ..structures.Bloxlink import Bloxlink
-from ..exceptions import CancelledPrompt, CancelCommand
+from ..exceptions import CancelledPrompt, CancelCommand, Error
 from ..constants import RED_COLOR, INVISIBLE_COLOR
-from config import PROMPT_TIMEOUT # pylint: disable=no-name-in-module
+from config import PROMPT, RELEASE, IS_DOCKER # pylint: disable=no-name-in-module
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
+broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
 
 prompts = {}
+
 
 @Bloxlink.loader
 class Arguments:
@@ -22,12 +24,12 @@ class Arguments:
 		self.skipped_args = skipped_args or []
 
 
-	async def say(self, text, type=None, is_prompt=True, embed=True):
+	async def say(self, text, type=None, is_prompt=True, embed=True, dm=False):
 		if not embed:
 			if is_prompt:
-				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=PROMPT_TIMEOUT)}"
+				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=PROMPT['PROMPT_TIMEOUT'])}"
 
-			return await self.response.send(text)
+			return await self.response.send(text, dm=dm, no_dm_post=True)
 
 		if type == "error":
 			new_embed = Embed(title=self.locale("prompt.errors.title"))
@@ -37,15 +39,15 @@ class Arguments:
 			new_embed.colour = INVISIBLE_COLOR
 
 		new_embed.description = f"{text}\n\n{self.locale('prompt.toCancel')}"
-		new_embed.set_footer(text=self.locale("prompt.timeoutWarning", timeout=PROMPT_TIMEOUT))
+		new_embed.set_footer(text=self.locale("prompt.timeoutWarning", timeout=PROMPT["PROMPT_TIMEOUT"]))
 
-		msg = await self.response.send(embed=new_embed)
+		msg = await self.response.send(embed=new_embed, dm=dm, no_dm_post=True)
 
 		if not msg:
 			if is_prompt:
-				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=PROMPT_TIMEOUT)}"
+				text = f"{text}\n\n{self.locale('prompt.toCancel')}\n\n{self.locale('prompt.timeoutWarning', timeout=PROMPT['PROMPT_TIMEOUT'])}"
 
-			return await self.response.send(text)
+			return await self.response.send(text, dm=dm, no_dm_post=True)
 
 		return msg
 
@@ -53,22 +55,37 @@ class Arguments:
 	def in_prompt(author):
 		return prompts.get(author.id)
 
-	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True):
+	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True, dm=False):
 		prompts[self.author.id] = True
 
 		skipped_args = skipped_args or self.skipped_args
 		checked_args = 0
+		err_count = 0
 		resolved_args = {}
 		messages = []
 
+		if dm:
+			if IS_DOCKER:
+				try:
+					m = await self.author.send("Loading setup...")
+				except Forbidden:
+					dm = False
+				else:
+					await m.delete()
+					await self.response.send("**Please check your DMs to continue.**")
+			else:
+				dm = False
+
 		try:
 			while checked_args != len(arguments):
+				if err_count == PROMPT["PROMPT_ERROR_COUNT"]:
+					raise CancelledPrompt("Too many failed attempts.", type="delete")
+
 				prompt = arguments[checked_args]
 				skipped_arg = self.skipped_args[checked_args:checked_args+1]
 				skipped_arg = skipped_arg and skipped_arg[0] or None
 				my_arg = skipped_arg
 				message = self.message
-				err_count = 0
 
 				if prompt.get("optional") and not skipped_arg:
 					resolved_args[prompt["name"]] = None
@@ -84,32 +101,55 @@ class Arguments:
 							if formatting:
 								prompt["prompt"] = prompt["prompt"].format(**resolved_args)
 
-							client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed)
+							client_message = await self.say(prompt["prompt"], type=error and "error", embed=embed, dm=dm)
 
 							if client_message:
 								messages.append(client_message)
 
-							message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT_TIMEOUT)
-							my_arg = message.content
+							if dm:
+								message_content = await broadcast(self.author.id, type="DM")
+								my_arg = message_content["0"]
 
-							messages.append(message)
+								if my_arg in ("cluster offline", "cluster timeout"):
+									raise Error("There's a temporary Bloxlink issue preventing this from working.\n"
+												"Please try again later.")
+							else:
+								message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
+								my_arg = message.content
+
+								messages.append(message)
 
 							if my_arg.lower() == "cancel":
 								raise CancelledPrompt(type="delete")
 
 						except TimeoutError:
-							raise CancelledPrompt(f"timeout ({PROMPT_TIMEOUT}s)")
+							raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)")
 
 					resolver = get_resolver(prompt.get("type", "string"))
-					resolved, err_msg = await resolver(message, prompt, my_arg)
+					resolved, error_message = await resolver(not dm and message, prompt, my_arg)
+
+					if resolved:
+						if prompt.get("validation"):
+							res = [await prompt["validation"](content=my_arg, message=not dm and message)]
+
+							if isinstance(res[0], tuple):
+								if not res[0][0]:
+									error_message = res[0][1]
+									resolved = False
+							else:
+								if not res[0]:
+									error_message = "Prompt failed validation. Please try again."
+									resolved = False
+					else:
+						error_message = f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{error_message}``"
 
 					if resolved:
 						checked_args += 1
 						resolved_args[prompt["name"]] = resolved
 					else:
-						client_message = await self.say(f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{err_msg}``", type="error", embed=embed)
+						client_message = await self.say(error_message, type="error", embed=embed, dm=dm)
 
-						if client_message:
+						if client_message and not dm:
 							messages.append(client_message)
 
 						try:
@@ -129,11 +169,14 @@ class Arguments:
 							# delete (]
 							raise CancelledPrompt(e)
 					finally:
-						for message in messages:
-							try:
-								await message.delete()
-							except (Forbidden, NotFound, HTTPException):
-								pass
+						if not dm:
+							for message in messages:
+								try:
+									await message.delete()
+								except (Forbidden, NotFound, HTTPException):
+									pass
+
+						await self.response.send("**Cancelled prompt.**", dm=dm, no_dm_post=True)
 
 			if return_messages:
 				return resolved_args, messages

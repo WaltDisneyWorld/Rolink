@@ -119,8 +119,6 @@ async def start_clusters():
 		if shard_range:
 			# append cluster spawning task
 			tasks.append(start_cluster(network, session, cluster_id, tuple(shard_range), shard_count))
-			#loop.create_task(start_cluster(network, session, cluster_id, tuple(shard_range), shard_count))
-			#await asyncio.sleep((len(shard_range) * 5) + 1)
 
 		cluster_id += 1
 
@@ -185,12 +183,15 @@ async def websocket_connect(websocket, _):
 		cluster_id = int(message.get("cluster_id", 0))
 		cluster = clusters[cluster_id]
 
-		if message.get("type"):
-			if message["type"] == "IDENTIFY":
+		message_type = message.get("type")
+		message_data = message.get("data")
+
+		if message_type:
+			if message_type == "IDENTIFY":
 				cluster.websocket = websocket
-			elif message["type"] == "READY":
-				guilds = message["data"]["guilds"]
-				users = message["data"]["users"]
+			elif message_type == "READY":
+				guilds = message_data["guilds"]
+				users = message_data["users"]
 
 				if len(cluster.shards) > 1:
 					shard_desc = f"{min(cluster.shards)}-{max(cluster.shards)}"
@@ -212,37 +213,56 @@ async def websocket_connect(websocket, _):
 				except:
 					print("MASTER | Failed to post log webhook", flush=True)
 
-			elif message["type"] == "EVAL":
-				if message.get("data"):
+			elif message_type == "EVAL":
+				if message_data:
 					future = loop.create_future()
-					to_eval = message.get("data")
 					pending[nonce] = {"results": {x:"cluster timeout" if y.websocket else "cluster offline" for x,y in enumerate(clusters)}, "future": future}
 
 					await asyncio.wait([cluster.websocket.send(json.dumps({
 						"nonce": nonce,
 						"secret": secret,
 						"type": "EVAL",
-						"data": to_eval,
+						"data": message_data,
 						"parent": cluster_id
 					})) for cluster in clusters if cluster.websocket])
 
 					loop.create_task(cluster_timeout(future, websocket, message))
 
-			elif message["type"] == "RESULT":
-				if pending.get(nonce) is not None:
-					future = pending[nonce]["future"]
-					pending[nonce]["results"][cluster_id] = message.get("data")
+			elif message_type == "RESULT":
+				pending_entry = pending.get(nonce, {})
+
+				if pending_entry is not None:
+					future = pending_entry.get("future")
+					results = pending_entry.get("results", {})
+					results[cluster_id] = message.get("data")
 
 					num_completed = 0
 					num_all = 0
-					for cluster_id, cluster_response in pending.get(nonce, {}).get("results", {}).items():
+
+					for cluster_id, cluster_response in results.items():
 						if cluster_response != "cluster offline":
 							num_all += 1
 						if cluster_response not in ("cluster offline", "cluster timeout"):
 							num_completed += 1
 
-					if num_completed == num_all:
+					if num_completed == num_all and future:
 						future.set_result(True)
+
+			elif message["type"] == "DM":
+				if message_data:
+					future = loop.create_future()
+					pending[nonce] = {"results": {0:"cluster timeout"}, "future": future}
+
+					await clusters[0].websocket.send(json.dumps({
+						"nonce": nonce,
+						"secret": secret,
+						"type": "DM",
+						"data": message_data,
+						"parent": cluster_id
+					}))
+
+					loop.create_task(cluster_timeout(future, websocket, message))
+
 
 	await session.close()
 

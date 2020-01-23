@@ -1,5 +1,6 @@
 from os import environ as env
 import websockets
+from ast import literal_eval
 import json
 import uuid
 from asyncio import sleep
@@ -12,6 +13,7 @@ WEBSOCKET_PORT = env.get("WEBSOCKET_PORT")
 WEBSOCKET_SECRET = env.get("WEBSOCKET_SECRET")
 CLUSTER_ID = int(env.get("CLUSTER_ID", 0))
 LABEL = env.get("LABEL", "master").lower()
+SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
 
 
 pending_tasks = {}
@@ -85,6 +87,8 @@ class IPC:
 
 					nonce = message.get("nonce")
 					secret = message.get("secret")
+					message_type = message.get("type")
+					message_data = message.get("data")
 
 					if secret != WEBSOCKET_SECRET:
 						await websocket.send("Invalid secret.")
@@ -94,12 +98,10 @@ class IPC:
 						await websocket.send("Missing nonce.")
 						break
 
-					if message.get("type"):
-						if message["type"] == "EVAL":
-							if message.get("data"):
-								to_eval = message.get("data")
-
-								res = (await eval(to_eval, codeblock=False)).description
+					if message_type:
+						if message_type == "EVAL":
+							if message_data:
+								res = (await eval(message_data, codeblock=False)).description
 
 								await websocket.send(json.dumps({
 									"type": "RESULT",
@@ -110,9 +112,22 @@ class IPC:
 									"data": res or "null"
 								}))
 
-						elif message["type"] == "RESULT":
-							pending_tasks[nonce].set_result(message["data"])
+						elif message_type == "RESULT":
+							pending_tasks[nonce].set_result(message_data)
 							del pending_tasks[nonce]
+
+						elif message_type == "DM":
+							if 0 in SHARD_RANGE:
+								message_ = await Bloxlink.wait_for("message", check=lambda m: m.author.id == message_data and not m.guild)
+
+								await websocket.send(json.dumps({
+									"type": "RESULT",
+									"cluster_id": CLUSTER_ID,
+									"parent": message["parent"],
+									"secret": WEBSOCKET_SECRET,
+									"nonce": nonce,
+									"data": message_.content
+								}))
 
 		finally:
 			# disconnected
