@@ -21,7 +21,7 @@ class ViewBindsCommand(Bloxlink.Module):
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
 
-        role_binds, group_ids = await get_binds(guild_data=guild_data, trello_board=trello_board)
+        role_binds, group_ids, _ = await get_binds(guild_data=guild_data, trello_board=trello_board)
 
         if not ((role_binds or {}).get("groups") or group_ids):
             raise Message(f"You have no bounded roles! Please use ``{CommandArgs.prefix}bind``"
@@ -122,6 +122,6 @@ class ViewBindsCommand(Bloxlink.Module):
 
 
         embed.set_author(name="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
-        embed.set_footer(text=f"Use {prefix}bind to make a new bind, or {prefix}delbinds to delete a bind")
+        embed.set_footer(text=f"Use {prefix}bind to make a new bind, or {prefix}delbind to delete a bind")
 
         await CommandArgs.response.send(embed=embed)

@@ -72,21 +72,21 @@ class BindCommand(Bloxlink.Module):
         nickname_lower = nickname.lower()
 
         if trello_board:
-            trello_bind_list = await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+            trello_binds_list = await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
-            if not trello_bind_list:
+            if not trello_binds_list:
                 try:
-                    trello_bind_list = await trello_board.create_list(name="Bloxlink Binds")
+                    trello_binds_list = await trello_board.create_list(name="Bloxlink Binds")
                 except TrelloUnauthorized:
                         await response.error("In order for me to create Trello binds, please add ``@bloxlink`` to your "
                                              "Trello board.")
                 except TrelloNotFound:
                     pass
 
-            trello_card_binds = await parse_trello_binds(trello_board=trello_board, trello_bind_list=trello_bind_list)
+            trello_card_binds, _ = await parse_trello_binds(trello_board=trello_board, trello_binds_list=trello_binds_list)
             trello_group_bind = trello_card_binds["entire group"].get(group_id)
         else:
-            trello_bind_list = None
+            trello_binds_list = None
             trello_group_bind = None
             trello_card_binds = {
                 "entire group": {},
@@ -125,7 +125,7 @@ class BindCommand(Bloxlink.Module):
 
                             if make_trello_card:
                                 try:
-                                    await trello_bind_list.create_card(name="Bloxlink Group Bind", desc=f"Group: {group_id}\nNickname: {nickname}")
+                                    await trello_binds_list.create_card(name="Bloxlink Group Bind", desc=f"Group: {group_id}\nNickname: {nickname}")
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
@@ -151,9 +151,9 @@ class BindCommand(Bloxlink.Module):
 
                 await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
-                if trello_bind_list:
+                if trello_binds_list:
                     try:
-                        await trello_bind_list.create_card(name="Bloxlink Group Bind", desc=f"Group: {group_id}\nNickname: {nickname}")
+                        await trello_binds_list.create_card(name="Bloxlink Group Bind", desc=f"Group: {group_id}\nNickname: {nickname}")
                     except TrelloUnauthorized:
                         await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                              "Trello board.")
@@ -180,13 +180,13 @@ class BindCommand(Bloxlink.Module):
 
                 new_ranks = {"binds":[], "ranges": []}
 
-                role_binds = CommandArgs.guild_data.get("roleBinds") or {}
+                role_binds = guild_data.get("roleBinds") or {}
 
                 if isinstance(role_binds, list):
                     role_binds = role_binds[0]
 
                 role_binds["groups"] = role_binds.get("groups") or {} # {"groups": {"ranges": {}, "binds": {}}}
-                role_binds["groups"][group_id] = role_binds.get(group_id) or {}
+                role_binds["groups"][group_id] = role_binds["groups"].get(group_id) or {}
                 role_binds["groups"][group_id]["binds"] = role_binds["groups"][group_id].get("binds") or {}
                 role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or {}
                 role_binds["groups"][group_id]["groupName"] = group.name
@@ -276,7 +276,7 @@ class BindCommand(Bloxlink.Module):
                             if role_id not in rank["roles"]:
                                 rank["roles"].append(role_id)
                         else:
-                            if not role_id in rank.get("roles", []):
+                            if role_id not in rank.get("roles", []):
                                 rank["roles"] = rank.get("roles") or []
                                 rank["roles"].append(role_id)
 
@@ -293,7 +293,7 @@ class BindCommand(Bloxlink.Module):
                                 # append role
                             # else: make new card
 
-                        if trello_bind_list:
+                        if trello_binds_list:
                             make_binds_card = True
 
                             if trello_card_binds:
@@ -335,7 +335,7 @@ class BindCommand(Bloxlink.Module):
                                                 except TrelloNotFound:
                                                     pass
 
-                                                trello_bind_list.parsed_bind_data = None
+                                                trello_binds_list.parsed_bind_data = None
                                                 make_binds_card = False
 
                                                 break
@@ -353,14 +353,14 @@ class BindCommand(Bloxlink.Module):
                                 trello_card_desc = "\n".join(card_bind_data)
 
                                 try:
-                                    card = await trello_bind_list.create_card(name="Bloxlink Bind", desc=trello_card_desc)
+                                    card = await trello_binds_list.create_card(name="Bloxlink Bind", desc=trello_card_desc)
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
                                 except TrelloNotFound:
                                     pass
 
-                                trello_bind_list.parsed_bind_data = None
+                                trello_binds_list.parsed_bind_data = None
 
                 if new_ranks["ranges"]:
                     role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or []
@@ -383,7 +383,7 @@ class BindCommand(Bloxlink.Module):
                             range_["high"] = int(x[1])
                             role_binds["groups"][group_id]["ranges"].append(range_)
 
-                        if trello_bind_list:
+                        if trello_binds_list:
                             make_binds_card = True
 
                             if trello_card_binds:
@@ -424,7 +424,7 @@ class BindCommand(Bloxlink.Module):
                                                 except TrelloNotFound:
                                                     pass
 
-                                                trello_bind_list.parsed_bind_data = None
+                                                trello_binds_list.parsed_bind_data = None
                                                 make_binds_card = False
 
                                                 break
@@ -440,14 +440,14 @@ class BindCommand(Bloxlink.Module):
                                 trello_card_desc = "\n".join(card_bind_data)
 
                                 try:
-                                    card = await trello_bind_list.create_card(name="Bloxlink Range Bind", desc=trello_card_desc)
+                                    card = await trello_binds_list.create_card(name="Bloxlink Range Bind", desc=trello_card_desc)
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
                                 except TrelloNotFound:
                                     pass
 
-                                trello_bind_list.parsed_bind_data = None
+                                trello_binds_list.parsed_bind_data = None
 
 
 

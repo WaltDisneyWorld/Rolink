@@ -19,14 +19,14 @@ class GetRoleCommand(Bloxlink.Module):
     async def __main__(self, CommandArgs):
         author = CommandArgs.message.author
         trello_board = CommandArgs.trello_board
-        trello_bind_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+        trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
         if not (CommandArgs.guild_data.get("groupIDs") or CommandArgs.guild_data.get("roleBinds")):
-            if trello_bind_list:
-                if not trello_bind_list.synced:
-                    await trello_bind_list.sync(limit=TRELLO["GLOBAL_CARD_LIMIT"])
+            if trello_binds_list:
+                if not trello_binds_list.synced:
+                    await trello_binds_list.sync(limit=TRELLO["GLOBAL_CARD_LIMIT"])
 
-                if len(await trello_bind_list.get_cards()) == 0:
+                if len(await trello_binds_list.get_cards()) == 0:
                     raise Message("Your Trello board has no bounded roles! Please create binds under a "
                                   f"list called ``Bloxlink Binds``, or use ``{CommandArgs.prefix}bind`` to make a new bind.",
                                   type="silly")
@@ -41,7 +41,7 @@ class GetRoleCommand(Bloxlink.Module):
                     guild            = CommandArgs.message.guild,
                     guild_data       = CommandArgs.guild_data,
                     trello_board     = trello_board,
-                    trello_bind_list = trello_bind_list,
+                    trello_binds_list = trello_binds_list,
                     roles            = True,
                     nickname         = True)
 
