@@ -1,5 +1,6 @@
 from ..structures.Bloxlink import Bloxlink
 from config import RELEASE # pylint: disable=no-name-in-module
+from rethinkdb.errors import ReqlOpFailedError
 
 TABLE_STRUCTURE = {
 	"bloxlink": [
@@ -26,7 +27,14 @@ class DatabaseTools:
 
 	async def wait(self):
 		for db_name, table_names in TABLE_STRUCTURE.items():
-			await self.r.db(db_name).wait().run()
+			try:
+				await self.r.db(db_name).wait().run()
+			except ReqlOpFailedError as e:
+				print(f"CRITICAL: {e}", flush=True)
+
 
 			for table_name in table_names:
-				await self.r.db(db_name).table(table_name).wait().run()
+				try:
+					await self.r.db(db_name).table(table_name).wait().run()
+				except ReqlOpFailedError as e:
+					print(f"CRITICAL: {e}", flush=True)
