@@ -73,7 +73,7 @@ class Commands:
 		author = message.author
 		channel = message.channel
 
-		guild_data = guild_data or (guild and await self.args.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}) or {}
+		guild_data = guild_data or (guild and (await self.args.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)})) or {}
 		trello_board = await get_board(guild_data=guild_data, guild=guild)
 		prefix = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
