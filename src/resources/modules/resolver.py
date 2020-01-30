@@ -64,32 +64,71 @@ class Resolver(Bloxlink.Module):
 
 		guild = message.guild
 
-		if message.mentions:
-			if message.mentions[0].id != self.client.user.id:
-				return message.mentions[0], None
+		if not arg.get("multiple"):
+			if message.mentions:
+				for mention in message.mentions:
+					if mention.id != self.client.user.id:
+						return mention, None
 
-		is_int, is_id = None, None
+			is_int, is_id = None, None
 
-		try:
-			is_int = int(content)
-			is_id = is_int > 15
-		except ValueError:
-			pass
+			try:
+				is_int = int(content)
+				is_id = is_int > 15
+			except ValueError:
+				pass
 
-		if is_id:
-			user = guild.get_member(is_int)
-			if user:
-				return user, None
-			else:
-				try:
-					user = await self.client.fetch_user(int(is_int))
+			if is_id:
+				user = guild.get_member(is_int)
+				if user:
 					return user, None
-				except NotFound:
-					return False, "A user with this discord ID does not exist"
-		else:
-			return guild.get_member_named(content), None
+				else:
+					try:
+						user = await self.client.fetch_user(int(is_int))
+						return user, None
+					except NotFound:
+						return False, "A user with this discord ID does not exist"
+			else:
+				return guild.get_member_named(content), None
 
-		return False, "Invalid user"
+			return False, "Invalid user"
+		else:
+			users = []
+			max = arg.get("max")
+			count = 0
+
+			lookup_strings = content.split(" ")
+
+			if max:
+				lookup_strings = lookup_strings[:max]
+
+			for user in message.mentions:
+				if max:
+					if count >= max:
+						break
+					else:
+						count += 1
+
+				users.append(user)
+
+			for member in guild.members:
+				if max:
+					if count >= max:
+						break
+
+				for lookup_string in lookup_strings:
+					if lookup_string.isdigit():
+						if member.id == int(lookup_string):
+							users.append(member)
+							count += 1
+							break
+					else:
+						if member.name == lookup_string or str(member) == lookup_string:
+							users.append(member)
+							count += 1
+							break
+
+			return users, None
 
 	async def channel_resolver(self, message, arg, content=None):
 		if not content:
