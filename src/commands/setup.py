@@ -267,4 +267,4 @@ class SetupCommand(Bloxlink.Module):
 
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-        await response.send("Your server is now configured with Bloxlink!", dm=True, no_dm_post=True)
+        await response.success("Your server is now **configured** with Bloxlink!", dm=True, no_dm_post=True)
