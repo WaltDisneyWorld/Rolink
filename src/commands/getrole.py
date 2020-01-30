@@ -38,12 +38,12 @@ class GetRoleCommand(Bloxlink.Module):
             try:
                 added, removed, nickname, errors, roblox_user = await update_member(
                     CommandArgs.message.author,
-                    guild            = CommandArgs.message.guild,
-                    guild_data       = CommandArgs.guild_data,
-                    trello_board     = trello_board,
+                    guild             = CommandArgs.message.guild,
+                    guild_data        = CommandArgs.guild_data,
+                    trello_board      = trello_board,
                     trello_binds_list = trello_binds_list,
-                    roles            = True,
-                    nickname         = True)
+                    roles             = True,
+                    nickname          = True)
 
                 embed = Embed(title=f"Discord Profile for {roblox_user.username}")
                 embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
