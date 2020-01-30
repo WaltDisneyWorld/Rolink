@@ -78,7 +78,7 @@ class Commands(Bloxlink.Module):
 		prefix = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
 		client_match = re.search(f"<@!?{self.client.user.id}>", content)
-		check = client_match and client_match.group(0) or (content[:len(prefix)].lower() == prefix.lower() and prefix)
+		check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or client_match and client_match.group(0)
 
 		if not check:
 			return
