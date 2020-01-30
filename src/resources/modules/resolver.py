@@ -13,7 +13,7 @@ class Resolver(Bloxlink.Module):
 		if not content:
 			content = message.content
 
-		min = arg.get("min", 0)
+		min = arg.get("min", 1)
 		max = arg.get("max", 100)
 
 		if arg.get("min") or arg.get("max"):

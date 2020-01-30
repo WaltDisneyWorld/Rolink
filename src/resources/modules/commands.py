@@ -201,6 +201,8 @@ class Commands(Bloxlink.Module):
 	def new_command(command_structure):
 		command = Command(command_structure())
 
+		Bloxlink.log(f"Adding command {command.name}")
+
 		for attr_name in dir(command_structure):
 			attr = getattr(command_structure, attr_name)
 

@@ -2,7 +2,7 @@ from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException, NotFound
 from ..exceptions import PermissionError, Message
 from ..structures import Bloxlink, Paginate
-from config import PREFIX, REACTIONS # pylint: disable=E0611
+from config import PREFIX, REACTIONS, IS_DOCKER # pylint: disable=E0611
 import asyncio
 
 loop = asyncio.get_event_loop()
@@ -101,6 +101,10 @@ class Response(Bloxlink.Module):
         return ResponseLoading(self, text)
 
     async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False):
+        if dm:
+            if not IS_DOCKER:
+                dm = False
+
         channel = dm and self.author or self.channel
 
         verified_webhook = False

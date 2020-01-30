@@ -88,7 +88,7 @@ class Roblox(Bloxlink.Module):
 
         words.append(random.choice(WORDS))
 
-        return " ".join(words)
+        return "BLOXLINK VERIFICATION " + " ".join(words)
 
 
     @staticmethod
@@ -527,9 +527,6 @@ class Roblox(Bloxlink.Module):
         if roblox_user:
             if not roblox_user.verified:
                 await roblox_user.sync()
-
-            if not template:
-                template = guild_data.get("nicknameTemplate", "{roblox_name}")
 
             if not template or template == "{disable-nicknaming}":
                 return
@@ -996,7 +993,7 @@ class Roblox(Bloxlink.Module):
                                         group_role = await guild.create_role(name=group.user_role)
                                     except Forbidden:
                                         raise PermissionError(f"Sorry, I wasn't able to create the role {group.user_role}."
-                                                            "Please ensure I have the ``Manage Roles`` permission.")
+                                                               "Please ensure I have the ``Manage Roles`` permission.")
                                 else:
                                     continue
 
@@ -1047,7 +1044,7 @@ class Roblox(Bloxlink.Module):
                             nickname = highest_role[0][1]
 
                 else:
-                    nickname = top_role_nickname or await self.get_nickname(author=author, template=guild_data.get("nicknameTemplate", "{roblox-name}"), roblox_user=roblox_user)
+                    nickname = top_role_nickname or await self.get_nickname(author=author, roblox_user=roblox_user)
 
             if nickname != author.display_name:
                 try:
@@ -1079,9 +1076,11 @@ class Roblox(Bloxlink.Module):
         except json.decoder.JSONDecodeError:
             raise RobloxAPIError
         else:
-            if json_data.get("Id"):
+            group_id = json_data.get("Id") or group_id
+
+            if group_id:
                 if not group:
-                    group = Group(id=group_id, **json_data)
+                    group = Group(group_id=group_id, **json_data)
                 else:
                     group.load_json(json_data)
 
@@ -1475,6 +1474,7 @@ class Group(Bloxlink.Module):
 
     def __init__(self, group_id=None, **kwargs):
         self.group_id = str(group_id)
+
         self.name = None
         self.description = None
         self.rolesets = []
@@ -1505,7 +1505,7 @@ class Group(Bloxlink.Module):
             roleset["Name"] = roleset["Name"].strip()
 
     def __str__(self):
-        return f"Group {self.group_id}"
+        return f"Group ({self.name or self.group_id})"
 
     def __repr__(self):
         return self.__str__()

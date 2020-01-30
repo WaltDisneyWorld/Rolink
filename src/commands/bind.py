@@ -5,7 +5,7 @@ from resources.constants import NICKNAME_TEMPLATES, ARROW  # pylint: disable=imp
 from discord import Embed
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
-from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound
+from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 
 bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
 
@@ -80,7 +80,7 @@ class BindCommand(Bloxlink.Module):
                 except TrelloUnauthorized:
                         await response.error("In order for me to create Trello binds, please add ``@bloxlink`` to your "
                                              "Trello board.")
-                except TrelloNotFound:
+                except (TrelloNotFound, TrelloBadRequest):
                     pass
 
             trello_card_binds, _ = await parse_trello_binds(trello_board=trello_board, trello_binds_list=trello_binds_list)
@@ -118,7 +118,7 @@ class BindCommand(Bloxlink.Module):
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
-                                except TrelloNotFound:
+                                except (TrelloNotFound, TrelloBadRequest):
                                     pass
 
                                 make_trello_card = False
@@ -129,7 +129,7 @@ class BindCommand(Bloxlink.Module):
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
-                                except TrelloNotFound:
+                                except (TrelloNotFound, TrelloBadRequest):
                                     pass
 
                         raise Message("Since your group is already linked, the nickname was updated.", type="success")
@@ -157,7 +157,7 @@ class BindCommand(Bloxlink.Module):
                     except TrelloUnauthorized:
                         await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                              "Trello board.")
-                    except TrelloNotFound:
+                    except (TrelloNotFound, TrelloBadRequest):
                         pass
 
                 raise Message("Success! Your group was successfully linked.", type="success")
@@ -332,7 +332,7 @@ class BindCommand(Bloxlink.Module):
                                                 except TrelloUnauthorized:
                                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                                          "Trello board.")
-                                                except TrelloNotFound:
+                                                except (TrelloNotFound, TrelloBadRequest):
                                                     pass
 
                                                 trello_binds_list.parsed_bind_data = None
@@ -357,7 +357,7 @@ class BindCommand(Bloxlink.Module):
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
-                                except TrelloNotFound:
+                                except (TrelloNotFound, TrelloBadRequest):
                                     pass
 
                                 trello_binds_list.parsed_bind_data = None
@@ -421,7 +421,7 @@ class BindCommand(Bloxlink.Module):
                                                 except TrelloUnauthorized:
                                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                                          "Trello board.")
-                                                except TrelloNotFound:
+                                                except (TrelloNotFound, TrelloBadRequest):
                                                     pass
 
                                                 trello_binds_list.parsed_bind_data = None
@@ -444,7 +444,7 @@ class BindCommand(Bloxlink.Module):
                                 except TrelloUnauthorized:
                                     await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                                          "Trello board.")
-                                except TrelloNotFound:
+                                except (TrelloNotFound, TrelloBadRequest):
                                     pass
 
                                 trello_binds_list.parsed_bind_data = None

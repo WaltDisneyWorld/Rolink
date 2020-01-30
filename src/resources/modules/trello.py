@@ -1,5 +1,5 @@
 from aiotrello import Trello as TrelloClient
-from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound
+from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import BadUsage
 from time import time
@@ -42,7 +42,7 @@ class Trello(Bloxlink.Module):
 					pass
 				except TrelloUnauthorized:
 					pass
-				except TrelloNotFound:
+				except (TrelloNotFound, TrelloBadRequest):
 					guild_data.pop("trelloID")
 
 					await self.r.table("guilds").get(str(guild.id)).update(guild_data).run()

@@ -73,10 +73,6 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def module(module):
-		args = Args.Args( # pylint: disable=no-member
-			r=r,
-			client=Bloxlink
-		)
 		new_module = module()
 
 		failed = False
@@ -95,11 +91,6 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def loader(module):
-		module_args = Args.Args( # pylint: disable=no-member
-			r=r,
-			client=Bloxlink
-		)
-
 		def load(*args, **kwargs):
 			return module(*args, **kwargs)
 
@@ -186,7 +177,6 @@ class BloxlinkStructure(AutoShardedClient):
 
 	@staticmethod
 	def command(*args, **kwargs):
-		Bloxlink.log("Adding new command")
 		return Bloxlink.get_module("commands", attrs="new_command")(*args, **kwargs)
 
 	@staticmethod
