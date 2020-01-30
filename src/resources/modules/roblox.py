@@ -870,8 +870,8 @@ class Roblox(Bloxlink.Module):
                             raise PermissionError("Sorry, I wasn't able to create the Verified role. "
                                                   "Please ensure I have the ``Manage Roles`` permission.")
 
-                        if not verified_role in author.roles:
-                            add_roles.add(verified_role)
+                    if not verified_role in author.roles:
+                        add_roles.add(verified_role)
 
 
             role_binds, group_ids, _ = await self.get_binds(guild_data=guild_data, trello_board=trello_board)
