@@ -2,8 +2,10 @@ import re
 import traceback
 from concurrent.futures._base import CancelledError
 from discord.errors import Forbidden, NotFound, HTTPException
+from discord.utils import find
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Command, Bloxlink, Args
+from resources.constants import MAGIC_ROLES
 
 
 get_prefix = Bloxlink.get_module("utils", attrs="get_prefix")
@@ -91,6 +93,16 @@ class Commands(Bloxlink.Module):
 		if command_name:
 			for index, command in dict(commands).items():
 				if index == command_name or command_name in command.aliases:
+					ignored_channels = guild_data.get("ignoredChannels", {})
+
+					if ignored_channels.get(str(channel.id)):
+						if not find(lambda r: r.name in MAGIC_ROLES, author.roles):
+							if guild.owner != author:
+								author_perms = author.guild_permissions
+
+								if not (author_perms.manage_guild or author_perms.administrator):
+									return
+
 					if not (command.dm_allowed or guild):
 						try:
 							await channel.send("This command does not support DM. Please run it in a server.")

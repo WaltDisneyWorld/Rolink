@@ -9,3 +9,5 @@ NICKNAME_TEMPLATES = (
 )
 
 ARROW = "\u2192"
+
+MAGIC_ROLES = ["Bloxlink Admin", "Bloxlink Bypass", "Bloxlink Updater"]
