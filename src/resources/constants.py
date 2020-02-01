@@ -5,7 +5,15 @@ ORANGE_COLOR = 0xCE8037
 NICKNAME_TEMPLATES = (
     "{roblox-name} \u2192 changes to their Roblox username\n"
     "{roblox-id} \u2192 changes to their Roblox user ID\n"
-    "{group-rank} \u2192 changes to their group rank"
+    "{roblox-age} \u2192 changes to their Roblox user age in days\n"
+    "{roblox-join-date} \u2192 changes to their Roblox join date\n"
+    "{group-rank} \u2192 changes to their group rank\n"
+    "{group-rank-ID} \u2192 changes to their group rank in group with ID\n"
+    "{discord-name} \u2192 changes to their Discord display name\n"
+    "{discord-nick} \u2192 changes to their Discord nickname\n"
+    "{server-name} \u2192 changes to the server name\n"
+    "\n"
+    "{disable-nicknaming} \u2192 overrides all other options and returns a blank nickname"
 )
 
 ARROW = "\u2192"

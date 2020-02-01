@@ -14,7 +14,8 @@ import asyncio
 import dateutil.parser as parser
 
 nickname_template_regex = re.compile("\{(.*?)\}")
-trello_card_bind_regex = re.compile("(.*): ?(.*)")
+trello_card_bind_regex = re.compile("(.*?): ?(.*)")
+any_group_nickname = re.compile(r"\{group-rank-(.*?)\}")
 
 
 loop = asyncio.get_event_loop()
@@ -516,6 +517,9 @@ class Roblox(Bloxlink.Module):
     """
 
     async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, guild_data=None, roblox_user=None):
+        if not template or "{disable-nicknaming}" in template:
+            return
+
         guild = guild or author.guild
         roblox_user = roblox_user or (not skip_roblox_check and await self.get_user(author=author))
 
@@ -528,57 +532,65 @@ class Roblox(Bloxlink.Module):
             if not roblox_user.verified:
                 await roblox_user.sync()
 
-            if not template or template == "{disable-nicknaming}":
-                return
-
             group_role = group and group.user_role or "Guest"
 
             template = template.replace(
                 "roblox-name", roblox_user.username
             ).replace(
-                "roblox-id", roblox_user.id
+                "roblox-id", str(roblox_user.id)
             ).replace(
-                "discord-name", author.name
+                "roblox-age", str(roblox_user.age)
             ).replace(
-                "discord-nick", author.display_name
+                "roblox-join-date", roblox_user.join_date
             ).replace(
                 "group-rank", group_role
             ).replace(
                 "clan-tag", "" # TODO
-            ).replace(
-                "server-name", guild.name
             )
 
-            for outer_nick in nickname_template_regex.findall(template):
-                nick_data = outer_nick.split(":")
-                nick_fn = None
-                nick_value = None
-
-                if len(nick_data) > 1:
-                    nick_fn = nick_data[0]
-                    nick_value = nick_data[1]
-                else:
-                    nick_value = nick_data[0]
-
-                # nick_fn = capA
-                # nick_value = roblox-name
-
-                if nick_fn == "allC":
-                    nick_value = nick_value.upper()
-                elif nick_fn == "allL":
-                    nick_value = nick_value.lower()
-
-                # TODO: add more nickname functions
-
-                template = template.replace("{{{0}}}".format(outer_nick), nick_value)
-
+            for rank in any_group_nickname.findall(template):
+                group = roblox_user.groups.get(rank)
+                group_role = group and group.user_role or "Guest"
+                template = template.replace("{group-rank-"+rank+"}", group_role)
 
         else:
             if not template:
                 template = guild_data.get("unverifiedNickname")
-                # TODO: update template for this
 
-        return template
+        template = template.replace(
+            "discord-name", author.name
+        ).replace(
+            "discord-nick", author.display_name
+        ).replace(
+            "server-name", guild.name
+        )
+
+        for outer_nick in nickname_template_regex.findall(template):
+            nick_data = outer_nick.split(":")
+            nick_fn = None
+            nick_value = None
+
+            if len(nick_data) > 1:
+                nick_fn = nick_data[0]
+                nick_value = nick_data[1]
+            else:
+                nick_value = nick_data[0]
+
+            # nick_fn = capA
+            # nick_value = roblox-name
+
+            if nick_fn == "allC":
+                nick_value = nick_value.upper()
+            elif nick_fn == "allL":
+                nick_value = nick_value.lower()
+
+            # TODO: add more nickname functions
+
+            template = template.replace("{{{0}}}".format(outer_nick), nick_value)
+
+
+
+        return template[0:31]
 
 
     async def parse_trello_binds(self, trello_board=None, trello_binds_list=None):
