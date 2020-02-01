@@ -89,6 +89,8 @@ class SetupCommand(Bloxlink.Module):
                           "permissions, you may encounter issues with using certain commands.",
                 "name": "_",
                 "footer": "Say **next** to continue.",
+                "type": "choice",
+                "choices": ["next"],
                 "embed_title": "Setup Prompt"
             },
             {
@@ -209,7 +211,8 @@ class SetupCommand(Bloxlink.Module):
                 "footer": "Please say **done** to complete the setup.",
                 "choices": ["done"],
                 "embed_title": "Setup Prompt Confirmation",
-                "embed_color": ORANGE_COLOR
+                "embed_color": ORANGE_COLOR,
+                "formatting": False
             }
         ], dm=True)
 

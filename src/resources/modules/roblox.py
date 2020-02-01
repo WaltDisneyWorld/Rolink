@@ -790,7 +790,7 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def update_member(self, author, *, nickname=True, roles=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None):
+    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, verify_role=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None):
         my_permissions = guild.me.guild_permissions
 
         if roles and not my_permissions.manage_roles:
@@ -823,200 +823,200 @@ class Roblox(Bloxlink.Module):
 
         guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
-        unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
-        unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
+        if verify_role:
+            unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
+            unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
-        try:
-            if not roblox_user:
-                roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
+            try:
+                if not roblox_user:
+                    roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
 
-        except UserNotVerified:
-            if roles and unverified_role_name:
-                if not unverified_role:
-                    try:
-                        unverified_role = await guild.create_role(name=unverified_role_name)
-                    except Forbidden:
-                        raise PermissionError("I was unable to create the Unverified Role. Please "
-                                              "ensure I have the ``Manage Roles`` permission.")
-
-                add_roles.add(unverified_role)
-
-            if nickname:
-                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
-
-            unverified = True
-
-        else:
-            if unverified_role and unverified_role in author.roles:
-                remove_roles.add(unverified_role)
-
-            # suspended_rank = guild_data.get("suspendedRank")
-            # TODO: change suspendedRank
-
-            if roles:
-                verified_role_name = guild_data.get("verifiedRoleName", "Verified")
-
-                if verified_role_name:
-                    verified_role_name = verified_role_name[0:99]
-                    verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
-
-                    if not verified_role:
+            except UserNotVerified:
+                if roles and unverified_role_name:
+                    if not unverified_role:
                         try:
-                            verified_role = await guild.create_role(
-                                name   = verified_role_name,
-                                reason = "Creating missing Verified role"
-                            )
+                            unverified_role = await guild.create_role(name=unverified_role_name)
                         except Forbidden:
-                            raise PermissionError("Sorry, I wasn't able to create the Verified role. "
-                                                  "Please ensure I have the ``Manage Roles`` permission.")
+                            raise PermissionError("I was unable to create the Unverified Role. Please "
+                                                  "ensure I have the ``Manage Roles`` permission.")
 
-                    if not verified_role in author.roles:
-                        add_roles.add(verified_role)
+                    add_roles.add(unverified_role)
 
+                if nickname:
+                    nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
 
-            role_binds, group_ids, _ = await self.get_binds(guild_data=guild_data, trello_board=trello_board)
+                unverified = True
+
+            else:
+                if unverified_role and unverified_role in author.roles:
+                    remove_roles.add(unverified_role)
+
+                # suspended_rank = guild_data.get("suspendedRank")
+                # TODO: change suspendedRank
+
+                if roles:
+                    verified_role_name = guild_data.get("verifiedRoleName", "Verified")
+
+                    if verified_role_name:
+                        verified_role_name = verified_role_name[0:99]
+                        verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
+
+                        if not verified_role:
+                            try:
+                                verified_role = await guild.create_role(
+                                    name   = verified_role_name,
+                                    reason = "Creating missing Verified role"
+                                )
+                            except Forbidden:
+                                raise PermissionError("Sorry, I wasn't able to create the Verified role. "
+                                                      "Please ensure I have the ``Manage Roles`` permission.")
+
+                        if not verified_role in author.roles:
+                            add_roles.add(verified_role)
 
             top_role_nickname = None
 
-            if role_binds:
-                if isinstance(role_binds, list):
-                    role_binds = role_binds[0]
+            if group_roles and roblox_user:
+                role_binds, group_ids, _ = await self.get_binds(guild_data=guild_data, trello_board=trello_board)
 
-                for group_id, data in role_binds.get("groups", {}).items():
-                    group = roblox_user.groups.get(group_id)
+                if role_binds:
+                    if isinstance(role_binds, list):
+                        role_binds = role_binds[0]
 
-                    if group:
-                        user_rank = group.user_rank
-                        int_user_rank = int(user_rank)
+                    for group_id, data in role_binds.get("groups", {}).items():
+                        group = roblox_user.groups.get(group_id)
 
-                        for bind_id, bind_data in data.get("binds", {}).items():
-                            rank = None
-                            bind_nickname = bind_data.get("nickname")
-                            bound_roles = bind_data.get("roles")
+                        if group:
+                            user_rank = group.user_rank
+                            int_user_rank = int(user_rank)
 
-                            if not bound_roles:
-                                bound_roles = set([group.user_role])
+                            for bind_id, bind_data in data.get("binds", {}).items():
+                                rank = None
+                                bind_nickname = bind_data.get("nickname")
+                                bound_roles = bind_data.get("roles")
 
-                            try:
-                                rank = int(bind_id)
-                            except ValueError:
-                                pass
+                                if not bound_roles:
+                                    bound_roles = set([group.user_role])
 
-                            if (bind_id == "all" or rank == int_user_rank) or (rank and (rank < 0 and int_user_rank >= abs(rank))):
-                                for role_id in bound_roles:
-                                    int_role_id = role_id.isdigit() and int(role_id)
-                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                try:
+                                    rank = int(bind_id)
+                                except ValueError:
+                                    pass
 
-                                    if not role:
-                                        if data.get("trello"):
-                                            try:
-                                                role = await guild.create_role(name=role_id)
-                                            except Forbidden:
-                                                raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                       "Please ensure I have the ``Manage Roles`` permission.")
-                                            else:
-                                                add_roles.add(role)
+                                if (bind_id == "all" or rank == int_user_rank) or (rank and (rank < 0 and int_user_rank >= abs(rank))):
+                                    for role_id in bound_roles:
+                                        int_role_id = role_id.isdigit() and int(role_id)
+                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                    else:
-                                        add_roles.add(role)
+                                        if not role:
+                                            if data.get("trello"):
+                                                try:
+                                                    role = await guild.create_role(name=role_id)
+                                                except Forbidden:
+                                                    raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
+                                                                           "Please ensure I have the ``Manage Roles`` permission.")
+                                                else:
+                                                    add_roles.add(role)
 
-                                if nickname and bind_nickname and bind_nickname != "skip":
-                                    if author.top_role == role:
-                                        top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
-
-                                    resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
-
-                                    if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                        possible_nicknames.append([role, resolved_nickname])
-                            else:
-                                for role_id in bound_roles:
-                                    int_role_id = role_id.isdigit() and int(role_id)
-                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
-
-                                    if role and role in author.roles:
-                                        remove_roles.add(role)
-
-                        for bind_range in data.get("ranges", []):
-                            bind_nickname = bind_range.get("nickname")
-                            bound_roles = bind_range.get("roles", set())
-
-                            if not bound_roles:
-                                bound_roles = set([group.user_role])
-
-                            if bind_range["low"] <= int_user_rank <= bind_range["high"]:
-
-                                for role_id in bind_range.get("roles", []):
-                                    int_role_id = role_id.isdigit() and int(role_id)
-                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
-
-                                    if not role:
-                                        if data.get("trello"):
-                                            try:
-                                                role = await guild.create_role(name=role_id)
-                                            except Forbidden:
-                                                raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                       "Please ensure I have the ``Manage Roles`` permission.")
-
-                                    if roles and role:
-                                        add_roles.add(role)
-
-                                        if nickname and author.top_role == role and bind_nickname:
-                                            top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
+                                        else:
+                                            add_roles.add(role)
 
                                     if nickname and bind_nickname and bind_nickname != "skip":
+                                        if author.top_role == role:
+                                            top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
+
                                         resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
 
                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                             possible_nicknames.append([role, resolved_nickname])
-                            else:
-                                for role_id in bound_roles:
-                                    int_role_id = role_id.isdigit() and int(role_id)
-                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
-
-                                    if role and role in author.roles:
-                                        remove_roles.add(role)
-                    else:
-                        # TODO: finish guest roles
-                        pass
-
-            if group_ids:
-                for group_id, group_data in group_ids.items():
-                    if group_id != "0":
-                        group = roblox_user.groups.get(str(group_id))
-
-                        if group:
-                            group_role = find(lambda r: r.name == group.user_role, guild.roles)
-
-                            if not group_role:
-                                if guild_data.get("dynamicRoles", True):
-                                    try:
-                                        group_role = await guild.create_role(name=group.user_role)
-                                    except Forbidden:
-                                        raise PermissionError(f"Sorry, I wasn't able to create the role {group.user_role}."
-                                                               "Please ensure I have the ``Manage Roles`` permission.")
                                 else:
-                                    continue
+                                    for role_id in bound_roles:
+                                        int_role_id = role_id.isdigit() and int(role_id)
+                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                            for roleset in group.rolesets:
-                                has_role = find(lambda r: r.name == roleset["Name"], author.roles)
+                                        if role and role in author.roles:
+                                            remove_roles.add(role)
 
-                                if has_role:
-                                    if group.user_role != roleset["Name"]:
-                                        remove_roles.add(has_role)
+                            for bind_range in data.get("ranges", []):
+                                bind_nickname = bind_range.get("nickname")
+                                bound_roles = bind_range.get("roles", set())
 
-                            add_roles.add(group_role)
+                                if not bound_roles:
+                                    bound_roles = set([group.user_role])
 
-                            group_nickname = group_data.get("nickname")
+                                if bind_range["low"] <= int_user_rank <= bind_range["high"]:
 
-                            if nickname and group_nickname:
-                                if author.top_role == group_role and group_nickname:
-                                    group_nickname = await self.get_nickname(author=author, template=group_nickname, roblox_user=roblox_user, group=group)
+                                    for role_id in bind_range.get("roles", []):
+                                        int_role_id = role_id.isdigit() and int(role_id)
+                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                if group_nickname and group_nickname != "skip":
-                                    resolved_nickname = await self.get_nickname(author=author, template=group_nickname, roblox_user=roblox_user, group=group)
+                                        if not role:
+                                            if data.get("trello"):
+                                                try:
+                                                    role = await guild.create_role(name=role_id)
+                                                except Forbidden:
+                                                    raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
+                                                                           "Please ensure I have the ``Manage Roles`` permission.")
 
-                                    if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                        possible_nicknames.append([group_role, resolved_nickname])
+                                        if roles and role:
+                                            add_roles.add(role)
+
+                                            if nickname and author.top_role == role and bind_nickname:
+                                                top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
+
+                                        if nickname and bind_nickname and bind_nickname != "skip":
+                                            resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, group=group)
+
+                                            if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                                possible_nicknames.append([role, resolved_nickname])
+                                else:
+                                    for role_id in bound_roles:
+                                        int_role_id = role_id.isdigit() and int(role_id)
+                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+
+                                        if role and role in author.roles:
+                                            remove_roles.add(role)
+                        else:
+                            # TODO: finish guest roles
+                            pass
+
+                if group_ids:
+                    for group_id, group_data in group_ids.items():
+                        if group_id != "0":
+                            group = roblox_user.groups.get(str(group_id))
+
+                            if group:
+                                group_role = find(lambda r: r.name == group.user_role, guild.roles)
+
+                                if not group_role:
+                                    if guild_data.get("dynamicRoles", True):
+                                        try:
+                                            group_role = await guild.create_role(name=group.user_role)
+                                        except Forbidden:
+                                            raise PermissionError(f"Sorry, I wasn't able to create the role {group.user_role}."
+                                                                   "Please ensure I have the ``Manage Roles`` permission.")
+
+                                for roleset in group.rolesets:
+                                    has_role = find(lambda r: r.name == roleset["Name"], author.roles)
+
+                                    if has_role:
+                                        if group.user_role != roleset["Name"]:
+                                            remove_roles.add(has_role)
+
+                                if group_role:
+                                    add_roles.add(group_role)
+
+                                group_nickname = group_data.get("nickname")
+
+                                if nickname and group_nickname:
+                                    if author.top_role == group_role and group_nickname:
+                                        top_role_nickname = await self.get_nickname(author=author, template=group_nickname, roblox_user=roblox_user, group=group)
+
+                                    if group_nickname and group_nickname != "skip":
+                                        resolved_nickname = await self.get_nickname(author=author, template=group_nickname, roblox_user=roblox_user, group=group)
+
+                                        if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                            possible_nicknames.append([group_role, resolved_nickname])
 
         if roles:
             add_roles = add_roles.difference(author.roles).difference(remove_roles)
@@ -1586,12 +1586,6 @@ class RobloxUser(Bloxlink.Module):
             roblox_data["premium"] = roblox_user_from_cache.premium
             roblox_data["presence"] = roblox_user_from_cache.presence
             roblox_data["badges"] = roblox_user_from_cache.badges
-            """
-            roblox_data["extras"]["description"] = roblox_user_from_cache.description
-            roblox_data["extras"]["age"] = roblox_user_from_cache.age
-            roblox_data["extras"]["join_date"] = roblox_user_from_cache.join_date
-            roblox_data["extras"]["banned"] = roblox_user_from_cache.banned
-            """
             roblox_data["banned"] = roblox_user_from_cache.banned
             roblox_data["join_date"] = roblox_user_from_cache.join_date
             roblox_data["description"] = roblox_user_from_cache.description

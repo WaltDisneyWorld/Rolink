@@ -1,7 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
 from discord import Embed
-from resources.exceptions import Message # pylint: disable=import-error
+from resources.exceptions import Message, UserNotVerified # pylint: disable=import-error
 
 verify_as, update_member, get_user = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user"])
 
@@ -18,15 +18,14 @@ class VerifyCommand(Bloxlink.Module):
 		if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
 			await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
 											 f"Please use ``{CommandArgs.prefix}verify add`` instead.")
-
-		_, _, _, _, roblox_user = await update_member(
-				CommandArgs.message.author,
-				guild      = CommandArgs.message.guild,
-				guild_data = CommandArgs.guild_data,
-				roles      = True,
-				nickname   = True)
-
-		if not roblox_user:
+		try:
+			_, _, _, _, roblox_user = await update_member(
+					CommandArgs.message.author,
+					guild      = CommandArgs.message.guild,
+					guild_data = CommandArgs.guild_data,
+					roles      = True,
+					nickname   = True)
+		except UserNotVerified:
 			await self.add(CommandArgs)
 		else:
 			await CommandArgs.response.success(CommandArgs.guild_data.get("welcomeMessage",
@@ -91,6 +90,7 @@ class VerifyCommand(Bloxlink.Module):
 				roles      = True,
 				nickname   = True)
 
+			"""
 			embed = Embed(title=f"Discord Profile for {roblox_user.username}")
 			embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
 
@@ -106,6 +106,7 @@ class VerifyCommand(Bloxlink.Module):
 			embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
 
 			await CommandArgs.response.send(embed=embed)
+			"""
 
 		finally:
 			messages.append(CommandArgs.message)
