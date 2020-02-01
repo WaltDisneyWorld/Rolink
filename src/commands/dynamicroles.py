@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 
 @Bloxlink.command
 class DynamicRolesCommand(Bloxlink.Module):
-    """automatically create missing group roles"""
+    """automatically create missing group roles. by default, this is ENABLED."""
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
