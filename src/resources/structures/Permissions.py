@@ -1,45 +1,34 @@
 class Permissions:
-	"""Contains permission attributes for commands"""
+    """Contains permission attributes for commands"""
 
-	def __init__(self, roles=None, **kwargs):
-		self.allowed = {"roles":[], "discord_perms": [], "functions": []}
-		self.exceptions = {"roles":[], }
+    def __init__(self, roles=None, **kwargs):
+        self.allowed = {"roles":[], "discord_perms": [], "functions": []}
+        self.exceptions = {"roles":[], }
 
-		self.bloxlink_role = False
+        self.bloxlink_role = False
 
-		if roles:
-			self.allowed["roles"] = roles
+        self.allow_bypass = False
 
-	def build(self, *args, function=None, roles=None):
-		if roles:
-			self.allowed["roles"] += roles
+        if roles:
+            self.allowed["roles"] = roles
 
-		if function:
-			self.allowed["functions"].append(function)
+    def build(self, *args, function=None, roles=None):
+        if roles:
+            self.allowed["roles"] += roles
 
-		for arg in args:
-			if arg in ("BLOXLINK_ADMIN", "BLOXLINK_MANAGER", "BLOXLINK_UPDATER", "BLOXLINK_MODERATOR"):
-				self.bloxlink_role = arg.replace("_", " ").title()
-			elif arg in ("MANAGE_ROLES", "BAN_MEMBERS", "KICK_MEMBERS", "MANAGE_SERVER"):
-				self.allowed["discord_perms"].append(arg.replace("_", "").title())
+        if function:
+            self.allowed["functions"].append(function)
 
-		return self
+        for arg in args:
+            if arg in ("BLOXLINK_ADMIN", "BLOXLINK_MANAGER", "BLOXLINK_UPDATER", "BLOXLINK_MODERATOR"):
+                self.bloxlink_role = arg.replace("_", " ").title()
+            elif arg in ("MANAGE_ROLES", "BAN_MEMBERS", "KICK_MEMBERS", "MANAGE_SERVER"):
+                self.allowed["discord_perms"].append(arg.replace("_", "").title())
 
-	"""
-	def only(self, *args, roles=None):
-		if roles:
-			self.only["roles"] += roles
+        return self
 
-		for arg in args:
-			if arg in ("BLOXLINK_ADMIN", "BLOXLINK_MANAGER", "BLOXLINK_UPDATER"):
-				self.bloxlink_roles_exceptions = False
-				setattr(self, arg, True)
+    def exception(self, *args, roles=None):
+        if roles:
+            self.exceptions["roles"] += roles
 
-		return self
-	"""
-
-	def exception(self, *args, roles=None):
-		if roles:
-			self.exceptions["roles"] += roles
-
-		return self
+        return self

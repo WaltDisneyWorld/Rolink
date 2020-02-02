@@ -45,10 +45,10 @@ class Utils(Bloxlink.Module):
 
 	async def get_prefix(self, guild=None, guild_data=None, trello_board=None):
 		if not guild:
-			return PREFIX
+			return PREFIX, None
 
 		if RELEASE == "MAIN" and await guild.fetch_member(469652514501951518):
-			return "!!"
+			return "!!", None
 
 		if trello_board:
 			List = await trello_board.get_list(lambda L: L.name == "Bloxlink Settings")
@@ -59,13 +59,13 @@ class Utils(Bloxlink.Module):
 				if card:
 					if card.name == "prefix":
 						if card.desc:
-							return card.desc.strip()
+							return card.desc.strip(), card
 
 					else:
 						match = self.prefix_regex.search(card.name)
 
 						if match:
-							return match.group(2)
+							return match.group(2), card
 
 
 
@@ -73,6 +73,6 @@ class Utils(Bloxlink.Module):
 		prefix = guild_data.get("prefix")
 
 		if prefix and prefix != "!":
-			return prefix
+			return prefix, None
 
-		return PREFIX
+		return PREFIX, None

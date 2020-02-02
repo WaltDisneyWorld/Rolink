@@ -80,7 +80,7 @@ class Commands(Bloxlink.Module):
 
         guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
         trello_board = await get_board(guild_data=guild_data, guild=guild)
-        prefix = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
+        prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
         client_match = re.search(f"<@!?{self.client.user.id}>", content)
         check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or client_match and client_match.group(0)
@@ -130,7 +130,8 @@ class Commands(Bloxlink.Module):
                             message = message,
                             guild_data = guild_data,
                             flags = {},
-                            prefix = prefix
+                            prefix = prefix,
+                            has_permission = False
                         )
 
                         if getattr(fn, "__flags__", False):
@@ -148,65 +149,73 @@ class Commands(Bloxlink.Module):
                         try:
                             await command.check_permissions(author, locale, permissions=subcommand_attrs.get("permissions"))
                         except PermissionError as e:
-                            await response.error(e)
+                            if not command.permissions.allow_bypass:
+                                await response.error(e)
+
+                                return
+
+                            CommandArgs.has_permission = False
+
                         else:
-                            messages = []
+                            CommandArgs.has_permission = True
 
-                            try:
-                                messages = await self.more_args(after, CommandArgs, subcommand_attrs.get("arguments") or command.arguments)
-                                response.prompt = CommandArgs.prompt # pylint: disable=no-member
-                                await fn(CommandArgs)
-                            except PermissionError as e:
-                                if e.args:
-                                    await response.error(e)
-                                else:
-                                    await response.error(locale("permissions.genericError"))
-                            except Forbidden:
-                                if e.args:
-                                    await response.error(e)
-                                else:
-                                    await response.error(locale("permissions.genericError"))
-                            except RobloxAPIError:
-                                await response.error("The Roblox API returned an error; are you supplying the correct ID to this command?")
-                            except RobloxDown:
-                                await response.error("The Roblox API is currently offline; please wait until Roblox is back online before re-running this command.")
-                            except CancelledPrompt as e:
-                                if e.args:
-                                    await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
-                                else:
-                                    await response.send(f"**{locale('prompt.cancelledPrompt')}.**")
+                        messages = []
 
-                                if messages:
-                                    for message in messages:
-                                        try:
-                                            await message.delete()
-                                        except (Forbidden, NotFound, HTTPException):
-                                            pass
+                        try:
+                            messages = await self.more_args(after, CommandArgs, subcommand_attrs.get("arguments") or command.arguments)
+                            response.prompt = CommandArgs.prompt # pylint: disable=no-member
+                            await fn(CommandArgs)
+                        except PermissionError as e:
+                            if e.args:
+                                await response.error(e)
+                            else:
+                                await response.error(locale("permissions.genericError"))
+                        except Forbidden:
+                            if e.args:
+                                await response.error(e)
+                            else:
+                                await response.error(locale("permissions.genericError"))
+                        except RobloxAPIError:
+                            await response.error("The Roblox API returned an error; are you supplying the correct ID to this command?")
+                        except RobloxDown:
+                            await response.error("The Roblox API is currently offline; please wait until Roblox is back online before re-running this command.")
+                        except CancelledPrompt as e:
+                            if e.args:
+                                await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
+                            else:
+                                await response.send(f"**{locale('prompt.cancelledPrompt')}.**")
 
-                            except Message as e:
-                                message_type = "send" if e.type == "info" else e.type
-                                response_fn = getattr(response, message_type, response.send)
+                            if messages:
+                                for message in messages:
+                                    try:
+                                        await message.delete()
+                                    except (Forbidden, NotFound, HTTPException):
+                                        pass
 
-                                if e.args:
-                                    await response_fn(e)
-                                else:
-                                    await response_fn("This command closed unexpectedly.")
-                            except Error as e:
-                                if e.args:
-                                    await response.error(e)
-                                else:
-                                    await response.error("This command has unexpectedly errored.")
-                            except CancelCommand as e:
-                                if e.args:
-                                    await response.send(e)
-                            except NotImplementedError:
-                                await response.error("The option you specified is currently not implemented, but will be coming soon!")
-                            except CancelledError:
-                                # TODO: save command and args to a database and then re-execute it when the bot restarts
-                                await response.send("I'm sorry, but Bloxlink is currently restarting for updates. Your command will be re-executed when the bot restarts.")
-                            except Exception as e:
-                                await response.error(locale("errors.commandError"))
-                                Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
+                        except Message as e:
+                            message_type = "send" if e.type == "info" else e.type
+                            response_fn = getattr(response, message_type, response.send)
+
+                            if e.args:
+                                await response_fn(e)
+                            else:
+                                await response_fn("This command closed unexpectedly.")
+                        except Error as e:
+                            if e.args:
+                                await response.error(e)
+                            else:
+                                await response.error("This command has unexpectedly errored.")
+                        except CancelCommand as e:
+                            if e.args:
+                                await response.send(e)
+                        except NotImplementedError:
+                            await response.error("The option you specified is currently not implemented, but will be coming soon!")
+                        except CancelledError:
+                            # TODO: save command and args to a database and then re-execute it when the bot restarts
+                            await response.send("I'm sorry, but Bloxlink is currently restarting for updates. Your command will be re-executed when the bot restarts.")
+                        except Exception as e:
+                            await response.error(locale("errors.commandError"))
+                            Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
 
                         break
 
