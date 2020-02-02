@@ -9,7 +9,7 @@ parse_message = Bloxlink.get_module("commands", attrs="parse_message")
 
 @Bloxlink.command
 class GetRoleCommand(Bloxlink.Module):
-    """retrieves your bound roles"""
+    """retrieve your bound roles"""
 
     def __init__(self):
         self.aliases = ["getroles", "give me roles please"]

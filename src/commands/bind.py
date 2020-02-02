@@ -14,7 +14,7 @@ update_member, get_group, parse_trello_binds = Bloxlink.get_module("roblox", att
 
 @Bloxlink.command
 class BindCommand(Bloxlink.Module):
-    """binds a discord role to a roblox group rank"""
+    """bind a discord role to a roblox group rank"""
 
     def __init__(self):
         self.arguments = [

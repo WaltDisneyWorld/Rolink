@@ -7,7 +7,7 @@ get_user = Bloxlink.get_module("roblox", attrs=["get_user"])
 
 @Bloxlink.command
 class GetinfoCommand(Bloxlink.Module):
-	"""retrieves the Roblox information from a member"""
+	"""retrieve the Roblox information from a member"""
 
 	def __init__(self):
 		self.aliases = ["whois"]

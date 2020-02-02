@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 
 @Bloxlink.command
 class IgnoreChannelCommand(Bloxlink.Module):
-    """toggles commands in the current channel by non-admins"""
+    """toggle commands in the current channel by non-admins"""
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")

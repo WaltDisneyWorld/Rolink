@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 
 @Bloxlink.command
 class AutoVerifyCommand(Bloxlink.Module):
-    """gives the Verified role to linked members when they join the server. by default, this is ENABLED."""
+    """give the Verified role to linked members when they join the server. by default, this is ENABLED."""
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
