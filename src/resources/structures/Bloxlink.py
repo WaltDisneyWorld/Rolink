@@ -180,16 +180,25 @@ class BloxlinkStructure(AutoShardedClient):
 		return Bloxlink.get_module("commands", attrs="new_command")(*args, **kwargs)
 
 	@staticmethod
-	def subcommand(a=None):
-		if callable(a):
-			a.__issubcommand__ = True
-			a.__subcommandattrs__ = {}
-			return a
+	def subcommand(_f=None):
+		if callable(_f):
+			def wrapper(self, *args, **kwargs):
+				return _f(self, *args, **kwargs)
+
+			_f.__issubcommand__ = True
+			_f.__subcommandattrs__ = {}
+
+			return wrapper
 		else:
-			def wrapper(fn):
-				fn.__issubcommand__ = True
-				fn.__subcommandattrs__ = a or {}
-				return fn
+			def wrapper(f):
+				def wrapped(self, *f_args, **f_kwargs):
+					return f(self, *f_args, **f_kwargs)
+
+				f.__issubcommand__ = True
+				f.__subcommandattrs__ = _f or {}
+
+				return wrapped
+
 
 			return wrapper
 
