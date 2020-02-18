@@ -21,6 +21,7 @@ any_group_nickname = re.compile(r"\{group-rank-(.*?)\}")
 loop = asyncio.get_event_loop()
 
 fetch = Bloxlink.get_module("utils", attrs="fetch")
+get_options = Bloxlink.get_module("trello", attrs="get_options")
 
 API_URL = "https://api.roblox.com"
 BASE_URL = "https://roblox.com"
@@ -802,7 +803,7 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, verify_role=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None):
+    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, verify_role=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None, trello_options=None):
         my_permissions = guild.me.guild_permissions
 
         if roles and not my_permissions.manage_roles:
@@ -817,6 +818,12 @@ class Roblox(Bloxlink.Module):
         possible_nicknames = []
         errors = []
         unverified = False
+
+        trello_options = trello_options or {}
+
+        if trello_board and not trello_options:
+            trello_options, _ = await get_options(trello_board)
+
 
         if not isinstance(author, Member):
             author = await guild.fetch_member(author.id)
@@ -836,7 +843,7 @@ class Roblox(Bloxlink.Module):
         guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
         if verify_role:
-            unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
+            unverified_role_name = (trello_options.get("unverifiedrole", "")).lower() or guild_data.get("unverifiedRoleName", "Unverified")
             unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
             try:
@@ -867,7 +874,7 @@ class Roblox(Bloxlink.Module):
                 # TODO: change suspendedRank
 
                 if roles:
-                    verified_role_name = guild_data.get("verifiedRoleName", "Verified")
+                    verified_role_name = (trello_options.get("verifiedrolename", "")).lower() or guild_data.get("verifiedRoleName", "Verified")
 
                     if verified_role_name:
                         verified_role_name = verified_role_name[0:99]
@@ -1001,7 +1008,7 @@ class Roblox(Bloxlink.Module):
                                 group_role = find(lambda r: r.name == group.user_role, guild.roles)
 
                                 if not group_role:
-                                    if guild_data.get("dynamicRoles", True):
+                                    if ((trello_options.get("dynamicroles", "")).lower() == "true") or guild_data.get("dynamicRoles", True):
                                         try:
                                             group_role = await guild.create_role(name=group.user_role)
                                         except Forbidden:
@@ -1037,8 +1044,12 @@ class Roblox(Bloxlink.Module):
                 if add_roles:
                     await author.add_roles(*add_roles, reason="Adding group roles")
 
+                if trello_options.get("allowoldroles", "").lower() == "true" or guild_data.get("allowOldRoles", True):
+                    remove_roles = set()
+
                 if remove_roles:
                     await author.remove_roles(*remove_roles, reason="Removing old roles")
+
             except Forbidden:
                 raise PermissionError("I was unable to sufficiently add roles to the user. Please ensure that "
                                       "I have the ``Manage Roles`` permission.")

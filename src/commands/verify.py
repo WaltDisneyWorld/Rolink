@@ -4,7 +4,7 @@ from discord import Embed
 from resources.exceptions import Message, UserNotVerified # pylint: disable=import-error
 
 verify_as, update_member, get_user = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user"])
-
+get_options = Bloxlink.get_module("trello", attrs=("get_options"))
 
 @Bloxlink.command
 class VerifyCommand(Bloxlink.Module):
@@ -15,22 +15,31 @@ class VerifyCommand(Bloxlink.Module):
 
 	@Bloxlink.flags
 	async def __main__(self, CommandArgs):
+		trello_board = CommandArgs.trello_board
+		guild_data = CommandArgs.guild_data
+		guild = CommandArgs.message.guild
+
 		if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
 			await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
 											 f"Please use ``{CommandArgs.prefix}verify add`` instead.")
 		try:
 			_, _, _, _, roblox_user = await update_member(
 					CommandArgs.message.author,
-					guild      = CommandArgs.message.guild,
-					guild_data = CommandArgs.guild_data,
+					guild      = guild,
+					guild_data = guild_data,
 					roles      = True,
 					nickname   = True)
 		except UserNotVerified:
 			await self.add(CommandArgs)
 		else:
-			await CommandArgs.response.success(CommandArgs.guild_data.get("welcomeMessage",
-											   f"Welcome to **{CommandArgs.message.guild.name}**, "
-											   f"{roblox_user.username}!"))
+			trello_options = {}
+
+			if trello_board:
+				trello_options, _ = await get_options(trello_board)
+
+			welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", f"Welcome to **{guild.name}**, "
+											   											  f"{roblox_user.username}!")
+			raise Message(welcome_message)
 
 	@staticmethod
 	@Bloxlink.subcommand()
@@ -39,6 +48,7 @@ class VerifyCommand(Bloxlink.Module):
 
 		guild_data = CommandArgs.guild_data
 		author = CommandArgs.message.author
+		trello_board = CommandArgs.trello_board
 
 		username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
 
@@ -79,9 +89,15 @@ class VerifyCommand(Bloxlink.Module):
 				await CommandArgs.response.success(e)
 
 		else:
-			await CommandArgs.response.success(guild_data.get("welcomeMessage",
-											   f"Welcome to **{CommandArgs.message.guild.name}**, "
-											   f"{username}!"))
+			trello_options = {}
+
+			if trello_board:
+				trello_options, _ = await get_options(trello_board)
+
+			welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", f"Welcome to **{CommandArgs.message.guild.name}**, "
+											   											  f"{username}!")
+
+			await CommandArgs.response.success(welcome_message)
 
 			added, removed, nickname, errors, roblox_user = await update_member(
 				CommandArgs.message.author,
