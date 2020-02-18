@@ -117,3 +117,6 @@ compile.py
 archive/
 clean.py
 docker-compose.yml
+*.py.icloud
+* 2.py
+*2*
