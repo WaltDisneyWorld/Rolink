@@ -101,7 +101,8 @@ class BindCommand(Bloxlink.Module):
             if args["type"] == "entire group":
                 if found_group:
                     if nickname and found_group["nickname"] != nickname:
-                        guild_data["groupIDs"][group_id] = {"nickname": nickname, "groupName": group.name}
+                        group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
+                        guild_data["groupIDs"] = group_ids
 
                         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 

@@ -111,14 +111,15 @@ class ViewBindsCommand(Bloxlink.Module):
                     else:
                         text.append(f"**Rank Range:** {range_data['low']} - {range_data['high']} {ARROW} **Roles:** (Dynamic Roles) {ARROW} **Nickname:** {range_data['nickname']}")
 
-                text = "\n".join(text)
+                if text:
+                    text = "\n".join(text)
 
-                try:
-                    group_name = group_data.get("groupName") or (await get_group(group_id)).name
-                except RobloxNotFound:
-                    group_name = f"Invalid Group: {group_id}"
+                    try:
+                        group_name = group_data.get("groupName") or (await get_group(group_id)).name
+                    except RobloxNotFound:
+                        group_name = f"Invalid Group: {group_id}"
 
-                embed.add_field(name=f"{group_name} ({group_id})", value=text, inline=False)
+                    embed.add_field(name=f"{group_name} ({group_id})", value=text, inline=False)
 
 
         embed.set_author(name="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
