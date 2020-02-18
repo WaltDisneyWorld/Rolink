@@ -16,7 +16,6 @@ Response = Bloxlink.get_module("response")
 Arguments = Bloxlink.get_module("arguments")
 
 commands = {}
-trello_boards = {}
 
 @Bloxlink.module
 class Commands(Bloxlink.Module):

@@ -28,8 +28,8 @@ class IgnoreChannelCommand(Bloxlink.Module):
 
         if disabled:
             await response.success("Successfully **disabled** commands from this channel by non-admins.\n"
-                "If you would like to grant a certain person access to use commands, give them a role called "
-                "``Bloxlink Bypass``."
+                                   "If you would like to grant a certain person access to use commands, give them a role called "
+                                   "``Bloxlink Bypass``."
             )
         else:
             await response.success("Successfully **enabled** commands in this channel.")

@@ -10,7 +10,7 @@ import asyncio
 @Bloxlink.module
 class Utils(Bloxlink.Module):
 	def __init__(self):
-		self.prefix_regex = compile("(.+):(.+)")
+		self.option_regex = compile("(.+):(.+)")
 
 	@staticmethod
 	def get_files(directory):
@@ -62,7 +62,7 @@ class Utils(Bloxlink.Module):
 							return card.desc.strip(), card
 
 					else:
-						match = self.prefix_regex.search(card.name)
+						match = self.option_regex.search(card.name)
 
 						if match:
 							return match.group(2), card
