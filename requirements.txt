@@ -3,7 +3,7 @@ rethinkdb==2.4.0
 aiodns==2.0.0
 cchardet==2.1.4
 sanic==19.3.1
-psutil==5.6.2
+psutil==5.6.6
 PyJWT==1.7.1
 python-dateutil==2.6.0
 docker==3.7.2
