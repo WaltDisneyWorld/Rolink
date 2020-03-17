@@ -243,11 +243,10 @@ class SetupCommand(Bloxlink.Module):
 
         if verified:
             if verified == "disable":
-                verified = None
-            elif verified in ("skip", "next"):
-                verified = guild_data.get("verifiedRoleName") or VERIFIED_DEFAULT
-
-            guild_data["verifiedRoleName"] = verified
+                guild_data["verifiedRoleEnabled"] = False
+            elif verified not in ("next", "skip"):
+                guild_data["verifiedRoleName"] = verified
+                guild_data["verifiedRoleEnabled"] = True
 
         if trello_board:
             update_trello = False

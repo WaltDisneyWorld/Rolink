@@ -4,8 +4,11 @@ from ..structures.Bloxlink import Bloxlink
 from ..exceptions import BadUsage
 from time import time
 from config import TRELLO # pylint: disable=E0611
+from resources.constants import OPTIONS
 from re import compile
 
+
+OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
 
 
 @Bloxlink.module
@@ -63,15 +66,36 @@ class Trello(Bloxlink.Module):
                 match = self.option_regex.search(card.name)
 
                 if match:
+                    match_value = match.group(2)
+                    match_value_lower = match_value.lower()
+                    card_name = match.group(1)
+                    card_name_lower = card_name.lower()
+
+                    if match_value_lower in ("true", "enabled"):
+                        match_value = True
+                    elif match_value_lower in ("false", "disabled"):
+                        match_value = False
+
                     if return_cards:
-                        options[match.group(1).lower()] = (match.group(2), card)
+                        options[OPTION_NAMES_MAP.get(card_name_lower, card_name_lower)] = (match_value, card)
                     else:
-                        options[match.group(1).lower()] = match.group(2)
+                        options[OPTION_NAMES_MAP.get(card_name_lower, card_name_lower)] = match_value
                 else:
+                    match_value = card.desc
+                    match_value_lower = match_value.lower()
+
+                    if match_value_lower in ("true", "enabled"):
+                        match_value = True
+                    elif match_value_lower in ("false", "disabled"):
+                        match_value = False
+
+                    card_name_lower = card.name.lower()
+
                     if return_cards:
-                        options[card.name.lower()] = (card.desc, card)
+                        card_name_lower = card.name.lower()
+                        options[OPTION_NAMES_MAP.get(card_name_lower, card_name_lower)] = (match_value, card)
                     else:
-                        options[card.name.lower()] = card.desc
+                        options[OPTION_NAMES_MAP.get(card_name_lower, card_name_lower)] = match_value
 
             return options, List
 

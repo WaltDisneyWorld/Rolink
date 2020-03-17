@@ -53,7 +53,7 @@ class Resolver(Bloxlink.Module):
 		for choice in arg["choices"]:
 			choice_lower = choice.lower()
 
-			if choice_lower == content or choice_lower[0] == content[0]:
+			if choice_lower == content or content == choice_lower[0:len(content)]:
 				return choice, None
 
 		return False, f"Choice must be of either: {str(arg['choices'])}"

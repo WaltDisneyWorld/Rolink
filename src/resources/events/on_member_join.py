@@ -19,25 +19,25 @@ class MemberJoinEvent(Bloxlink.Module):
             trello_options = {}
 
             if trello_board:
-                trello_options, _ = get_options(trello_board)
+                trello_options, _ = await get_options(trello_board)
+                guild_data.update(trello_options)
 
-            group_roles = (trello_options.get("autoroles", "")).lower() or guild_data.get("autoRoles", True)
-            group_roles = group_roles != "false"
+            group_roles = guild_data.get("autoRoles", True)
+            verify_enabled = guild_data.get("verifiedRoleEnabled", True)
+            auto_verification = guild_data.get("autoVerification", group_roles)
 
-            verify_role = (trello_options.get("autoVerification", "")).lower() or guild_data.get("autoVerification", True)
-            verify_role = verify_role != "false"
 
-            if verify_role:
+            if auto_verification or group_roles:
                 try:
                     added, removed, nickname, errors, roblox_user = await update_member(
                         member,
-                        guild             = guild,
-                        guild_data        = guild_data,
-                        group_roles       = group_roles,
-                        verify_role       = verify_role,
-                        roles             = True,
-                        nickname          = True,
-                        trello_options    = trello_options)
+                        guild                   = guild,
+                        guild_data              = guild_data,
+                        group_roles             = group_roles,
+                        skip_verify_role        = not auto_verification,
+                        roles                   = True,
+                        nickname                = True,
+                        given_trello_options    = True)
 
                 except UserNotVerified:
                     pass

@@ -24,7 +24,7 @@ fetch = Bloxlink.get_module("utils", attrs="fetch")
 get_options = Bloxlink.get_module("trello", attrs="get_options")
 
 API_URL = "https://api.roblox.com"
-BASE_URL = "https://roblox.com"
+BASE_URL = "https://www.roblox.com"
 
 @Bloxlink.module
 class Roblox(Bloxlink.Module):
@@ -90,7 +90,7 @@ class Roblox(Bloxlink.Module):
 
         words.append(random.choice(WORDS))
 
-        return "BLOXLINK VERIFICATION " + " ".join(words)
+        return " ".join(words)
 
 
     @staticmethod
@@ -803,7 +803,7 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, verify_role=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None, trello_options=None):
+    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, skip_verify_role=False, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
         my_permissions = guild.me.guild_permissions
 
         if roles and not my_permissions.manage_roles:
@@ -818,12 +818,10 @@ class Roblox(Bloxlink.Module):
         possible_nicknames = []
         errors = []
         unverified = False
+        top_role_nickname = None
+        trello_options = {}
 
         trello_options = trello_options or {}
-
-        if trello_board and not trello_options:
-            trello_options, _ = await get_options(trello_board)
-
 
         if not isinstance(author, Member):
             author = await guild.fetch_member(author.id)
@@ -840,10 +838,19 @@ class Roblox(Bloxlink.Module):
         if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
             raise UserNotVerified
 
-        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
-        if verify_role:
-            unverified_role_name = (trello_options.get("unverifiedrole", "")).lower() or guild_data.get("unverifiedRoleName", "Unverified")
+        if trello_board and not given_trello_options:
+            trello_options, _ = await get_options(trello_board)
+
+
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+        verify_role = guild_data.get("verifiedRoleEnabled", True)
+
+        if trello_options:
+            guild_data.update(trello_options)
+
+        if verify_role and not skip_verify_role:
+            unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
             unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
             try:
@@ -874,7 +881,7 @@ class Roblox(Bloxlink.Module):
                 # TODO: change suspendedRank
 
                 if roles:
-                    verified_role_name = (trello_options.get("verifiedrolename", "")).lower() or guild_data.get("verifiedRoleName", "Verified")
+                    verified_role_name = guild_data.get("verifiedRoleName", "Verified")
 
                     if verified_role_name:
                         verified_role_name = verified_role_name[0:99]
@@ -883,8 +890,8 @@ class Roblox(Bloxlink.Module):
                         if not verified_role:
                             try:
                                 verified_role = await guild.create_role(
-                                    name   = verified_role_name,
-                                    reason = "Creating missing Verified role"
+                                       name   = verified_role_name,
+                                       reason = "Creating missing Verified role"
                                 )
                             except Forbidden:
                                 raise PermissionError("Sorry, I wasn't able to create the Verified role. "
@@ -892,8 +899,6 @@ class Roblox(Bloxlink.Module):
 
                         if not verified_role in author.roles:
                             add_roles.add(verified_role)
-
-            top_role_nickname = None
 
             if group_roles and roblox_user:
                 role_binds, group_ids, _ = await self.get_binds(guild_data=guild_data, trello_board=trello_board)
@@ -1008,7 +1013,7 @@ class Roblox(Bloxlink.Module):
                                 group_role = find(lambda r: r.name == group.user_role, guild.roles)
 
                                 if not group_role:
-                                    if ((trello_options.get("dynamicroles", "")).lower() == "true") or guild_data.get("dynamicRoles", True):
+                                    if guild_data.get("dynamicRoles", True):
                                         try:
                                             group_role = await guild.create_role(name=group.user_role)
                                         except Forbidden:
@@ -1044,7 +1049,7 @@ class Roblox(Bloxlink.Module):
                 if add_roles:
                     await author.add_roles(*add_roles, reason="Adding group roles")
 
-                if trello_options.get("allowoldroles", "").lower() == "true" or guild_data.get("allowOldRoles", True):
+                if guild_data.get("allowOldRoles", False):
                     remove_roles = set()
 
                 if remove_roles:
@@ -1074,13 +1079,15 @@ class Roblox(Bloxlink.Module):
                     await author.edit(nick=nickname)
                 except Forbidden:
                     if guild.owner == author:
-                        errors.append("Since you're the Server Owner, I cannot edit your nickname. You may ignore this message.")
+                        errors.append("Since you're the Server Owner, I cannot edit your nickname. You may ignore this message; verification will work for normal users.")
                     else:
                         errors.append("I was unable to edit your nickname. Please ensure I have the ``Manage Roles`` permission, and drag my roles above the other roles.")
 
-
         if unverified:
             raise UserNotVerified
+
+        if not roblox_user:
+            roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
 
         return [r.name for r in add_roles], [r.name for r in remove_roles], nickname, errors, roblox_user
 
@@ -1332,9 +1339,21 @@ class Roblox(Bloxlink.Module):
 
 
 
-    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, response=None, username:str=None, roblox_id:str=None) -> bool:
+    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, trello_board=None, response=None, guild_data=None, username:str=None, roblox_id:str=None) -> bool:
         if not (username or roblox_id):
             raise BadUsage("Must supply either a username or roblox_id to verify_as.")
+
+        guild_data = guild_data or {}
+        trello_options = trello_options or {}
+
+        if not trello_options and trello_board:
+            trello_options, _ = get_options(trello_board)
+
+        allow_reverify = (trello_options.get("allowreverify", "")).lower() or guild_data.get("allowReVerify", True)
+        allow_reverify = allow_reverify != "false"
+
+        if not allow_reverify:
+            raise Error("This server doesn't support account switching.")
 
         guild = guild or author.guild
         author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {}

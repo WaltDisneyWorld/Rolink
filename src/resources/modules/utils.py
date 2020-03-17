@@ -31,7 +31,9 @@ class Utils(Bloxlink.Module):
 
 						raise RobloxAPIError
 
-					elif response.status >= 400:
+					elif response.status == 400:
+						raise RobloxAPIError
+					elif response.status == 404:
 						raise RobloxNotFound
 
 				if text == "The service is unavailable.":

@@ -39,7 +39,15 @@ class Commands(Bloxlink.Module):
                     arg = arg.replace('"', "")
 
                 if len(skipped_args) + 1 == arg_len:
-                    t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip()
+                    # t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip() # PROBLEM HERE
+                    t = content_modified.replace('"', "")
+                    toremove = " ".join(skipped_args)
+
+                    if t.startswith(toremove):
+                        t = t[len(toremove):]
+
+                    t = t.strip()
+
                     skipped_args.append(t)
 
                     break
@@ -54,6 +62,7 @@ class Commands(Bloxlink.Module):
 
                 else:
                     skipped_args.append(arg)
+
 
             arguments = Arguments(skipped_args, arg_container)
             parsed_args, messages = await arguments.prompt(command_args, return_messages=True)
@@ -117,8 +126,9 @@ class Commands(Bloxlink.Module):
 
                         if args:
                             # subcommand checking
-                            if command.subcommands.get(args[0]):
-                                fn = command.subcommands.get(args[0])
+                            subcommand = command.subcommands.get(args[0])
+                            if subcommand:
+                                fn = subcommand
                                 subcommand_attrs = getattr(fn, "__subcommandattrs__", None)
                                 del args[0]
 
@@ -148,12 +158,14 @@ class Commands(Bloxlink.Module):
                         try:
                             await command.check_permissions(author, locale, permissions=subcommand_attrs.get("permissions"))
                         except PermissionError as e:
-                            if not command.permissions.allow_bypass:
+                            if subcommand_attrs.get("allow_bypass"):
+                                CommandArgs.has_permission = False
+                            elif command.permissions.allow_bypass:
+                                CommandArgs.has_permission = False
+                            else:
                                 await response.error(e)
 
                                 return
-
-                            CommandArgs.has_permission = False
 
                         else:
                             CommandArgs.has_permission = True
@@ -242,14 +254,19 @@ class Commands(Bloxlink.Module):
 
     @staticmethod
     def new_command(command_structure):
-        command = Command(command_structure())
+        c = command_structure()
+        command = Command(c)
+        subcommands = {}
 
         Bloxlink.log(f"Adding command {command.name}")
 
         for attr_name in dir(command_structure):
-            attr = getattr(command_structure, attr_name)
+            attr = getattr(c, attr_name)
 
             if callable(attr) and hasattr(attr, "__issubcommand__"):
-                command.subcommands[attr.__name__] = attr
+                command.subcommands[attr_name] = attr
+                #subcommands[attr_name] = attr
 
         commands[command.name] = command
+
+        return command_structure
