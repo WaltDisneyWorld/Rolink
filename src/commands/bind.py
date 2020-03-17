@@ -9,7 +9,7 @@ from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRe
 
 bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
 
-update_member, get_group, parse_trello_binds = Bloxlink.get_module("roblox", attrs=["update_member", "get_group", "parse_trello_binds"])
+get_group, parse_trello_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds"])
 
 
 @Bloxlink.command
@@ -213,7 +213,7 @@ class BindCommand(Bloxlink.Module):
                                       "You may specify the roleset name or ID. You may provide them in a list, "
                                       "or as a range. You may also say ``everyone`` to capture everyone in the group; "
                                       "and you can negate the number to catch everyone with the rank _and above._\n"
-                                      "Example 1: ``1,4,6,VIP, 10, 50-100, Staff Members, 255``.\nExample 2: ``"
+                                      "Example 1: ``1,4,-6,VIP, 10, 50-100, Staff Members, 255``.\nExample 2: ``"
                                       "-100`` means everyone with rank 100 _and above._\nExample 3: ``everyone`` "
                                       "means everyone in the group.\n\n"
                                       "For your convenience, your Rolesets' names and IDs were sent above.",

@@ -16,6 +16,6 @@
 		"genericError": "Bloxlink is missing permissions for this command. Please give me the appropriate permissions."
 	},
 	"errors": {
-		"commandError": "oops, we made a little oof, try again later"
+		"commandError": "This command has unexpectedly errored."
 	}
 }

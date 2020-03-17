@@ -49,7 +49,7 @@ class GetRoleCommand(Bloxlink.Module):
                 embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
 
                 if not (added or removed):
-                    raise Message("All caught up! There no roles to add or remove.", type="success")
+                    raise Message("All caught up! There are no roles to add or remove.", type="success")
 
                 if added:
                     embed.add_field(name="Added Roles", value=", ".join(added))
