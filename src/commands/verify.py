@@ -18,6 +18,7 @@ class VerifyCommand(Bloxlink.Module):
         trello_board = CommandArgs.trello_board
         guild_data = CommandArgs.guild_data
         guild = CommandArgs.message.guild
+        author = CommandArgs.message.author
 
         if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
             await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
@@ -29,7 +30,8 @@ class VerifyCommand(Bloxlink.Module):
                     guild_data   = guild_data,
                     roles        = True,
                     nickname     = True,
-                    trello_board = CommandArgs.trello_board)
+                    trello_board = CommandArgs.trello_board,
+                    author_data  = await self.r.table("users").get(str(author.id)).run())
 
         except UserNotVerified:
             await self.add(CommandArgs)
@@ -48,6 +50,9 @@ class VerifyCommand(Bloxlink.Module):
     @Bloxlink.subcommand()
     async def add(self, CommandArgs):
         """link a new account to Bloxlink"""
+
+        author = CommandArgs.message.author
+        guild = CommandArgs.message.guild
 
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
@@ -78,8 +83,8 @@ class VerifyCommand(Bloxlink.Module):
 
         try:
             username = await verify_as(
-                CommandArgs.message.author,
-                CommandArgs.message.guild,
+                author,
+                guild,
                 response = CommandArgs.response,
                 primary  = args["default"] == "yes",
                 username = username)
@@ -88,7 +93,7 @@ class VerifyCommand(Bloxlink.Module):
             if e.type == "error":
                 await CommandArgs.response.error(e)
             else:
-                await CommandArgs.response.success(e)
+                await CommandArgs.response.send(e)
         except Error as e:
             await CommandArgs.response.error(e)
         else:
@@ -100,14 +105,15 @@ class VerifyCommand(Bloxlink.Module):
             welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", f"Welcome to **{CommandArgs.message.guild.name}**, "
                                                                                           f"{username}!")
 
-            await CommandArgs.response.success(welcome_message)
+            await CommandArgs.response.send(welcome_message)
 
             added, removed, nickname, errors, roblox_user = await update_member(
-                CommandArgs.message.author,
-                guild      = CommandArgs.message.guild,
+                author,
+                guild      = guild,
                 guild_data = CommandArgs.guild_data,
                 roles      = True,
-                nickname   = True)
+                nickname   = True,
+                author_data  = await self.r.table("users").get(str(author.id)).run())
 
             """
             embed = Embed(title=f"Discord Profile for {roblox_user.username}")

@@ -41,7 +41,7 @@ class BloxlinkStructure(AutoShardedClient):
         loop.run_until_complete(self.get_session())
 
     async def get_session(self):
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(headers={"Connection": "close"})
 
     @staticmethod
     def log(*text, level=LOG_LEVEL):

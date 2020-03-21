@@ -230,10 +230,10 @@ class SetupCommand(Bloxlink.Module):
                             except HTTPException:
                                 pass
 
-                sorted_rolesets = sorted(group.rolesets, key=lambda r: r["Rank"], reverse=True)
+                sorted_rolesets = sorted(group.rolesets, key=lambda r: r["rank"], reverse=True)
 
                 for roleset in sorted_rolesets:
-                    roleset_name = roleset["Name"]
+                    roleset_name = roleset["name"]
 
                     if not find(lambda r: r.name == roleset_name, guild.roles):
                         try:

@@ -43,7 +43,8 @@ class GetRoleCommand(Bloxlink.Module):
                     trello_board      = trello_board,
                     trello_binds_list = trello_binds_list,
                     roles             = True,
-                    nickname          = True)
+                    nickname          = True,
+                    author_data       = await self.r.table("users").get(str(author.id)).run())
 
                 embed = Embed(title=f"Discord Profile for {roblox_user.username}")
                 embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)

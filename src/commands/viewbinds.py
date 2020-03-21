@@ -71,10 +71,13 @@ class ViewBindsCommand(Bloxlink.Module):
                                     else:
                                         # deleted role
                                         # TODO: check if the role is saved in server settings, then delete it
-                                        role_names.add("( Deleted Role(s))")
+                                        role_names.add("(Deleted Role(s))")
                                         role_cache[role_] = "(Deleted Role(s))"
 
-                        text.append(f"**Rank:** {rank_id} {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {rank_data['nickname']}")
+                        if rank_id in ("guest", "0"):
+                            text.append(f"**Rank:** (Guest Role) {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {rank_data['nickname']}")
+                        else:
+                            text.append(f"**Rank:** {rank_id} {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {rank_data['nickname']}")
                     else:
                         text.append(f"**Rank:** {rank_id} {ARROW} **Roles:** (Dynamic Roles) {ARROW} **Nickname:** {rank_data['nickname']}")
 

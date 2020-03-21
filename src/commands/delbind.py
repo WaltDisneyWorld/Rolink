@@ -193,8 +193,6 @@ class DelBindCommand(Bloxlink.Module):
 
                     await delete_bind_from_cards(rank="everything", trello_binds_list=trello_binds_list, group=bind_id, bind_data_trello=found_group_trello)
 
-                elif rank_id in ("guest", "guest."):
-                    pass # TODO: guest roles
                 elif "-" in rank_id:
                     rank_id = rank_id.split("-")
 
@@ -218,7 +216,15 @@ class DelBindCommand(Bloxlink.Module):
                             raise Message("There's no range found with this ID!", type="silly")
 
                 else:
-                    binds_trello = found_group_trello.get("binds", {}).get(rank_id)
+                    found_group_trello["binds"] = found_group_trello.get("binds") or {}
+
+                    if rank_id in ("guest", "guest."):
+                        if found_group_trello["binds"].get("guest"):
+                            rank_id = "guest"
+                        elif found_group_trello["binds"].get("0"):
+                            rank_id = "0"
+
+                    binds_trello = found_group_trello["binds"].get(rank_id)
                     binds = found_group.get("binds", {})
 
                     if binds_trello:
