@@ -3,6 +3,7 @@ from ..exceptions import PermissionError
 from .Permissions import Permissions
 from .Args import Args
 from discord.utils import find
+from resources.constants import OWNER
 import re
 
 
@@ -47,6 +48,13 @@ class Command:
 	async def check_permissions(self, author, locale, permissions=None):
 		permissions = permissions or self.permissions
 
+		if permissions.developer_only or self.category == "Developer":
+			if author.id != OWNER:
+				raise PermissionError("This command is reserved for the Bloxlink Developer.")
+
+		if permissions.premium:
+			pass # TODO
+
 		try:
 			for role_exception in permissions.exceptions["roles"]:
 				if find(lambda r: r.name == role_exception, author.roles):
@@ -67,6 +75,19 @@ class Command:
 						pass
 					else:
 						raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
+
+				elif role_name == "Bloxlink Updater":
+					if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
+						pass
+					else:
+						raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
+											  "role permission, or the ``Manage Server`` role permission.")
+
+				elif role_name == "Bloxlink Admin":
+					if author_perms.administrator:
+						pass
+					else:
+						raise PermissionError("You need the ``Administrator`` role permission to run this command.")
 
 			if permissions.allowed.get("discord_perms"):
 				for perm in permissions.allowed["discord_perms"]:

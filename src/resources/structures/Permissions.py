@@ -6,6 +6,8 @@ class Permissions:
         self.exceptions = {"roles":[], }
 
         self.bloxlink_role = False
+        self.developer_only = False
+        self.premium = False
 
         self.allow_bypass = False
 
@@ -24,6 +26,11 @@ class Permissions:
                 self.bloxlink_role = arg.replace("_", " ").title()
             elif arg in ("MANAGE_ROLES", "BAN_MEMBERS", "KICK_MEMBERS", "MANAGE_SERVER"):
                 self.allowed["discord_perms"].append(arg.replace("_", "").title())
+            elif arg == "DEVELOPER_ONLY":
+                self.developer_only = True
+            elif arg == "PREMIUM":
+                self.premium = True
+
 
         return self
 
