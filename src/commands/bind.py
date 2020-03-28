@@ -43,6 +43,7 @@ class BindCommand(Bloxlink.Module):
 
         self.aliases = ["newbind"]
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
+        self.category = "Binds"
 
     @staticmethod
     def find_range(tuple_set, ranges):
@@ -218,6 +219,7 @@ class BindCommand(Bloxlink.Module):
                                       "You may specify the roleset name or ID. You may provide them in a list, "
                                       "or as a range. You may also say ``everyone`` to capture everyone in the group; "
                                       "and you can negate the number to catch everyone with the rank _and above._\n"
+                                      "You can also say ``guest`` to include **all non-group members**.\n"
                                       "Example 1: ``1,4,-6,VIP, 10, 50-100, Staff Members, 255``.\nExample 2: ``"
                                       "-100`` means everyone with rank 100 _and above._\nExample 3: ``everyone`` "
                                       "means everyone in the group.\n\n"

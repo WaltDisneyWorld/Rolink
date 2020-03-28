@@ -24,6 +24,7 @@ class PrefixCommand(Bloxlink.Module):
         permission.allow_bypass = True
 
         self.permissions = permission
+        self.category = "Administration"
 
     async def __main__(self, CommandArgs):
         locale = CommandArgs.locale

@@ -21,6 +21,7 @@ class UpdateUserCommand(Bloxlink.Module):
                 "max": 10
             }
         ]
+        self.category = "Administration"
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response

@@ -12,7 +12,7 @@ class ViewBindsCommand(Bloxlink.Module):
     """view your server bound roles"""
 
     def __init__(self):
-        pass
+        self.category = "Binds"
 
     async def __main__(self, CommandArgs):
         guild = CommandArgs.message.guild
@@ -128,4 +128,4 @@ class ViewBindsCommand(Bloxlink.Module):
         embed.set_author(name="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
         embed.set_footer(text=f"Use {prefix}bind to make a new bind, or {prefix}delbind to delete a bind")
 
-        await CommandArgs.response.send(embed=embed)
+        await CommandArgs.response.send(embed=embed, paginate_field_limit=10)

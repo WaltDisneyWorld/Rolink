@@ -121,6 +121,7 @@ class DelBindCommand(Bloxlink.Module):
         }]
 
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
+        self.category = "Binds"
 
 
     async def __main__(self, CommandArgs):

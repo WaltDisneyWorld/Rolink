@@ -10,6 +10,7 @@ class VerifyChannelCommand(Bloxlink.Module):
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.aliases = ["verificationchannel"]
+        self.category = "Administration"
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
