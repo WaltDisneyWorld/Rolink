@@ -100,12 +100,12 @@ class Response(Bloxlink.Module):
     def loading(self, text="Please wait until the operation completes."):
         return ResponseLoading(self, text)
 
-    async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False):
+    async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None):
         if dm:
             if not IS_DOCKER:
                 dm = False
 
-        channel = dm and self.author or self.channel
+        channel = channel_override or (dm and self.author or self.channel)
 
         verified_webhook = False
         if self.webhook_only:
@@ -133,68 +133,84 @@ class Response(Bloxlink.Module):
                     except Forbidden:
                         pass
 
+        paginate = False
+        pages = None
+
+        if paginate_field_limit:
+            pages = Paginate.get_pages(embed, embed.fields, paginate_field_limit)
+
+            if len(pages) > 1:
+                paginate = True
+
 
         if embed and not dm and not embed.color:
             #embed.color = self.guild.me.color
             embed.color = 0x36393E
-        try:
-            if verified_webhook and not dm:
-                msg = await verified_webhook.send(embed=embed, content=content,
-                                                  wait=True, username=bot_name,
-                                                  avatar_url=bot_avatar)
-            else:
-                msg = await channel.send(embed=embed, content=content, files=files)
-            if dm and not no_dm_post:
-                if verified_webhook:
-                    await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",
-                                                username=bot_name, avatar_url=bot_avatar
-                    )
-                else:
-                    await self.channel.send(self.author.mention + ", **check your DMs!**")
-            return msg
 
-        except Forbidden:
-            channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
-
+        if not paginate:
             try:
                 if verified_webhook and not dm:
-                    return await verified_webhook.send(content=on_error or content, embed=embed,
-                                                       wait=True, username=bot_name, avatar_url=bot_avatar)
+                    msg = await verified_webhook.send(embed=embed, content=content,
+                                                      wait=True, username=bot_name,
+                                                      avatar_url=bot_avatar)
+                else:
+                    msg = await channel.send(embed=embed, content=content, files=files)
 
-                return await channel.send(content=on_error or content, embed=embed, files=files)
-            except Forbidden:
-                try:
-                    if dm:
-                        if verified_webhook and not dm:
-                            await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
-                                                         "Please check your privacy settings and try again.",
-                                                         username=bot_name, avatar_url=bot_avatar)
-                        else:
-                            await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
-                                                     "Please check your privacy settings and try again.")
+                if dm and not no_dm_post:
+                    if verified_webhook:
+                        await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",
+                                                    username=bot_name, avatar_url=bot_avatar
+                        )
                     else:
-                        await self.author.send(f"You attempted to use command {self.args.command_name} in "
-                                               f"{self.channel.mention}, but I was unable to post there. "
-                                                "You may need to grant me the ``Embed Links`` permission.", files=files)
-                    return False
+                        await self.channel.send(self.author.mention + ", **check your DMs!**")
+
+                return msg
+
+            except Forbidden:
+                channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
+
+                try:
+                    if verified_webhook and not dm:
+                        return await verified_webhook.send(content=on_error or content, embed=embed,
+                                                           wait=True, username=bot_name, avatar_url=bot_avatar)
+
+                    return await channel.send(content=on_error or content, embed=embed, files=files)
 
                 except Forbidden:
-                    return False
+                    try:
+                        if dm:
+                            if verified_webhook and not dm:
+                                await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
+                                                             "Please check your privacy settings and try again.",
+                                                             username=bot_name, avatar_url=bot_avatar)
+                            else:
+                                await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
+                                                         "Please check your privacy settings and try again.")
+                        else:
+                            await self.author.send(f"You attempted to use command {self.args.command_name} in "
+                                                   f"{self.channel.mention}, but I was unable to post there. "
+                                                    "You may need to grant me the ``Embed Links`` permission.", files=files)
+                        return False
 
-        except HTTPException:
-            # check for embed, THEN do pagination
-            if not ignore_http_check:
-                if self.webhook_only:
-                    self.webhook_only = False
-                    return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files)
+                    except Forbidden:
+                        return False
 
-                else:
-                    if embed:
-                        paginator = Paginate(self.message, embed, self)
-                        await paginator()
+            except HTTPException:
+                if not ignore_http_check:
+                    if self.webhook_only:
+                        self.webhook_only = False
+                        return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files)
 
                     else:
-                        raise HTTPException
+                        if embed:
+                            paginate = True
+
+                        else:
+                            raise HTTPException
+        if paginate:
+            paginator = Paginate(self.message, channel, embed, self, field_limit=paginate_field_limit, pages=pages)
+
+            return await paginator()
 
         return True
 
