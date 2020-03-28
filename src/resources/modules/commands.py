@@ -35,33 +35,34 @@ class Commands(Bloxlink.Module):
             temp = []
 
             for arg in split:
-                if arg.startswith('"') and arg.endswith('"'):
-                    arg = arg.replace('"', "")
+                if arg:
+                    if arg.startswith('"') and arg.endswith('"'):
+                        arg = arg.replace('"', "")
 
-                if len(skipped_args) + 1 == arg_len:
-                    # t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip() # PROBLEM HERE
-                    t = content_modified.replace('"', "")
-                    toremove = " ".join(skipped_args)
+                    if len(skipped_args) + 1 == arg_len:
+                        # t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip() # PROBLEM HERE
+                        t = content_modified.replace('"', "")
+                        toremove = " ".join(skipped_args)
 
-                    if t.startswith(toremove):
-                        t = t[len(toremove):]
+                        if t.startswith(toremove):
+                            t = t[len(toremove):]
 
-                    t = t.strip()
+                        t = t.strip()
 
-                    skipped_args.append(t)
+                        skipped_args.append(t)
 
-                    break
+                        break
 
-                if arg.startswith('"') or (temp and not arg.endswith('"')):
-                    temp.append(arg.replace('"', ""))
+                    if arg.startswith('"') or (temp and not arg.endswith('"')):
+                        temp.append(arg.replace('"', ""))
 
-                elif arg.endswith('"'):
-                    temp.append(arg.replace('"', ""))
-                    skipped_args.append(" ".join(temp))
-                    temp.clear()
+                    elif arg.endswith('"'):
+                        temp.append(arg.replace('"', ""))
+                        skipped_args.append(" ".join(temp))
+                        temp.clear()
 
-                else:
-                    skipped_args.append(arg)
+                    else:
+                        skipped_args.append(arg)
 
 
             arguments = Arguments(skipped_args, arg_container)
