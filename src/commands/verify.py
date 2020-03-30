@@ -2,9 +2,12 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from discord.errors import Forbidden, NotFound
 from discord import Embed
 from resources.exceptions import Message, UserNotVerified, Error # pylint: disable=import-error
+from resources.constants import WELCOME_MESSAGE, NICKNAME_TEMPLATES
+from config import TRELLO
+from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 
-verify_as, update_member, get_user = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user"])
-get_options = Bloxlink.get_module("trello", attrs=("get_options"))
+verify_as, update_member, get_user, get_nickname = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname"])
+get_options = Bloxlink.get_module("trello", attrs="get_options")
 
 @Bloxlink.command
 class VerifyCommand(Bloxlink.Module):
@@ -42,11 +45,12 @@ class VerifyCommand(Bloxlink.Module):
                 trello_options, _ = await get_options(trello_board)
                 guild_data.update(trello_options)
 
-            welcome_message = guild_data.get("welcomeMessage", f"Welcome to **{guild.name}**, "
-                                                               f"{roblox_user.username}!")
+            welcome_message = guild_data.get("welcomeMessage", WELCOME_MESSAGE)
+            welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+
             raise Message(welcome_message)
 
-    #@staticmethod
+
     @Bloxlink.subcommand()
     async def add(self, CommandArgs):
         """link a new account to Bloxlink"""
@@ -102,10 +106,6 @@ class VerifyCommand(Bloxlink.Module):
             if trello_board:
                 trello_options, _ = await get_options(trello_board)
 
-            welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", f"Welcome to **{CommandArgs.message.guild.name}**, "
-                                                                                          f"{username}!")
-
-            await CommandArgs.response.send(welcome_message)
 
             added, removed, nickname, errors, roblox_user = await update_member(
                 author,
@@ -115,23 +115,12 @@ class VerifyCommand(Bloxlink.Module):
                 nickname   = True,
                 author_data  = await self.r.table("users").get(str(author.id)).run())
 
-            """
-            embed = Embed(title=f"Discord Profile for {roblox_user.username}")
-            embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
+            welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", WELCOME_MESSAGE)
 
-            if added:
-                embed.add_field(name="Added Roles", value=", ".join(added))
-            if removed:
-                embed.add_field(name="Removed Roles", value=", ".join(removed))
-            if nickname:
-                embed.description = f"**Nickname:** ``{nickname}``"
-            if errors:
-                embed.add_field(name="Errors", value=", ".join(errors))
+            welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-            embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
+            await CommandArgs.response.send(welcome_message)
 
-            await CommandArgs.response.send(embed=embed)
-            """
 
         finally:
             messages.append(CommandArgs.message)
@@ -142,6 +131,70 @@ class VerifyCommand(Bloxlink.Module):
                 except (Forbidden, NotFound):
                     pass
 
+    @Bloxlink.subcommand(permissions=Bloxlink.Permissions().build("BLOXLINK_MANAGER"))
+    async def customize(self, CommandArgs):
+        """customize the behavior of !verify"""
+
+        # TODO: able to set: "forced groups", allowReVerify
+
+        prefix = CommandArgs.prefix
+        guild = CommandArgs.message.guild
+        response = CommandArgs.response
+
+
+        choice = (await CommandArgs.prompt([{
+            "prompt": "Which option would you like to change?\nOptions: ``(welcomeMessage)``",
+            "name": "choice",
+            "type": "choice",
+            "choices": ("welcomeMessage",)
+        }]))["choice"]
+
+
+        trello_board = CommandArgs.trello_board
+        card = None
+
+        if trello_board:
+            options_trello_data, trello_binds_list = await get_options(trello_board, return_cards=True)
+            options_trello_find = options_trello_data.get(choice)
+
+            if options_trello_find:
+                card = options_trello_find[1]
+
+        if choice == "welcomeMessage":
+            welcome_message = (await CommandArgs.prompt([{
+                "prompt": f"What would you like your welcome message to be? This will be shown in ``{prefix}verify`` messages.\nYou may "
+                           f"use these templates: ```{NICKNAME_TEMPLATES}```",
+                "name": "welcome_message",
+                "formatting": False,
+                "max": 1500
+            }]))["welcome_message"]
+
+            if trello_board:
+                try:
+                    if card:
+                        if card.name == choice:
+                            await card.edit(name="welcomeMessage", desc=welcome_message)
+                    else:
+                        trello_settings_list = await trello_board.get_list(lambda L: L.name == "Bloxlink Settings") \
+                                            or await trello_board.create_list(name="Bloxlink Settings")
+
+                        await trello_settings_list.create_card(name="welcomeMessage", desc=welcome_message)
+
+                    await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+
+                except TrelloUnauthorized:
+                    await response.error("In order for me to edit your Trello settings, please add ``@bloxlink`` to your "
+                                         "Trello board.")
+
+                except (TrelloNotFound, TrelloBadRequest):
+                    pass
+
+            await self.r.table("guilds").insert({
+                "id": str(guild.id),
+                "welcomeMessage": welcome_message
+            }, conflict="update").run()
+
+        raise Message(f"Successfully saved your new ``{choice}``!", type="success")
 
 
     @staticmethod
