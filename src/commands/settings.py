@@ -1,6 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error, CancelledPrompt # pylint: disable=import-error
-from resources.constants import ARROW, OPTIONS, DEFAULTS # pylint: disable=import-error
+from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
 from config import TRELLO # pylint: disable=no-name-in-module
 from discord import Embed
 from discord.errors import Forbidden
@@ -33,10 +33,11 @@ class SettingsCommand(Bloxlink.Module):
             parsed_args = await CommandArgs.prompt([
                 {
                     "prompt": "Would you like to **view** your settings, **change** them, or "
-                              "**reset** all of your settings?\nValid choices: (change/view/reset)",
+                              "**reset** all of your settings?\nIf you don't understand an option, "
+                              "then say **help**.\nValid choices: (change/view/reset/help)",
                     "name": "choice",
                     "type": "choice",
-                    "choices": ("change", "view", "reset")
+                    "choices": ("change", "view", "reset", "help")
                 }
             ])
 
@@ -52,9 +53,13 @@ class SettingsCommand(Bloxlink.Module):
             await self.change(CommandArgs)
         elif choice == "reset":
             await self.reset(CommandArgs)
+        elif choice == "help":
+            await self.help(CommandArgs)
 
     @Bloxlink.subcommand()
     async def view(self, CommandArgs):
+        """view your server settings"""
+
         guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
         response = CommandArgs.response
@@ -87,6 +92,8 @@ class SettingsCommand(Bloxlink.Module):
 
     @Bloxlink.subcommand()
     async def change(self, CommandArgs):
+        """change your Bloxlink settings"""
+
         if not CommandArgs.has_permission:
             raise PermissionError("You do not meet the required permissions to change server settings.")
 
@@ -110,6 +117,8 @@ class SettingsCommand(Bloxlink.Module):
             raise Message(f"You can link your Trello board from ``{prefix}setup``!", type="success")
         elif choice == "Linked Groups":
             raise Message(f"You can link your group from ``{prefix}bind``!", type="success")
+        elif choice == "joinDM":
+            raise Message(f"You can customize this setting from ``{prefix}joindm``!", type="success")
 
         option_find = OPTIONS.get(choice)
 
@@ -120,7 +129,7 @@ class SettingsCommand(Bloxlink.Module):
 
             if trello_board:
                 options_trello_data, trello_binds_list = await get_options(trello_board, return_cards=True)
-                options_trello_find = options_trello_data.get(choice.lower())
+                options_trello_find = options_trello_data.get(choice)
 
                 if options_trello_find:
                     card = options_trello_find[1]
@@ -170,14 +179,14 @@ class SettingsCommand(Bloxlink.Module):
             try:
                 if card:
                     if card.name == choice:
-                        await card.edit(desc=parsed_value)
+                        await card.edit(desc=str(parsed_value))
                     else:
                         await card.edit(name=f"{choice}:{parsed_value}")
                 else:
                     trello_settings_list = await trello_board.get_list(lambda L: L.name == "Bloxlink Settings") \
                                            or await trello_board.create_list(name="Bloxlink Settings")
 
-                    await trello_settings_list.create_card(name=choice, desc=parsed_value)
+                    await trello_settings_list.create_card(name=choice, desc=str(parsed_value))
 
                 await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
 
@@ -194,6 +203,8 @@ class SettingsCommand(Bloxlink.Module):
 
     @Bloxlink.subcommand()
     async def reset(self, CommandArgs):
+        """reset either ALL of your settings, or just your binds"""
+
         if not CommandArgs.has_permission:
             raise PermissionError("You do not meet the required permissions to change server settings.")
 
@@ -332,3 +343,24 @@ class SettingsCommand(Bloxlink.Module):
                     await trello_board.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
 
             raise Message("Successfully cleared all of your bound roles.", type="success")
+
+    @Bloxlink.subcommand()
+    async def help(self, CommandArgs):
+        """provides a description of all changeable settings"""
+
+        parsed_args = (await CommandArgs.prompt([{
+            "prompt": f"Which option would you like more information on?\n\nOptions: ``{options_keys}``",
+            "name": "choice",
+            "type": "choice",
+            "formatting": False,
+            "choices": options_keys
+        }]))["choice"]
+
+        option_find = OPTIONS.get(parsed_args)
+
+        if option_find:
+            desc = option_find[3]
+
+            embed = Embed(title=parsed_args, description=desc.format(prefix=CommandArgs.prefix, templates=NICKNAME_TEMPLATES))
+
+            await CommandArgs.response.send(embed=embed)
