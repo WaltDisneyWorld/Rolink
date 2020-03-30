@@ -75,18 +75,20 @@ class BloxlinkStructure(AutoShardedClient):
     @staticmethod
     def module(module):
         new_module = module()
+        module_name = module.__name__
 
         failed = False
         if hasattr(new_module, "__setup__"):
             try:
                 loop.create_task(new_module.__setup__())
             except Exception as e:
-                Bloxlink.log(f"ERROR | Module {new_module.__name__.lower()}.__setup__() failed: {e}")
+                Bloxlink.log(f"ERROR | Module {module_name.lower()}.__setup__() failed: {e}")
+                Bloxlink.error(str(e), title=f"Error source: {module_name.lower()}.py")
                 failed = True
 
         if not failed:
-            Bloxlink.log(f"Loaded {module.__name__}")
-            loaded_modules[module.__name__.lower()] = new_module
+            Bloxlink.log(f"Loaded {module_name}")
+            loaded_modules[module_name.lower()] = new_module
 
         return new_module
 
@@ -114,11 +116,15 @@ class BloxlinkStructure(AutoShardedClient):
                 module = import_module(import_name)
             except (ModuleNotFoundError, ImportError) as e:
                 Bloxlink.log(f"ERROR | {e}")
-                traceback.print_exc()
+                traceback_text = traceback.format_exc()
+                traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
+                Bloxlink.error(traceback_text, title=f"Error source: {name}.py")
 
             except Exception as e:
                 Bloxlink.log(f"ERROR | Module {name} failed to load: {e}")
-                traceback.print_exc()
+                traceback_text = traceback.format_exc()
+                traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
+                Bloxlink.error(traceback_text, title=f"Error source: {name}.py")
 
         mod = loaded_modules.get(name)
 
