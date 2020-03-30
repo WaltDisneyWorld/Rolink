@@ -7,6 +7,7 @@ class DynamicRolesCommand(Bloxlink.Module):
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Administration"
+        self.hidden = True
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response

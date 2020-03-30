@@ -2,11 +2,12 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 
 @Bloxlink.command
 class AutoRolesCommand(Bloxlink.Module):
-    """completely updates members that join the server. by default, this is ENABLED."""
+    """completely update members that join the server. by default, this is ENABLED."""
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Administration"
+        self.hidden = True
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
