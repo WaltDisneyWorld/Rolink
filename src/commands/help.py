@@ -103,7 +103,19 @@ class HelpCommand(Bloxlink.Module):
                     continue
 
                 category = categories.get(command.category, [])
-                category.append(f'``{prefix}{command.name}`` {ARROW} {command.description}')
+
+                if command.subcommands:
+                    subcommands = [""]
+
+                    for subcommand_name, subcommand in command.subcommands.items():
+                        subcommand_description = subcommand.__doc__ or "N/A"
+                        subcommands.append(f"``{prefix}{command.name} {subcommand_name}`` {ARROW} {subcommand_description}")
+
+                    subcommands = "\n".join(subcommands)
+                else:
+                    subcommands = ""
+
+                category.append(f"``{prefix}{command.name}`` {ARROW} {command.description}{subcommands}")
                 categories[command.category] = category
 
             for i,v in categories.items():
