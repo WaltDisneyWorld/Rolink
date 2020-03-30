@@ -1,7 +1,9 @@
 from ..structures.Bloxlink import Bloxlink
 from resources.exceptions import UserNotVerified # pylint: disable=import-error
+from discord.errors import Forbidden, HTTPException
+from resources.constants import WELCOME_MESSAGE
 
-update_member = Bloxlink.get_module("roblox", attrs="update_member")
+update_member, get_nickname, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_nickname", "get_user"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 
 @Bloxlink.module
@@ -24,8 +26,10 @@ class MemberJoinEvent(Bloxlink.Module):
 
             group_roles = guild_data.get("autoRoles", True)
             verify_enabled = guild_data.get("verifiedRoleEnabled", True)
-            auto_verification = guild_data.get("autoVerification", group_roles)
+            auto_verification = guild_data.get("autoVerification", verify_enabled)
 
+            verified_dm = guild_data.get("verifiedDM", WELCOME_MESSAGE)
+            unverified_dm = guild_data.get("unverifiedDM")
 
             if auto_verification or group_roles:
                 try:
@@ -34,10 +38,44 @@ class MemberJoinEvent(Bloxlink.Module):
                         guild                   = guild,
                         guild_data              = guild_data,
                         group_roles             = group_roles,
-                        skip_verify_role        = not auto_verification,
                         roles                   = True,
                         nickname                = True,
                         given_trello_options    = True)
 
                 except UserNotVerified:
-                    pass
+                    if unverified_dm:
+                        unverified_dm = await get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, is_nickname=False)
+
+                        try:
+                            await member.send(unverified_dm)
+                        except (Forbidden, HTTPException):
+                            pass
+                else:
+                    if verified_dm:
+                        verified_dm = await get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+
+                        try:
+                            await member.send(verified_dm)
+                        except (Forbidden, HTTPException):
+                            pass
+            else:
+                if unverified_dm or verified_dm:
+                    try:
+                        primary_account, _ = await get_user(author=member, everything=False, basic_details=True)
+
+                    except UserNotVerified:
+                        if unverified_dm:
+                            unverified_dm = await get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, is_nickname=False)
+
+                            try:
+                                await member.send(unverified_dm)
+                            except (Forbidden, HTTPException):
+                                pass
+                    else:
+                        if verified_dm:
+                            verified_dm = await get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=primary_account, is_nickname=False)
+
+                            try:
+                                await member.send(verified_dm)
+                            except (Forbidden, HTTPException):
+                                pass
