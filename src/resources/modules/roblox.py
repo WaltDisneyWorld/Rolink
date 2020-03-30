@@ -175,7 +175,7 @@ class Roblox(Bloxlink.Module):
         return success
 
 
-    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, guild_data=None, roblox_user=None):
+    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, is_nickname=True, guild_data=None, roblox_user=None):
         if not template or "{disable-nicknaming}" in template:
             return
 
@@ -247,9 +247,10 @@ class Roblox(Bloxlink.Module):
 
             template = template.replace("{{{0}}}".format(outer_nick), nick_value)
 
-
-
-        return template[0:31]
+        if is_nickname:
+            return template[0:31]
+        else:
+            return template
 
 
     async def parse_trello_binds(self, trello_board=None, trello_binds_list=None):
@@ -461,7 +462,7 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, skip_verify_role=False, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
+    async def update_member(self, author, *, nickname=True, roles=True, group_roles=True, guild=None, roblox_user=None, author_data=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
         my_permissions = guild.me.guild_permissions
 
         if roles and not my_permissions.manage_roles:
@@ -502,12 +503,13 @@ class Roblox(Bloxlink.Module):
 
 
         guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
-        verify_role = guild_data.get("verifiedRoleEnabled", True)
 
         if trello_options:
             guild_data.update(trello_options)
 
-        if verify_role and not skip_verify_role:
+        verify_role = guild_data.get("verifiedRoleEnabled", True)
+
+        if verify_role and roles:
             unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
             unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
@@ -516,28 +518,26 @@ class Roblox(Bloxlink.Module):
                 roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
 
         except UserNotVerified:
-            if verify_role and not skip_verify_role:
-                if roles and unverified_role_name:
-                    if not unverified_role:
-                        try:
-                            unverified_role = await guild.create_role(name=unverified_role_name)
-                        except Forbidden:
-                            raise PermissionError("I was unable to create the Unverified Role. Please "
-                                                  "ensure I have the ``Manage Roles`` permission.")
+            if verify_role and roles and unverified_role_name:
+                if not unverified_role:
+                    try:
+                        unverified_role = await guild.create_role(name=unverified_role_name)
+                    except Forbidden:
+                        raise PermissionError("I was unable to create the Unverified Role. Please "
+                                              "ensure I have the ``Manage Roles`` permission.")
 
-                    add_roles.add(unverified_role)
+                add_roles.add(unverified_role)
 
-                if nickname:
-                    nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
+            if nickname:
+                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
 
             unverified = True
 
         else:
-            if verify_role and not skip_verify_role:
+            if verify_role and roles:
                 if unverified_role and unverified_role in author.roles:
                     remove_roles.add(unverified_role)
 
-            if roles and not skip_verify_role:
                 verified_role_name = guild_data.get("verifiedRoleName", "Verified")
 
                 if verified_role_name:
@@ -547,8 +547,8 @@ class Roblox(Bloxlink.Module):
                     if not verified_role:
                         try:
                             verified_role = await guild.create_role(
-                                   name   = verified_role_name,
-                                   reason = "Creating missing Verified role"
+                                name   = verified_role_name,
+                                reason = "Creating missing Verified role"
                             )
                         except Forbidden:
                             raise PermissionError("Sorry, I wasn't able to create the Verified role. "
@@ -915,7 +915,7 @@ class Roblox(Bloxlink.Module):
                     roblox_account = discord_profile.primary_account
 
                 if roblox_account:
-                    await roblox_account.sync(*args, author=author, embed=embed, everything=everything)
+                    await roblox_account.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
                     return roblox_account, discord_profile.accounts
 
                 return None, discord_profile.accounts
