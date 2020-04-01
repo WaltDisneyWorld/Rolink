@@ -65,9 +65,7 @@ class Roblox(Bloxlink.Module):
         if roblox_user and roblox_user.verified:
             return roblox_user.id, roblox_user.username
 
-
         _, response = await fetch(f"{API_URL}/users/{roblox_id}", raise_on_failure=True)
-
 
         json_data = await response.json()
 
@@ -981,8 +979,7 @@ class Roblox(Bloxlink.Module):
                 raise BadUsage("Must supply a username or ID")
 
             if not roblox_id:
-                roblox_id = self.cache["roblox_usernames_to_ids"].get(username) or await self.get_roblox_id(username)
-                self.cache["roblox_usernames_to_ids"] = roblox_id
+                roblox_id, username = await self.get_roblox_id(username)
 
             if roblox_id:
                 roblox_user = self.cache["roblox_users"].get(roblox_id) or RobloxUser(roblox_id=roblox_id)
@@ -1310,7 +1307,7 @@ class RobloxUser(Bloxlink.Module):
 
             if embed:
                 embed[0].set_thumbnail(url=avatar_url)
-                embed[0].set_author(name=author and str(author) or roblox_data["username"], icon_url=author and author.avatar_url, url=roblox_data.get("profile_link")) # unsure what this does with icon_url if there's no author
+                embed[0].set_author(name=author and str(author) or roblox_data["username"], icon_url=author and author.avatar_url or avatar_url, url=roblox_data.get("profile_link")) # unsure what this does with icon_url if there's no author
 
         async def presence():
             if roblox_data.get("presence"):
@@ -1407,7 +1404,7 @@ class RobloxUser(Bloxlink.Module):
                         roblox_user.groups = groups
 
             if embed:
-                if everything or "groups" in args:
+                if groups and (everything or "groups" in args):
                     embed[0].add_field(name="Groups", value=(", ".join(x.name for x in groups.values()))[:1000])
 
 
@@ -1452,7 +1449,6 @@ class RobloxUser(Bloxlink.Module):
                     embed[0].add_field(name="Join Date", value=join_date)
 
 
-
             if roblox_user:
                 roblox_user.description = description
                 roblox_user.age = age
@@ -1460,7 +1456,7 @@ class RobloxUser(Bloxlink.Module):
                 roblox_user.created = created
 
             if embed:
-                if everything or "description" in args:
+                if description and (everything or "description" in args):
                     embed[0].add_field(name="Description", value=description[0:1000])
 
                 # TODO: set age with "created"
