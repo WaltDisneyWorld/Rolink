@@ -26,24 +26,31 @@ class VerifyCommand(Bloxlink.Module):
         if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
             await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
                                              f"Please use ``{CommandArgs.prefix}verify add`` instead.")
+
+        username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
+        if username:
+            return await self.add(CommandArgs)
+
+        trello_options = {}
+
+        if trello_board:
+            trello_options, _ = await get_options(trello_board)
+            guild_data.update(trello_options)
+
         try:
             _, _, _, _, roblox_user = await update_member(
                     CommandArgs.message.author,
-                    guild        = guild,
-                    guild_data   = guild_data,
-                    roles        = True,
-                    nickname     = True,
-                    trello_board = CommandArgs.trello_board,
-                    author_data  = await self.r.table("users").get(str(author.id)).run())
+                    guild                = guild,
+                    guild_data           = guild_data,
+                    roles                = True,
+                    nickname             = True,
+                    trello_board         = CommandArgs.trello_board,
+                    author_data          = await self.r.table("users").get(str(author.id)).run(),
+                    given_trello_options = True)
 
         except UserNotVerified:
             await self.add(CommandArgs)
         else:
-            trello_options = {}
-
-            if trello_board:
-                trello_options, _ = await get_options(trello_board)
-                guild_data.update(trello_options)
 
             welcome_message = guild_data.get("welcomeMessage", WELCOME_MESSAGE)
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
@@ -85,13 +92,20 @@ class VerifyCommand(Bloxlink.Module):
         # TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
         # groupVerify = [group_ids...]
 
+        trello_options = {}
+
+        if trello_board:
+            trello_options, _ = await get_options(trello_board)
+            guild_data.update(trello_options)
+
         try:
             username = await verify_as(
                 author,
                 guild,
                 response = CommandArgs.response,
                 primary  = args["default"] == "yes",
-                username = username)
+                username = username,
+                trello_options = trello_options)
 
         except Message as e:
             if e.type == "error":
@@ -101,19 +115,14 @@ class VerifyCommand(Bloxlink.Module):
         except Error as e:
             await CommandArgs.response.error(e)
         else:
-            trello_options = {}
-
-            if trello_board:
-                trello_options, _ = await get_options(trello_board)
-
-
             added, removed, nickname, errors, roblox_user = await update_member(
                 author,
-                guild      = guild,
-                guild_data = CommandArgs.guild_data,
-                roles      = True,
-                nickname   = True,
-                author_data  = await self.r.table("users").get(str(author.id)).run())
+                guild                = guild,
+                guild_data           = CommandArgs.guild_data,
+                roles                = True,
+                nickname             = True,
+                author_data          = await self.r.table("users").get(str(author.id)).run(),
+                given_trello_options = True)
 
             welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", WELCOME_MESSAGE)
 
