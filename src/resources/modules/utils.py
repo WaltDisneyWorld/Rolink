@@ -3,7 +3,7 @@ from re import compile
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound
 from config import RELEASE, PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
-from aiohttp.client_exceptions import ClientOSError
+from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 import asyncio
 
 
@@ -40,6 +40,12 @@ class Utils(Bloxlink.Module):
 					raise RobloxDown
 
 				return text, response
+
+		except ServerDisconnectedError:
+			if retry != 0:
+				return await self.fetch(url, raise_on_failure=raise_on_failure, retry=retry-1)
+			else:
+				raise ServerDisconnectedError
 
 		except ClientOSError:
 			# todo: raise HttpError with non-roblox URLs
