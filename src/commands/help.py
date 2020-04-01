@@ -86,7 +86,12 @@ class HelpCommand(Bloxlink.Module):
                         embed.add_field(name="Permissions", value="\n\n".join(permission_text))
 
                     if command.examples:
-                        embed.add_field(name="Examples", value="\n".join(command.examples))
+                        examples = []
+
+                        for example in command.examples:
+                            examples.append(f"{prefix}{command_name} {example}")
+
+                        embed.add_field(name="Examples", value="\n".join(examples))
 
                     await response.send(embed=embed, dm=True)
 

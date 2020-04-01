@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink
-from resources.exceptions import UserNotVerified
+from resources.exceptions import UserNotVerified, Message, Error
 from discord import Embed
 
 get_user = Bloxlink.get_module("roblox", attrs=["get_user"])
@@ -20,16 +20,27 @@ class GetinfoCommand(Bloxlink.Module):
 			}
 		]
 
+		self.examples = [
+			"justin",
+			"@justin",
+			"84117866944663552",
+			"@justin --avatar",
+			"@justin --avatar --groups"
+		]
+
 	@Bloxlink.flags
 	async def __main__(self, CommandArgs):
 		target = CommandArgs.parsed_args["target"] or CommandArgs.message.author
 		flags = CommandArgs.flags
+		guild = CommandArgs.message.guild
+		response = CommandArgs.response
+		prefix = CommandArgs.prefix
 
-		async with CommandArgs.response.loading():
+		async with response.loading():
 			try:
-				primary_account, accounts = await get_user(*flags.keys(), author=target, send_embed=True, response=CommandArgs.response, everything=not bool(flags), basic_details=not bool(flags))
+				account, accounts = await get_user(*flags.keys(), author=target, guild=guild, send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
 			except UserNotVerified:
-				await CommandArgs.response.error(f"**{target}** is not linked to Bloxlink.")
+				raise Error(f"**{target}** is not linked to Bloxlink.")
 			else:
-				# TODO: let the user pick an account to switch to
-				pass
+				if not account:
+					raise Message(f"You have no primary account set! Please use ``{prefix}switchuser`` and set one.", type="silly")
