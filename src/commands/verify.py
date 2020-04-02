@@ -198,7 +198,7 @@ class VerifyCommand(Bloxlink.Module):
                 except (TrelloNotFound, TrelloBadRequest):
                     pass
 
-            await self.r.table("guilds").insert({
+            await self.r.db("canary").table("guilds").insert({
                 "id": str(guild.id),
                 "welcomeMessage": welcome_message
             }, conflict="update").run()

@@ -88,7 +88,7 @@ class SwitchUserCommand(Bloxlink.Module):
                 guild = parsed_args["guild"]
                 username = parsed_args["account"]
 
-                guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
+                guild_data = await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
                 trello_board = await get_board(guild_data=guild_data, guild=guild)
 

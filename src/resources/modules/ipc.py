@@ -10,7 +10,7 @@ from time import time
 from math import floor
 from psutil import Process
 
-eval = Bloxlink.get_module("eval", attrs="__call__")
+eval = Bloxlink.get_module("evalm", attrs="__call__")
 
 
 pending_tasks = {}

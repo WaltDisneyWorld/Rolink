@@ -1,9 +1,8 @@
 import math
 from resources.structures.Bloxlink import Bloxlink
 from discord import Embed
-from config import IS_DOCKER
 from time import time
-from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED
+from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED, IS_DOCKER
 from psutil import Process
 from os import getpid
 

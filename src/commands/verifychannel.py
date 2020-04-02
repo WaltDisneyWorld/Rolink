@@ -73,7 +73,7 @@ class VerifyChannelCommand(Bloxlink.Module):
                                   "proper permissions.")
 
 
-        await self.r.table("guilds").insert({
+        await self.r.db("canary").table("guilds").insert({
             "id": str(guild.id),
             "verifyChannel": str(verify_channel.id)
         }, conflict="update").run()

@@ -147,7 +147,7 @@ class SettingsCommand(Bloxlink.Module):
                 parsed_bool_choice = parsed_value["choice"]
                 parsed_value = parsed_bool_choice == "enable"
 
-                await self.r.table("guilds").insert({
+                await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
                     choice: parsed_value
                 }, conflict="update").run()
@@ -163,7 +163,7 @@ class SettingsCommand(Bloxlink.Module):
                     "max": option_find[2]
                 }]))["choice"]
 
-                await self.r.table("guilds").insert({
+                await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
                     choice: parsed_value
                 }, conflict="update").run()
@@ -236,7 +236,7 @@ class SettingsCommand(Bloxlink.Module):
             if cont == "no":
                 raise CancelledPrompt
 
-            await self.r.table("guilds").get(str(guild.id)).delete().run()
+            await self.r.db("canary").table("guilds").get(str(guild.id)).delete().run()
 
             if trello_board:
                 trello_options, _ = await get_options(trello_board, return_cards=True)
@@ -322,7 +322,7 @@ class SettingsCommand(Bloxlink.Module):
             guild_data.pop("roleBinds", None)
             guild_data.pop("groupIDs", None)
 
-            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
             if trello_board:
                 try:

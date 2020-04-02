@@ -171,7 +171,7 @@ class DelBindCommand(Bloxlink.Module):
                         del group_ids[bind_id]
 
                         guild_data["groupIDs"] = group_ids
-                        await self.r.table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
+                        await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
                                                                                                   # cancel bind deletion below
 
             found_group_trello = role_binds_trello.get("groups", {}).get(bind_id) or {}
@@ -239,7 +239,7 @@ class DelBindCommand(Bloxlink.Module):
             guild_data["roleBinds"] = role_binds
             guild_data["groupIDs"] = group_ids
 
-            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
             raise Message("All bind removals were successful.", type="success")
 

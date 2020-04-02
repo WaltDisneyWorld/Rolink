@@ -202,7 +202,7 @@ class Roblox(Bloxlink.Module):
         if isinstance(roblox_user, tuple):
             roblox_user = roblox_user[0]
 
-        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
         if roblox_user:
             if not roblox_user.verified:
@@ -464,7 +464,7 @@ class Roblox(Bloxlink.Module):
 
     async def get_binds(self, guild=None, guild_data=None, trello_board=None, trello_binds_list=None):
         card_binds, trello_binds_list = await self.parse_trello_binds(trello_board=trello_board, trello_binds_list=trello_binds_list)
-        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
         role_binds = dict(guild_data.get("roleBinds") or {})
         group_ids = dict(guild_data.get("groupIDs") or {})
@@ -519,7 +519,7 @@ class Roblox(Bloxlink.Module):
             trello_options, _ = await get_options(trello_board)
 
 
-        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
         if trello_options:
             guild_data.update(trello_options)

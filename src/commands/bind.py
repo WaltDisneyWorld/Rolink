@@ -106,7 +106,7 @@ class BindCommand(Bloxlink.Module):
                         group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
                         guild_data["groupIDs"] = group_ids
 
-                        await self.r.table("guilds").insert(guild_data, conflict="update").run()
+                        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
                         trello_group_bind = trello_card_binds["entire group"].get(group_id)
 
@@ -156,7 +156,7 @@ class BindCommand(Bloxlink.Module):
                 group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
                 guild_data["groupIDs"] = group_ids
 
-                await self.r.table("guilds").insert(guild_data, conflict="update").run()
+                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
                 if trello_binds_list:
                     try:
@@ -461,7 +461,7 @@ class BindCommand(Bloxlink.Module):
 
 
 
-            await self.r.table("guilds").insert({
+            await self.r.db("canary").table("guilds").insert({
                 "id": str(guild.id),
                 "roleBinds": role_binds
             }, conflict="update").run()

@@ -184,7 +184,7 @@ class GuestRoleCommand(Bloxlink.Module):
                 trello_binds_list.parsed_bind_data = None
 
 
-        await self.r.table("guilds").insert({
+        await self.r.db("canary").table("guilds").insert({
             "id": str(guild.id),
             "roleBinds": role_binds
         }, conflict="update").run()

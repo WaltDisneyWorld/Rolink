@@ -3,6 +3,8 @@ from re import compile
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound
 from config import RELEASE, PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
+from discord.errors import NotFound, Forbidden
+from discord.utils import find
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 import asyncio
 
@@ -11,6 +13,14 @@ import asyncio
 class Utils(Bloxlink.Module):
 	def __init__(self):
 		self.option_regex = compile("(.+):(.+)")
+		self.bloxlink_server = self.client.get_guild(372036754078826496)
+
+
+	async def __setup__(self):
+		try:
+			self.bloxlink_server = self.bloxlink_server or self.client.get_guild(372036754078826496) or await self.client.fetch_guild(372036754078826496)
+		except Forbidden:
+			self.bloxlink_server = None
 
 	@staticmethod
 	def get_files(directory):
@@ -77,10 +87,29 @@ class Utils(Bloxlink.Module):
 
 
 
-		guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+		guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 		prefix = guild_data.get("prefix")
 
 		if prefix and prefix != "!":
 			return prefix, None
 
 		return PREFIX, None
+
+
+	async def validate_guild(self, guild):
+		owner = guild.owner
+
+		if not self.bloxlink_server:
+			return True
+
+		try:
+			member = self.bloxlink_server.get_member(owner.id) or await self.bloxlink_server.fetch_member(owner.id)
+		except NotFound:
+			return False
+
+		if member:
+			if find(lambda r: r.name == "3.0 Access", member.roles):
+				return True
+
+
+		return False

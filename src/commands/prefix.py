@@ -39,7 +39,7 @@ class PrefixCommand(Bloxlink.Module):
             if not CommandArgs.has_permission:
                 raise PermissionError("You do not meet the required permissions for this command.")
 
-            await self.r.table("guilds").insert({
+            await self.r.db("canary").table("guilds").insert({
                 "id": str(guild.id),
                 "prefix": new_prefix
             }, conflict="update").run()

@@ -59,12 +59,12 @@ class JoinDMCommand(Bloxlink.Module):
 
                 guild_data["verifiedDM"] = parsed_args_2
 
-                await self.r.table("guilds").insert(guild_data, conflict="update").run()
+                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
             elif parsed_args_1 == "disable":
                 guild_data["verifiedDM"] = None
 
-                await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+                await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
         finally:
             try:
                 for message in messages:
@@ -111,12 +111,12 @@ class JoinDMCommand(Bloxlink.Module):
 
                 guild_data["unverifiedDM"] = parsed_args_2
 
-                await self.r.table("guilds").insert(guild_data, conflict="update").run()
+                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
             elif parsed_args_1 == "disable":
                 guild_data["unverifiedDM"] = None
 
-                await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+                await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
         finally:
             try:
                 for message in messages:

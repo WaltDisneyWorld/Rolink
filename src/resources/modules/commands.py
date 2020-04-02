@@ -87,7 +87,7 @@ class Commands(Bloxlink.Module):
         channel_id = channel and str(channel.id)
         guild_id = guild and str(guild.id)
 
-        guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
+        guild_data = guild_data or (guild and (await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
         trello_board = await get_board(guild_data=guild_data, guild=guild)
         prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 

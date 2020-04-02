@@ -17,7 +17,7 @@ class AutoVerifyCommand(Bloxlink.Module):
 
         guild_data["autoVerification"] = toggle
 
-        await self.r.table("guilds").insert(guild_data, conflict="update").run()
+        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
         if toggle:
             await response.success("Successfully **enabled** Auto-Verification!")

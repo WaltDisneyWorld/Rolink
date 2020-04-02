@@ -268,6 +268,6 @@ class SetupCommand(Bloxlink.Module):
             guild_data["groupIDs"] = group_ids
 
 
-        await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+        await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
         await response.success("Your server is now **configured** with Bloxlink!", dm=True, no_dm_post=True)

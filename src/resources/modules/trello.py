@@ -51,7 +51,7 @@ class Trello(Bloxlink.Module):
                 except (TrelloNotFound, TrelloBadRequest):
                     guild_data.pop("trelloID")
 
-                    await self.r.table("guilds").get(str(guild.id)).update(guild_data).run()
+                    await self.r.db("canary").table("guilds").get(str(guild.id)).update(guild_data).run()
 
 
         return trello_board
