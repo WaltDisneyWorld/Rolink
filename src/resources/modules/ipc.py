@@ -1,19 +1,16 @@
-from os import environ as env
+from os import getpid
 import websockets
 from ast import literal_eval
 import json
 import uuid
 from asyncio import sleep
 from ..structures.Bloxlink import Bloxlink
+from resources.constants import WEBSOCKET_PORT, WEBSOCKET_SECRET, CLUSTER_ID, LABEL, SHARD_RANGE, STARTED
+from time import time
+from math import floor
+from psutil import Process
 
 eval = Bloxlink.get_module("eval", attrs="__call__")
-
-
-WEBSOCKET_PORT = env.get("WEBSOCKET_PORT")
-WEBSOCKET_SECRET = env.get("WEBSOCKET_SECRET")
-CLUSTER_ID = int(env.get("CLUSTER_ID", 0))
-LABEL = env.get("LABEL", "master").lower()
-SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
 
 
 pending_tasks = {}
@@ -24,7 +21,7 @@ class IPC(Bloxlink.Module):
 		self.connected = False
 		self.websocket = None
 
-	async def broadcast(self, message, *, response=True, type="EVAL"):
+	async def broadcast(self, message=None, *, response=True, type="EVAL"):
 		"""broadcasts a message to all clusters"""
 
 		nonce = str(uuid.uuid4())
@@ -125,6 +122,38 @@ class IPC(Bloxlink.Module):
 									"nonce": nonce,
 									"data": message_.content
 								}))
+						elif message_type == "STATS":
+							seconds = floor(time() - STARTED)
+
+							m, s = divmod(seconds, 60)
+							h, m = divmod(m, 60)
+							d, h = divmod(h, 24)
+
+							days, hours, minutes, seconds = None, None, None, None
+
+							if d:
+								days = f"{d}d"
+							if h:
+								hours = f"{h}h"
+							if m:
+								minutes = f"{m}m"
+							if s:
+								seconds = f"{s}s"
+
+							uptime = f"{days or ''} {hours or ''} {minutes or ''} {seconds or ''}".strip()
+
+							process = Process(getpid())
+							mem = floor(process.memory_info()[0] / float(2 ** 20))
+
+							await websocket.send(json.dumps({
+								"type": "RESULT",
+								"cluster_id": CLUSTER_ID,
+								"parent": message["parent"],
+								"secret": WEBSOCKET_SECRET,
+								"nonce": nonce,
+								"data": (len(self.client.guilds), len(self.client.users), mem, uptime)
+							}))
+
 
 		finally:
 			# disconnected

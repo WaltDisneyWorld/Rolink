@@ -1,3 +1,21 @@
+from os import environ as env
+from ast import literal_eval
+from time import time
+
+
+VERSION = "v3.0 ALPHA"
+
+RELEASE = env.get("RELEASE", "LOCAL")
+IS_DOCKER = env.get("LABEL")
+
+WEBSOCKET_PORT = env.get("WEBSOCKET_PORT")
+WEBSOCKET_SECRET = env.get("WEBSOCKET_SECRET")
+CLUSTER_ID = int(env.get("CLUSTER_ID", 0))
+LABEL = env.get("LABEL", "master").lower()
+SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
+
+STARTED = time()
+
 RED_COLOR = 0xE74C3C
 INVISIBLE_COLOR = 0x36393E
 ORANGE_COLOR = 0xCE8037

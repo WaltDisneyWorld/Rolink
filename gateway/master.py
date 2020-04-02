@@ -262,6 +262,19 @@ async def websocket_connect(websocket, _):
 					}))
 
 					loop.create_task(cluster_timeout(future, websocket, message))
+			elif message["type"] == "STATS":
+				future = loop.create_future()
+				pending[nonce] = {"results": {x:"cluster timeout" if y.websocket else "cluster offline" for x,y in enumerate(clusters)}, "future": future}
+
+				await asyncio.wait([cluster.websocket.send(json.dumps({
+					"nonce": nonce,
+					"secret": secret,
+					"type": "STATS",
+					"data": None,
+					"parent": cluster_id
+				})) for cluster in clusters if cluster.websocket])
+
+				loop.create_task(cluster_timeout(future, websocket, message))
 
 
 	await session.close()
