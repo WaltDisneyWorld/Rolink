@@ -122,44 +122,44 @@ class GuestRoleCommand(Bloxlink.Module):
 
                 if trello_bind_group:
                     card_data_ = trello_bind_group.get(x)
+                    if card_data_:
+                        for card in card_data_["trello"]["cards"]:
+                            trello_card = card["card"]
+                            trello_ranks = card.get("ranks", [])
 
-                    for card in card_data_["trello"]["cards"]:
-                        trello_card = card["card"]
-                        trello_ranks = card.get("ranks", [])
+                            if (x in trello_ranks or x == "all") and len(trello_ranks) == 1:
+                                trello_bind_roles = card.get("roles", set())
+                                card_bind_data = [
+                                    f"Group: {group_id}",
+                                    f"Nickname: {(nickname != 'skip' and nickname) or rank.get('nickname') or card_data_.get('nickname') or 'None'}",
+                                ]
 
-                        if (x in trello_ranks or x == "all") and len(trello_ranks) == 1:
-                            trello_bind_roles = card.get("roles", set())
-                            card_bind_data = [
-                                f"Group: {group_id}",
-                                f"Nickname: {(nickname != 'skip' and nickname) or rank.get('nickname') or card_data_.get('nickname') or 'None'}",
-                            ]
+                                for role_ in trello_bind_roles:
+                                    if role_ in (role_id, role.name):
+                                        break
+                                else:
+                                    trello_bind_roles.add(role.name)
+                                    card_bind_data.append(f"Roles: {', '.join(trello_bind_roles)}")
 
-                            for role_ in trello_bind_roles:
-                                if role_ in (role_id, role.name):
+                                card_bind_data.append(f"Ranks: {card['trello_str']['ranks']}")
+
+                                trello_card_desc = "\n".join(card_bind_data)
+
+                                if trello_card_desc != trello_card.description:
+                                    trello_card.description = trello_card_desc
+
+                                    try:
+                                        await trello_card.edit(desc=trello_card_desc)
+                                    except TrelloUnauthorized:
+                                        await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
+                                                            "Trello board.")
+                                    except (TrelloNotFound, TrelloBadRequest):
+                                        pass
+
+                                    trello_binds_list.parsed_bind_data = None
+                                    make_binds_card = False
+
                                     break
-                            else:
-                                trello_bind_roles.add(role.name)
-                                card_bind_data.append(f"Roles: {', '.join(trello_bind_roles)}")
-
-                            card_bind_data.append(f"Ranks: {card['trello_str']['ranks']}")
-
-                            trello_card_desc = "\n".join(card_bind_data)
-
-                            if trello_card_desc != trello_card.description:
-                                trello_card.description = trello_card_desc
-
-                                try:
-                                    await trello_card.edit(desc=trello_card_desc)
-                                except TrelloUnauthorized:
-                                    await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
-                                                         "Trello board.")
-                                except (TrelloNotFound, TrelloBadRequest):
-                                    pass
-
-                                trello_binds_list.parsed_bind_data = None
-                                make_binds_card = False
-
-                                break
 
             if make_binds_card:
                 card_bind_data = [

@@ -1,7 +1,4 @@
 from ..structures.Bloxlink import Bloxlink
-from resources.exceptions import UserNotVerified # pylint: disable=import-error
-from discord.errors import Forbidden, HTTPException
-from resources.constants import WELCOME_MESSAGE
 
 validate_guild = Bloxlink.get_module("utils", attrs=["validate_guild"])
 
