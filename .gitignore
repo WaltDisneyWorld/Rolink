@@ -118,5 +118,9 @@ archive/
 clean.py
 docker-compose.yml
 *.py.icloud
-* 2.py
+*2.py
 *2*
+api/config/
+api/nginx_dev/
+api/src/core/conf.py
+*tempCodeRunnerFile.py
