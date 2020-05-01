@@ -2,8 +2,10 @@ from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient
 from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
+from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT
 from . import Args, Permissions
 from ast import literal_eval
+from async_timeout import timeout
 import functools
 import traceback
 import datetime
@@ -20,9 +22,7 @@ except ImportError:
 finally:
     r.set_loop_type("asyncio")
 
-CLUSTER_ID = env.get("CLUSTER_ID", "0")
-SHARD_COUNT = int(env.get("SHARD_COUNT", 1))
-SHARD_RANGE = literal_eval(env.get("SHARD_RANGE", "(0,)"))
+
 
 LOG_LEVEL = env.get("LOG_LEVEL", "INFO").upper()
 LABEL = env.get("LABEL", "Bloxlink")
@@ -159,28 +159,34 @@ class BloxlinkStructure(AutoShardedClient):
 
 
     @staticmethod
-    async def load_database(host=RETHINKDB["HOST"]):
-        try:
-            conn = await r.connect(
-                host=host,
-                port=RETHINKDB["PORT"],
-                db=RETHINKDB["DB"],
-                password=RETHINKDB["PASSWORD"],
-                timeout=20
-            )
-            Bloxlink.db_host_validated = True
-        except ReqlDriverError as e:
-            Bloxlink.log(f"Unable to connect to Database: {e}. Retrying.")
-            await asyncio.sleep(5)
+    async def load_database():
+        async def connect(host, password, db, port):
+            try:
+                conn = await r.connect(
+                    host=host,
+                    port=port,
+                    db=db,
+                    password=password,
+                    timeout=2
+                )
+                conn.repl()
 
-            if not Bloxlink.db_host_validated:
-                return await Bloxlink.load_database("localhost")
+                print("Connected to RethinkDB", flush=True)
 
-            return await Bloxlink.load_database()
+            except ReqlDriverError as e:
+                print(f"Unable to connect to Database: {e}. Retrying with a different host.", flush=True)
 
-        conn.repl()
+            else:
+                return True
 
-        Bloxlink.log("Connected to RethinkDB")
+        while True:
+            for host in RETHINKDB["HOSTS"]:
+                async with timeout(2):
+                    success = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
+
+                    if success:
+                        return
+
 
     @staticmethod
     def command(*args, **kwargs):

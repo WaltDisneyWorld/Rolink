@@ -1,6 +1,9 @@
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
-from resources.constants import IS_DOCKER
+from resources.constants import IS_DOCKER # pylint: disable=import-error
+from resources.exceptions import Error # pylint: disable=import-error
+import async_timeout
+import asyncio
 
 broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
 eval = Bloxlink.get_module("evalm", attrs="__call__")
@@ -24,10 +27,15 @@ class EvalCommand(Bloxlink.Module):
         response = CommandArgs.response
         code = CommandArgs.parsed_args["code"]
         message = CommandArgs.message
+        flags = CommandArgs.flags
 
-        if IS_DOCKER and CommandArgs.flags.get("global"):
-            stats = await broadcast(code, type="EVAL")
-            embed = Embed(title="Code Evaluation")
+        global_flag = flags.get("global")
+        waiting_for_flag = flags.get("waiting_for")
+        timeout_flag = flags.get("timeout", 10)
+
+        if IS_DOCKER and global_flag:
+            stats = await broadcast(code, type="EVAL", timeout=timeout_flag != "0" and int(timeout_flag), waiting_for=waiting_for_flag)
+            embed = Embed(title="Evaluation Result")
 
             for cluster_id, cluster_data in stats.items():
                 embed.add_field(name=f"Cluster {cluster_id}", value=cluster_data, inline=False)
@@ -35,6 +43,10 @@ class EvalCommand(Bloxlink.Module):
             await response.send(embed=embed)
 
         else:
-            embed = await eval(code, message, codeblock=False)
-
-            await response.send(embed=embed)
+            try:
+                async with async_timeout.timeout(timeout_flag != "0" and int(timeout_flag)):
+                    embed = await eval(code, message, codeblock=False)
+            except asyncio.TimeoutError:
+                raise Error("This evaluation timed out.")
+            else:
+                await response.send(embed=embed)

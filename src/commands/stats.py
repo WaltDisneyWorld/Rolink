@@ -16,14 +16,14 @@ class StatsCommand(Bloxlink.Module):
     """view the current stats of Bloxlink"""
 
     def __init__(self):
-        pass
+        self.developer = True
 
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
 
-        embed = Embed(description="Showing stats for all clusters")
-        embed.set_author(name=Bloxlink.user.name, icon_url=Bloxlink.user.avatar_url)
+
+        clusters = 0
 
         if IS_DOCKER:
             guilds = 0
@@ -31,7 +31,9 @@ class StatsCommand(Bloxlink.Module):
             mem = 0
             errored = 0
 
-            stats = await broadcast(type="STATS")
+            stats = await broadcast(None, type="STATS")
+            clusters = len(stats)
+            print(stats, flush=True)
 
             for cluster_id, cluster_data in stats.items():
                 if cluster_data in ("cluster offline", "cluster timeout"):
@@ -51,6 +53,7 @@ class StatsCommand(Bloxlink.Module):
         else:
             guilds = str(len(self.client.guilds))
             users = str(len(self.client.users))
+            clusters = 1
 
             process = Process(getpid())
             mem = math.floor(process.memory_info()[0] / float(2 ** 20))
@@ -75,16 +78,18 @@ class StatsCommand(Bloxlink.Module):
 
         uptime = f"{days or ''} {hours or ''} {minutes or ''} {seconds or ''}".strip()
 
+        embed = Embed(description=f"Showing collective stats for **{clusters}** clusters")
+        embed.set_author(name=Bloxlink.user.name, icon_url=Bloxlink.user.avatar_url)
 
         embed.add_field(name="Version", value=VERSION)
         embed.add_field(name="Cluster", value=CLUSTER_ID)
         embed.add_field(name="Shards", value=SHARD_RANGE)
         embed.add_field(name="Servers", value=guilds)
-        embed.add_field(name="Cached Users", value=users)
+        embed.add_field(name="_Cached_ Users", value=users)
         embed.add_field(name="Uptime", value=uptime)
         embed.add_field(name="Memory Usage", value=f"{mem} MB")
 
-        embed.add_field(name="Invite Bloxlink", value=f"https://blox.link/invite")
+        embed.add_field(name="Invite **Bloxlink**", value=f"https://blox.link/invite")
         embed.add_field(name="Website", value=f"https://blox.link")
 
 

@@ -1,183 +1,190 @@
 from os import getpid
-import websockets
-from ast import literal_eval
 import json
 import uuid
-from asyncio import sleep
+import asyncio
 from ..structures.Bloxlink import Bloxlink
-from resources.constants import WEBSOCKET_PORT, WEBSOCKET_SECRET, CLUSTER_ID, LABEL, SHARD_RANGE, STARTED
+from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER
+from config import REDIS, PROMPT # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
 from psutil import Process
+import aredis
+import async_timeout
 
 eval = Bloxlink.get_module("evalm", attrs="__call__")
 
 
-pending_tasks = {}
-
 @Bloxlink.module
 class IPC(Bloxlink.Module):
-	def __init__(self):
-		self.connected = False
-		self.websocket = None
+    def __init__(self):
+        self.pending_tasks = {}
+        self.clusters = set()
 
-	async def broadcast(self, message=None, *, response=True, type="EVAL"):
-		"""broadcasts a message to all clusters"""
+    async def handle_message(self, message):
+        message = json.loads(str(message["data"], "utf-8"))
 
-		nonce = str(uuid.uuid4())
+        data = message["data"]
+        type = message["type"]
+        nonce = message["nonce"]
+        original_cluster = message["original_cluster"]
+        waiting_for = message["waiting_for"]
+        cluster_id = message["cluster_id"]
 
-		await self.websocket.send(json.dumps({
-			"nonce": nonce,
-			"secret": WEBSOCKET_SECRET,
-			"cluster_id": CLUSTER_ID,
-			"type": type,
-			"data": message
-		}))
+        if type == "IDENTIFY":
+            # we're syncing this cluster with ourselves, and send back our clusters
+            if original_cluster == CLUSTER_ID:
+                if isinstance(data, int):
+                    self.clusters.add(data)
+                else:
+                    for x in data:
+                        self.clusters.add(x)
+            else:
+                self.clusters.add(original_cluster)
 
-		future = self.loop.create_future()
+                data = json.dumps({
+                    "nonce": None,
+                    "cluster_id": CLUSTER_ID,
+                    "data": list(self.clusters),
+                    "type": "IDENTIFY",
+                    "original_cluster": original_cluster,
+                    "waiting_for": waiting_for
+                })
 
-		pending_tasks[nonce] = future
+                await self.redis.publish(f"CLUSTER_{original_cluster}", data)
 
-		if response:
-			return await future
+        elif type == "EVAL":
+            res = (await eval(data, codeblock=False)).description
 
-	async def connect(self):
-		success = False
+            data = json.dumps({
+                "nonce": nonce,
+                "cluster_id": CLUSTER_ID,
+                "data": res,
+                "type": "CLIENT_RESULT",
+                "original_cluster": original_cluster,
+                "waiting_for": waiting_for
+            })
 
-		try:
-			async with websockets.connect(f"ws://{LABEL}:{WEBSOCKET_PORT}") as websocket:
-				Bloxlink.log("Connected to Websocket")
-				self.connected = True
-				success = True
-				self.websocket = websocket
+            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
 
-				await websocket.send(json.dumps({
-					"type": "IDENTIFY",
-					"cluster_id": CLUSTER_ID,
-					"secret": WEBSOCKET_SECRET,
-					"nonce": str(uuid.uuid4())
-				}))
+        elif type == "CLIENT_RESULT":
+            task = self.pending_tasks.get(nonce)
 
-				await self.client.wait_for("ready")
+            if task:
+                task[1][cluster_id] = data
+                task[2] += 1
+                waiting_for = message["waiting_for"] or len(self.clusters)
 
-				# for initial stats posting
-				await websocket.send(json.dumps({
-					"type": "READY",
-					"cluster_id": CLUSTER_ID,
-					"secret": WEBSOCKET_SECRET,
-					"nonce": str(uuid.uuid4()),
-					"data": {
-						"guilds": len(self.client.guilds),
-						"users": len(self.client.users)
-					}
-				}))
+                if task[2] == waiting_for:
+                    task[0].set_result(True)
 
-				async for message in websocket:
-					try:
-						message = json.loads(message)
-					except json.JSONDecodeError:
-						await websocket.send("Invalid JSON.")
-						break
+        elif type == "DM":
+            if 0 in SHARD_RANGE:
+                try:
+                    message_ = await Bloxlink.wait_for("message", check=lambda m: m.author.id == data and not m.guild, timeout=PROMPT["PROMPT_TIMEOUT"])
 
-					nonce = message.get("nonce")
-					secret = message.get("secret")
-					message_type = message.get("type")
-					message_data = message.get("data")
+                except asyncio.TimeoutError:
+                    message_ = "cancel (timeout)"
 
-					if secret != WEBSOCKET_SECRET:
-						await websocket.send("Invalid secret.")
-						break
+                data = json.dumps({
+                    "nonce": nonce,
+                    "cluster_id": CLUSTER_ID,
+                    "data": message_.content,
+                    "type": "CLIENT_RESULT",
+                    "original_cluster": original_cluster,
+                    "waiting_for": waiting_for
+                })
 
-					if not nonce:
-						await websocket.send("Missing nonce.")
-						break
+                await self.redis.publish(f"CLUSTER_{original_cluster}", data)
 
-					if message_type:
-						if message_type == "EVAL":
-							if message_data:
-								res = (await eval(message_data, codeblock=False)).description
+        elif type == "STATS":
+            seconds = floor(time() - STARTED)
 
-								await websocket.send(json.dumps({
-									"type": "RESULT",
-									"cluster_id": CLUSTER_ID,
-									"parent": message["parent"],
-									"secret": WEBSOCKET_SECRET,
-									"nonce": nonce,
-									"data": res or "null"
-								}))
+            m, s = divmod(seconds, 60)
+            h, m = divmod(m, 60)
+            d, h = divmod(h, 24)
 
-						elif message_type == "RESULT":
-							pending_tasks[nonce].set_result(message_data)
-							del pending_tasks[nonce]
+            days, hours, minutes, seconds = None, None, None, None
 
-						elif message_type == "DM":
-							if 0 in SHARD_RANGE:
-								message_ = await Bloxlink.wait_for("message", check=lambda m: m.author.id == message_data and not m.guild)
+            if d:
+                days = f"{d}d"
+            if h:
+                hours = f"{h}h"
+            if m:
+                minutes = f"{m}m"
+            if s:
+                seconds = f"{s}s"
 
-								await websocket.send(json.dumps({
-									"type": "RESULT",
-									"cluster_id": CLUSTER_ID,
-									"parent": message["parent"],
-									"secret": WEBSOCKET_SECRET,
-									"nonce": nonce,
-									"data": message_.content
-								}))
-						elif message_type == "STATS":
-							seconds = floor(time() - STARTED)
+            uptime = f"{days or ''} {hours or ''} {minutes or ''} {seconds or ''}".strip()
 
-							m, s = divmod(seconds, 60)
-							h, m = divmod(m, 60)
-							d, h = divmod(h, 24)
+            process = Process(getpid())
+            mem = floor(process.memory_info()[0] / float(2 ** 20))
 
-							days, hours, minutes, seconds = None, None, None, None
+            data = json.dumps({
+                "nonce": nonce,
+                "cluster_id": CLUSTER_ID,
+                "data": (len(self.client.guilds), len(self.client.users), mem, uptime),
+                "type": "CLIENT_RESULT",
+                "original_cluster": original_cluster,
+                "waiting_for": waiting_for
+            })
 
-							if d:
-								days = f"{d}d"
-							if h:
-								hours = f"{h}h"
-							if m:
-								minutes = f"{m}m"
-							if s:
-								seconds = f"{s}s"
+            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
 
-							uptime = f"{days or ''} {hours or ''} {minutes or ''} {seconds or ''}".strip()
+    async def __setup__(self):
+        if IS_DOCKER:
+            self.redis = aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"])
+            pubsub = self.redis.pubsub()
+            await pubsub.subscribe("GLOBAL", f"CLUSTER_{CLUSTER_ID}")
 
-							process = Process(getpid())
-							mem = floor(process.memory_info()[0] / float(2 ** 20))
+            data = json.dumps({
+                "nonce": None,
+                "cluster_id": CLUSTER_ID,
+                "data": CLUSTER_ID,
+                "type": "IDENTIFY",
+                "original_cluster": CLUSTER_ID,
+                "waiting_for": None
+            })
 
-							await websocket.send(json.dumps({
-								"type": "RESULT",
-								"cluster_id": CLUSTER_ID,
-								"parent": message["parent"],
-								"secret": WEBSOCKET_SECRET,
-								"nonce": nonce,
-								"data": (len(self.client.guilds), len(self.client.users), mem, uptime)
-							}))
+            await self.redis.publish("GLOBAL", data)
 
 
-		finally:
-			# disconnected
-			self.connected = False
-			Bloxlink.log("Disconnected from websocket")
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True)
+                if message:
+                    self.loop.create_task(self.handle_message(message))
 
-		return success
 
-	async def __setup__(self):
-		if WEBSOCKET_PORT:
-			failed = 0
+    async def broadcast(self, message, type, send_to="GLOBAL", waiting_for=None, timeout=10, response=True):
+        nonce = str(uuid.uuid4())
 
-			while True:
-				if failed == 5:
-					raise SystemExit("Websocket disconnected. Couldn't reconnect after 5 tries.")
+        if waiting_for and isinstance(waiting_for, str):
+            waiting_for = int(waiting_for)
 
-				success = await self.connect()
+        future = self.loop.create_future()
+        self.pending_tasks[nonce] = [future, {x:"cluster timeout" for x in self.clusters}, 0]
 
-				if success:
-					failed = 0
-				else:
-					failed += 1
-					Bloxlink.log("Disconnected from websocket. Retrying.")
-					await sleep(5)
+        data = json.dumps({
+            "nonce": response and nonce,
+            "data": message,
+            "type": type,
+            "original_cluster": CLUSTER_ID,
+            "cluster_id": CLUSTER_ID,
+            "waiting_for": waiting_for
+        })
 
-		else:
-			Bloxlink.log("DEBUG | Not loading IPC")
+
+        await self.redis.publish(send_to, data)
+
+        if response:
+            try:
+                async with async_timeout.timeout(timeout):
+                    await future
+            except asyncio.TimeoutError:
+                pass
+
+            result = self.pending_tasks[nonce][1]
+            self.pending_tasks[nonce] = None
+
+            return result
+        else:
+            self.pending_tasks[nonce] = None # this is necessary to prevent any race conditions
