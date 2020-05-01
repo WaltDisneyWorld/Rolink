@@ -1,10 +1,13 @@
 from ..structures.Bloxlink import Bloxlink
-from config import RELEASE # pylint: disable=no-name-in-module
+from resources.constants import RELEASE # pylint: disable=no-name-in-module
 from rethinkdb.errors import ReqlOpFailedError
 
 TABLE_STRUCTURE = {
 	"bloxlink": [
 		"users",
+		"guilds",
+	],
+	"canary": [
 		"guilds",
 	],
 	"patreon": []
@@ -17,7 +20,7 @@ class DatabaseTools(Bloxlink.Module):
 
 	async def __setup__(self):
 		for missing_database in set(TABLE_STRUCTURE.keys()).difference(await self.r.db_list().run()):
-			if RELEASE == "LOCAL":
+			if RELEASE in ("LOCAL", "CANARY"):
 				await self.r.db_create(missing_database).run()
 
 				for table in TABLE_STRUCTURE[missing_database]:
@@ -30,11 +33,17 @@ class DatabaseTools(Bloxlink.Module):
 			try:
 				await self.r.db(db_name).wait().run()
 			except ReqlOpFailedError as e:
-				print(f"CRITICAL: {e}", flush=True)
+				if RELEASE == "LOCAL":
+					await self.r.db_create(db_name).run()
+				else:
+					print(f"CRITICAL: {e}", flush=True)
 
 
 			for table_name in table_names:
 				try:
 					await self.r.db(db_name).table(table_name).wait().run()
 				except ReqlOpFailedError as e:
-					print(f"CRITICAL: {e}", flush=True)
+					if RELEASE == "LOCAL":
+						await self.r.db(db_name).table_create(table_name).run()
+					else:
+						print(f"CRITICAL: {e}", flush=True)

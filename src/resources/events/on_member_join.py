@@ -1,7 +1,7 @@
 from ..structures.Bloxlink import Bloxlink
 from resources.exceptions import UserNotVerified # pylint: disable=import-error
+from resources.constants import DEFAULTS
 from discord.errors import Forbidden, HTTPException
-from resources.constants import WELCOME_MESSAGE
 
 update_member, get_nickname, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_nickname", "get_user"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
@@ -16,7 +16,7 @@ class MemberJoinEvent(Bloxlink.Module):
         @Bloxlink.event
         async def on_member_join(member):
             guild = member.guild
-            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
+            guild_data = await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
             trello_board = await get_board(guild=guild, guild_data=guild_data)
             trello_options = {}
 
@@ -24,11 +24,11 @@ class MemberJoinEvent(Bloxlink.Module):
                 trello_options, _ = await get_options(trello_board)
                 guild_data.update(trello_options)
 
-            group_roles = guild_data.get("autoRoles", True)
-            verify_enabled = guild_data.get("verifiedRoleEnabled", True)
+            group_roles = guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
+            verify_enabled = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
             auto_verification = guild_data.get("autoVerification", verify_enabled)
 
-            verified_dm = guild_data.get("verifiedDM", WELCOME_MESSAGE)
+            verified_dm = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
             unverified_dm = guild_data.get("unverifiedDM")
 
             if auto_verification or group_roles:

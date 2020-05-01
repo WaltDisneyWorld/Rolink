@@ -74,8 +74,11 @@ class Paginate:
     async def turn_page(self, i, pages):
         self.embed.clear_fields()
 
+
         for field in pages[i]:
             self.embed.add_field(name=field["name"], value=field["value"], inline=False)
+            if not self.embed.footer or (self.embed.footer and "Page" in self.embed.footer.text):
+                self.embed.set_footer(text=f"Page {i+1}/{len(pages)}")
 
         if self.sent_message:
             try:
@@ -93,6 +96,7 @@ class Paginate:
         len_pages = len(pages)
 
         i = 0
+        user = None
 
         await self.turn_page(i, pages)
 
@@ -129,12 +133,13 @@ class Paginate:
                     i = x
                     await self.turn_page(i, pages)
 
-                try:
-                    await self.sent_message.remove_reaction(emoji, user)
-                except Forbidden:
-                    raise Error("I'm missing the ``Manage Messages`` permission.")
-                except NotFound:
-                    raise CancelCommand
+                if user:
+                    try:
+                        await self.sent_message.remove_reaction(emoji, user)
+                    except Forbidden:
+                        raise Error("I'm missing the ``Manage Messages`` permission.")
+                    except NotFound:
+                        raise CancelCommand
 
 
         return self.sent_message

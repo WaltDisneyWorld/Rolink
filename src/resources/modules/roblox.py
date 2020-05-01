@@ -7,6 +7,7 @@ from discord.utils import find
 from discord import Embed, Member
 from datetime import datetime
 from config import WORDS, RELEASE, TRELLO # pylint: disable=no-name-in-module
+from resources.constants import DEFAULTS # pylint: disable=import-error
 import json
 import random
 import re
@@ -193,7 +194,9 @@ class Roblox(Bloxlink.Module):
 
 
     async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, is_nickname=True, guild_data=None, roblox_user=None):
-        if not template or "{disable-nicknaming}" in template:
+        template = template or ""
+
+        if template == "{disable-nicknaming}":
             return
 
         guild = guild or author.guild
@@ -205,10 +208,15 @@ class Roblox(Bloxlink.Module):
         guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
         if roblox_user:
-            if not roblox_user.verified:
-                await roblox_user.sync()
+            if not roblox_user.complete:
+                await roblox_user.sync(everything=True)
 
             group_role = group and group.user_rank_name or "Guest"
+
+            template = template or DEFAULTS.get("nicknameTemplate") or ""
+
+            if template == "{disable-nicknaming}":
+                return
 
             template = template.replace(
                 "roblox-name", roblox_user.username
@@ -231,7 +239,10 @@ class Roblox(Bloxlink.Module):
 
         else:
             if not template:
-                template = guild_data.get("unverifiedNickname")
+                template = guild_data.get("unverifiedNickname") or DEFAULTS.get("unverifiedNickname") or ""
+
+                if template == "{disable-nicknaming}":
+                    return
 
         template = template.replace(
             "discord-name", author.name
@@ -524,10 +535,10 @@ class Roblox(Bloxlink.Module):
         if trello_options:
             guild_data.update(trello_options)
 
-        verify_role = guild_data.get("verifiedRoleEnabled", True)
+        verify_role = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
 
         if verify_role and roles:
-            unverified_role_name = guild_data.get("unverifiedRoleName", "Unverified")
+            unverified_role_name = guild_data.get("unverifiedRoleName", DEFAULTS.get("unverifiedRoleName"))
             unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
         try:
@@ -555,7 +566,7 @@ class Roblox(Bloxlink.Module):
                 if unverified_role and unverified_role in author.roles:
                     remove_roles.add(unverified_role)
 
-                verified_role_name = guild_data.get("verifiedRoleName", "Verified")
+                verified_role_name = guild_data.get("verifiedRoleName", DEFAULTS.get("verifiedRoleName"))
 
                 if verified_role_name:
                     verified_role_name = verified_role_name[0:99]
@@ -727,7 +738,7 @@ class Roblox(Bloxlink.Module):
                             group_role = find(lambda r: r.name == group.user_rank_name, guild.roles)
 
                             if not group_role:
-                                if guild_data.get("dynamicRoles", True):
+                                if guild_data.get("dynamicRoles", DEFAULTS.get("dynamicRoles")):
                                     try:
                                         group_role = await guild.create_role(name=group.user_rank_name)
                                     except Forbidden:
@@ -741,7 +752,6 @@ class Roblox(Bloxlink.Module):
                                 if has_role:
                                     if group.user_role != roleset["name"]:
                                         remove_roles.add(has_role)
-
                             """
 
                             if author_data:
@@ -825,7 +835,7 @@ class Roblox(Bloxlink.Module):
                 if add_roles:
                     await author.add_roles(*add_roles, reason="Adding group roles")
 
-                if guild_data.get("allowOldRoles", False):
+                if guild_data.get("allowOldRoles", DEFAULTS.get("allowOldRoles")):
                     remove_roles = set()
 
                 if remove_roles:
@@ -850,7 +860,10 @@ class Roblox(Bloxlink.Module):
                 else:
                     nickname = top_role_nickname or await self.get_nickname(author=author, roblox_user=roblox_user)
 
-            if nickname != author.display_name:
+                if isinstance(nickname, bool):
+                    nickname = self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), roblox_user=roblox_user, author=author)
+
+            if nickname and nickname != author.display_name:
                 try:
                     await author.edit(nick=nickname)
                 except Forbidden:
@@ -876,6 +889,27 @@ class Roblox(Bloxlink.Module):
             return group
 
         #text, _ = await fetch(f"{API_URL}/groups/{group_id}", raise_on_failure=False)
+
+        text, _ = await fetch(f"{API_URL}/groups/{group_id}", raise_on_failure=False)
+
+        try:
+            json_data = json.loads(text)
+        except json.decoder.JSONDecodeError:
+            raise RobloxAPIError
+        else:
+            if json_data.get("Id"):
+                rolesets = json_data.get("Roles")
+
+                if not group:
+                    group = Group(group_id=group_id, group_data=json_data, version="old", rolesets=rolesets)
+                else:
+                    group.load_json(json_data, version="old")
+
+                self.cache["groups"][group_id] = group
+
+                return group
+
+        """
         text, _ = await fetch(f"{GROUP_API}/v1/groups/{group_id}", raise_on_failure=False)
 
         try:
@@ -902,6 +936,9 @@ class Roblox(Bloxlink.Module):
                 self.cache["groups"][group_id] = group
 
                 return group
+        """
+
+        # text, _ = await fetch(f"https://api.roblox.com/groups/{group_id}", raise_on_failure=False)
 
         raise RobloxNotFound
 
@@ -1003,7 +1040,7 @@ class Roblox(Bloxlink.Module):
         if trello_options:
             guild_data.update(trello_options)
 
-        allow_reverify = guild_data.get("allowReVerify", True)
+        allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
 
         guild = guild or author.guild
         author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {}
@@ -1150,7 +1187,7 @@ class Group(Bloxlink.Module):
     __slots__ = ("name", "group_id", "description", "rolesets", "owner", "member_count",
                  "embed_url", "url", "user_rank_name", "user_rank_id")
 
-    def __init__(self, group_id, group_data, version=2, my_roles=None, rolesets=None):
+    def __init__(self, group_id, group_data, version=1, my_roles=None, rolesets=None):
         self.group_id = str(group_id)
 
         self.name = None
@@ -1158,6 +1195,7 @@ class Group(Bloxlink.Module):
         self.owner = None
         self.member_count = None
         self.rolesets = []
+        self.version = version
         self.url = f"https://www.roblox.com/My/Groups.aspx?gid={self.group_id}"
 
         self.user_rank_name = None
@@ -1166,13 +1204,26 @@ class Group(Bloxlink.Module):
         self.load_json(group_data, version=version, my_roles=my_roles, rolesets=rolesets)
 
     def load_json(self, group_data, version, my_roles=None, rolesets=None):
-        self.name = self.name or group_data.get("name", "N/A")
-        self.member_count = self.member_count or group_data.get("memberCount", 0)
 
-        self.user_rank_name = self.user_rank_name or (my_roles and my_roles.get("name", "").strip())
-        self.user_rank_id = self.user_rank_id or (my_roles and my_roles.get("rank"))
+        if version == 1 or version == 2:
+            self.name = self.name or group_data.get("name", "N/A")
+            self.member_count = self.member_count or group_data.get("memberCount", 0)
+            self.description = self.description or group_data.get("description", "")
 
-        self.rolesets = self.rolesets or rolesets or []
+            self.user_rank_name = self.user_rank_name or (my_roles and my_roles.get("name", "").strip())
+            self.user_rank_id = self.user_rank_id or (my_roles and my_roles.get("rank"))
+
+            self.version = version
+
+            self.rolesets = self.rolesets or rolesets or []
+        elif version == "old":
+            self.name = self.name = group_data.get("Name", "N/A")
+            self.owner = self.owner or group_data.get("Owner")
+            self.description = self.description or group_data.get("Description", "")
+            self.rolesets = self.rolesets or group_data.get("Roles", [])
+
+            self.version = "old"
+
 
     def __str__(self):
         return f"Group ({self.name or self.group_id})"
@@ -1521,7 +1572,7 @@ class RobloxUser(Bloxlink.Module):
             else:
                 raise RobloxAPIError
         else:
-            self.complete = everything
+            self.complete = self.complete or everything
             self.verified = True
             self.partial = not everything
             self.profile_link = self.profile_link or f"https://www.roblox.com/users/{self.id}/profile"

@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink
-from resources.constants import ARROW, ORANGE_COLOR, NICKNAME_TEMPLATES
+from resources.constants import ARROW, ORANGE_COLOR, NICKNAME_TEMPLATES, RELEASE
 from resources.exceptions import Error, RobloxNotFound
 from config import TRELLO # pylint: disable=no-name-in-module
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
@@ -15,8 +15,7 @@ VERIFIED_DEFAULT = "Verified"
 get_group, generate_code = Bloxlink.get_module("roblox", attrs=["get_group", "generate_code"])
 trello = Bloxlink.get_module("trello", attrs=["trello"])
 
-roblox_group_regex = re.compile("roblox.com/groups/(\d+)/")
-
+roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
 
 @Bloxlink.command
@@ -35,12 +34,12 @@ class SetupCommand(Bloxlink.Module):
         regex_search = roblox_group_regex.search(content)
 
         if regex_search:
-            group_id = regex_search.group(0)
+            group_id = regex_search.group(1)
         else:
             group_id = content
 
         try:
-            group = await get_group(group_id)
+            group = await get_group(group_id, rolesets=True)
         except RobloxNotFound:
             return None, "No group was found with this ID. Please try again."
 
@@ -117,7 +116,7 @@ class SetupCommand(Bloxlink.Module):
                 "embed_title": "Setup Prompt",
                 "validation": self.validate_trello_board
             }
-        ], dm=True)
+        ], dm=True, no_dm_post=False)
 
         for k, v in parsed_args_1.items():
             if k != "_":
@@ -152,7 +151,7 @@ class SetupCommand(Bloxlink.Module):
                     "embed_title": "Setup Prompt"
 
                 }
-            ], dm=True)
+            ], dm=True, no_dm_post=True)
 
             if parsed_args_2["merge_replace"]  == "next":
                 parsed_args_2["merge_replace"] = "skip"
@@ -197,7 +196,7 @@ class SetupCommand(Bloxlink.Module):
                     "embed_title": "Trello Verification"
 
                 }
-            ], dm=True)
+            ], dm=True, no_dm_post=True)
 
             if True: # TODO: trello verification
                 pass
@@ -215,7 +214,7 @@ class SetupCommand(Bloxlink.Module):
                 "embed_color": ORANGE_COLOR,
                 "formatting": False
             }
-        ], dm=True)
+        ], dm=True, no_dm_post=True)
 
         if group and group != "skip":
             merge_replace = parsed_args_2.get("merge_replace")
@@ -231,10 +230,11 @@ class SetupCommand(Bloxlink.Module):
                             except HTTPException:
                                 pass
 
-                sorted_rolesets = sorted(group.rolesets, key=lambda r: r["rank"], reverse=True)
+                sorted_rolesets = sorted(group.rolesets, key=lambda r: r.get("Rank") or r.get("rank"), reverse=True)
 
                 for roleset in sorted_rolesets:
-                    roleset_name = roleset["name"]
+                    roleset_name = roleset.get("Name") or roleset.get("name")
+                    roleset_rank = roleset.get("Rank") or roleset.get("rank")
 
                     if not find(lambda r: r.name == roleset_name, guild.roles):
                         try:

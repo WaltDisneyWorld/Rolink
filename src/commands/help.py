@@ -1,7 +1,7 @@
-from resources.structures.Bloxlink import Bloxlink
-from resources.modules.commands import commands
-from resources.exceptions import CancelCommand, Error
-from resources.constants import ARROW, OWNER, HELP_DESCRIPTION
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.modules.commands import commands # pylint: disable=import-error
+from resources.exceptions import CancelCommand, Error # pylint: disable=import-error
+from resources.constants import ARROW, OWNER, HELP_DESCRIPTION # pylint: disable=import-error
 from discord import Embed
 
 
@@ -93,7 +93,7 @@ class HelpCommand(Bloxlink.Module):
 
                         embed.add_field(name="Examples", value="\n".join(examples))
 
-                    await response.send(embed=embed, dm=True)
+                    await response.send(embed=embed)
 
                     break
             else:

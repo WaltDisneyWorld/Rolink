@@ -60,11 +60,12 @@ class Arguments:
 
 		return msg
 
+
 	@staticmethod
 	def in_prompt(author):
 		return prompts.get(author.id)
 
-	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True, dm=False):
+	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True, dm=False, no_dm_post=False):
 		prompts[self.author.id] = True
 
 		skipped_args = skipped_args or self.skipped_args
@@ -81,7 +82,8 @@ class Arguments:
 					dm = False
 				else:
 					await m.delete()
-					await self.response.send("**Please check your DMs to continue.**")
+					if not no_dm_post:
+						await self.response.send("**Please check your DMs to continue.**")
 			else:
 				dm = False
 
@@ -117,24 +119,27 @@ class Arguments:
 							messages.append(client_message)
 
 						if dm:
-							message_content = await broadcast(self.author.id, type="DM")
-							my_arg = message_content["0"]
+							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1)
+							my_arg = message_content[0]
 
 							if my_arg in ("cluster offline", "cluster timeout"):
 								raise Error("There's a temporary Bloxlink issue preventing this from working.\n"
 											"Please try again later.")
 						else:
 							message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
-							my_arg = message.content
 
+							my_arg = message.content
 							self.messages.append(message)
 							messages.append(message)
 
-						if my_arg.lower() == "cancel":
-							raise CancelledPrompt(type="delete")
+						my_arg_lower = my_arg.lower()
+						if my_arg_lower == "cancel":
+							raise CancelledPrompt(type="delete", dm=dm)
+						elif my_arg_lower == "cancel (timeout)":
+							raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)", dm=dm)
 
 					except TimeoutError:
-						raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)")
+						raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)", dm=dm)
 
 				resolver = get_resolver(prompt.get("type", "string"))
 				resolved, error_message = await resolver(not dm and message, prompt, my_arg)
@@ -147,14 +152,14 @@ class Arguments:
 							if not res[0][0]:
 								error_message = res[0][1]
 								resolved = False
-							else:
-								resolved = res[0][0]
+
 						else:
 							if not res[0]:
 								error_message = "Prompt failed validation. Please try again."
 								resolved = False
-							else:
-								resolved = res[0]
+
+						if resolved:
+							resolved = res[0]
 				else:
 					error_message = f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{error_message}``"
 
@@ -165,7 +170,6 @@ class Arguments:
 					client_message = await self.say(error_message, type="error", embed=embed, dm=dm)
 
 					if client_message and not dm:
-						self.messages.append(client_message)
 						messages.append(client_message)
 
 					try:
@@ -176,25 +180,10 @@ class Arguments:
 					err_count += 1
 
 
-
 			if return_messages:
 				return resolved_args, messages
 
 			return resolved_args
-
-		except CancelledPrompt as e:
-			try:
-				if e.type == "delete":
-					# delete everything
-					self.messages.append(self.message)
-					messages.append(self.message)
-					raise CancelCommand
-				else:
-					# delete (]
-					raise CancelledPrompt(e)
-			finally:
-				if dm:
-					await self.response.send("**Cancelled prompt.**", dm=True, no_dm_post=True)
 
 		finally:
 			del prompts[self.author.id]
@@ -205,6 +194,7 @@ class Arguments:
 						await message.delete()
 					except (Forbidden, NotFound, HTTPException):
 						pass
+
 
 	def _check_prompt(self):
 		def wrapper(message):

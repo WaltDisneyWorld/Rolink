@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from discord.errors import Forbidden, NotFound
 from discord import Embed
 from resources.exceptions import Message, UserNotVerified, Error # pylint: disable=import-error
-from resources.constants import WELCOME_MESSAGE, NICKNAME_TEMPLATES
+from resources.constants import DEFAULTS, NICKNAME_TEMPLATES
 from config import TRELLO
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 
@@ -52,7 +52,7 @@ class VerifyCommand(Bloxlink.Module):
             await self.add(CommandArgs)
         else:
 
-            welcome_message = guild_data.get("welcomeMessage", WELCOME_MESSAGE)
+            welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
             raise Message(welcome_message)
@@ -114,6 +114,8 @@ class VerifyCommand(Bloxlink.Module):
                 await CommandArgs.response.send(e)
         except Error as e:
             await CommandArgs.response.error(e)
+        except UserNotVerified:
+            raise Message("I cannot update you due to you having the ``Bloxlink Bypass`` role!")
         else:
             added, removed, nickname, errors, roblox_user = await update_member(
                 author,
@@ -124,7 +126,7 @@ class VerifyCommand(Bloxlink.Module):
                 author_data          = await self.r.table("users").get(str(author.id)).run(),
                 given_trello_options = True)
 
-            welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", WELCOME_MESSAGE)
+            welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
 
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 

@@ -192,10 +192,16 @@ class Commands(Bloxlink.Module):
                         except RobloxDown:
                             await response.error("The Roblox API is currently offline; please wait until Roblox is back online before re-running this command.")
                         except CancelledPrompt as e:
+                            if e.type == "delete" and not e.dm:
+                                try:
+                                    await message.delete()
+                                except (Forbidden, NotFound):
+                                    pass
+
                             if e.args:
-                                await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}")
+                                await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}", dm=e.dm, no_dm_post=True)
                             else:
-                                await response.send(f"**{locale('prompt.cancelledPrompt')}.**")
+                                await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
 
                             if messages:
                                 for message in messages:

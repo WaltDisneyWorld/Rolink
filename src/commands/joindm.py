@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES, WELCOME_MESSAGE, UNVERIFIED_TEMPLATES
+from resources.constants import NICKNAME_TEMPLATES, DEFAULTS, UNVERIFIED_TEMPLATES
 from resources.exceptions import Message
 from discord.errors import NotFound, HTTPException, Forbidden
 
@@ -31,7 +31,7 @@ class JoinDMCommand(Bloxlink.Module):
         messages = []
 
         guild_data = CommandArgs.guild_data
-        verifiedDM = guild_data.get("verifiedDM", WELCOME_MESSAGE)
+        verifiedDM = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
 
         response = CommandArgs.response
 

@@ -1,6 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
 from resources.exceptions import Error, Message, UserNotVerified  # pylint: disable=import-error
-from resources.constants import WELCOME_MESSAGE  # pylint: disable=import-error
+from resources.constants import DEFAULTS  # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound, HTTPException
 
 
@@ -96,7 +96,7 @@ class SwitchUserCommand(Bloxlink.Module):
                     options_trello, _ = await get_options(trello_board)
                     guild_data.update(options_trello)
 
-                allow_reverify = guild_data.get("allowReVerify", True)
+                allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
 
                 try:
                     member = await guild.fetch_member(author.id)
@@ -139,7 +139,7 @@ class SwitchUserCommand(Bloxlink.Module):
                         author_data  = await self.r.table("users").get(str(author.id)).run())
 
 
-                    welcome_message = guild_data.get("welcomeMessage") or WELCOME_MESSAGE
+                    welcome_message = guild_data.get("welcomeMessage") or DEFAULTS.get("welcomeMessage")
 
                     welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 

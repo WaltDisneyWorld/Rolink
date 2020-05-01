@@ -138,7 +138,7 @@ class DelBindCommand(Bloxlink.Module):
         if not ((role_binds_trello or {}).get("groups") or group_ids_trello):
             additional = (not trello_binds_list and "\nAdditionally, you may use "
                          f"``{prefix}setup`` to link a Trello board for bind-to-card creation.") or ""
-            raise Message(f"You have no bounded roles! Please use ``{prefix}bind``"
+            raise Message(f"You have no bounded roles! Please use ``{prefix}bind`` "
                           f"to make a new role bind. {additional}", type="silly")
 
         bind_id = CommandArgs.parsed_args["bind_id"]
@@ -190,7 +190,8 @@ class DelBindCommand(Bloxlink.Module):
 
                 if rank_id in ("everything", "everything."):
                     if found_group:
-                        del role_binds[bind_id]
+                        if role_binds.get(bind_id):
+                            del role_binds[bind_id]
 
                     await delete_bind_from_cards(rank="everything", trello_binds_list=trello_binds_list, group=bind_id, bind_data_trello=found_group_trello)
 

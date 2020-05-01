@@ -1,4 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.constants import DEFAULTS
 
 @Bloxlink.command
 class AutoRolesCommand(Bloxlink.Module):
@@ -13,7 +14,7 @@ class AutoRolesCommand(Bloxlink.Module):
         response = CommandArgs.response
         guild_data = CommandArgs.guild_data
 
-        toggle = not guild_data.get("autoRoles", True)
+        toggle = not guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
 
         guild_data["autoRoles"] = toggle
 

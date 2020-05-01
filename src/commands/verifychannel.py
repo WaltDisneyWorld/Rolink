@@ -1,5 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import PermissionError # pylint: disable=import-error
+from resources.constants import DEFAULTS
 from discord.utils import find
 from discord.errors import Forbidden, NotFound
 
@@ -38,7 +39,7 @@ class VerifyChannelCommand(Bloxlink.Module):
         try:
             await verify_info.set_permissions(guild.me, send_messages=True, read_messages=True)
 
-            verified_role_name = guild_data.get("verifiedRoleName", "Verified")
+            verified_role_name = guild_data.get("verifiedRoleName", DEFAULTS.get("verifiedRoleName"))
 
             for role in guild.roles:
                 if role.name != guild.me.name:

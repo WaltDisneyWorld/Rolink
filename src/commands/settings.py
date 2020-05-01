@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Message, Error, CancelledPrompt # pylint: disable=import-error
+from resources.exceptions import Message, Error, CancelledPrompt, PermissionError # pylint: disable=import-error
 from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
 from config import TRELLO # pylint: disable=no-name-in-module
 from discord import Embed
@@ -45,7 +45,7 @@ class SettingsCommand(Bloxlink.Module):
 
         if choice in ("change", "reset"):
             if not CommandArgs.has_permission:
-                raise PermissionError("You do not meet the required permissions to change server settings.")
+                raise PermissionError("You do not have the required permissions to change server settings.")
 
         if choice == "view":
             await self.view(CommandArgs)
@@ -64,6 +64,7 @@ class SettingsCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         response = CommandArgs.response
         trello_board = CommandArgs.trello_board
+        prefix = CommandArgs.prefix
 
         embed = Embed(title="Bloxlink Settings")
         text_buffer = []
@@ -79,7 +80,10 @@ class SettingsCommand(Bloxlink.Module):
             if option_data[0]:
                 value = option_data[0](guild_data) # pylint: disable=not-callable
             else:
-                value = guild_data.get(option_name, DEFAULTS.get(option_name, "False"))
+                try:
+                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False"))).format(prefix=prefix)
+                except KeyError:
+                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False")))
 
             text_buffer.append(f"**{option_name}** {ARROW} {value}")
 
@@ -95,7 +99,7 @@ class SettingsCommand(Bloxlink.Module):
         """change your Bloxlink settings"""
 
         if not CommandArgs.has_permission:
-            raise PermissionError("You do not meet the required permissions to change server settings.")
+            raise PermissionError("You do not have the required permissions to change server settings.")
 
         prefix = CommandArgs.prefix
         guild = CommandArgs.message.guild
@@ -140,12 +144,17 @@ class SettingsCommand(Bloxlink.Module):
                     "prompt": f"Would you like to **enable** or **disable** ``{choice}``?",
                     "name": "choice",
                     "type": "choice",
+                    "footer": "Say **clear** to set as the default value.",
                     "formatting": False,
-                    "choices": ("enable", "disable")
+                    "choices": ("enable", "disable", "clear")
                 }])
 
                 parsed_bool_choice = parsed_value["choice"]
-                parsed_value = parsed_bool_choice == "enable"
+
+                if parsed_bool_choice == "clear":
+                    parsed_value = DEFAULTS.get(choice)
+                else:
+                    parsed_value = parsed_bool_choice == "enable"
 
                 await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
@@ -159,9 +168,13 @@ class SettingsCommand(Bloxlink.Module):
                     "prompt": f"Please specify a new value for ``{choice}``.",
                     "name": "choice",
                     "type": "string",
+                    "footer": "Say **clear** to set as the default value.",
                     "formatting": False,
                     "max": option_find[2]
                 }]))["choice"]
+
+                if parsed_value == "clear":
+                    parsed_value = DEFAULTS.get(choice)
 
                 await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
@@ -188,7 +201,8 @@ class SettingsCommand(Bloxlink.Module):
 
                     await trello_settings_list.create_card(name=choice, desc=str(parsed_value))
 
-                await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                if trello_binds_list:
+                    await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
 
             except TrelloUnauthorized:
                 await response.error("In order for me to edit your Trello settings, please add ``@bloxlink`` to your "
@@ -206,7 +220,7 @@ class SettingsCommand(Bloxlink.Module):
         """reset either ALL of your settings, or just your binds"""
 
         if not CommandArgs.has_permission:
-            raise PermissionError("You do not meet the required permissions to change server settings.")
+            raise PermissionError("You do not have the required permissions to change server settings.")
 
         prefix = CommandArgs.prefix
         guild = CommandArgs.message.guild

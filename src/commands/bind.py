@@ -8,6 +8,7 @@ from discord.utils import find
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 
 bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
+roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
 get_group, parse_trello_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds"])
 
@@ -20,8 +21,8 @@ class BindCommand(Bloxlink.Module):
         self.arguments = [
             {
                 "prompt": "Please specify the Group ID to integrate with. The group ID is the rightmost numbers on your Group URL.",
-                "name": "groupID",
-                "type": "number",
+                "name": "group",
+                "validation": self.validate_group
             },
             {
                 "prompt": f"Would you like to integrate the entire group to receive roles (binds will be made for _all_ Rolesets), or only select a few ranks to receive a role?\n\n"
@@ -53,18 +54,34 @@ class BindCommand(Bloxlink.Module):
 
         return {}, 0
 
+    @staticmethod
+    async def validate_group(message, content):
+        if content.lower() in ("skip", "next"):
+            return "skip"
+
+        regex_search = roblox_group_regex.search(content)
+
+        if regex_search:
+            group_id = regex_search.group(1)
+        else:
+            group_id = content
+
+        try:
+            group = await get_group(group_id, rolesets=True)
+        except RobloxNotFound:
+            return None, "No group was found with this ID. Please try again."
+
+        return group
+
     async def __main__(self, CommandArgs):
         guild = CommandArgs.message.guild
         response = CommandArgs.response
         args = CommandArgs.parsed_args
 
-        group_id = str(args["groupID"])
         nickname = args["nickname"]
 
-        try:
-            group = await get_group(group_id, rolesets=True)
-        except RobloxNotFound:
-            raise Error(f"A group with ID ``{group_id}`` does not exist. Please try again.")
+        group = args["group"]
+        group_id = group.group_id
 
         prompt_messages = CommandArgs.prompt_messages
 
@@ -140,8 +157,8 @@ class BindCommand(Bloxlink.Module):
                         raise Message("This group is already linked.", type="silly")
 
                 for roleset in group.rolesets:
-                    roleset_name = roleset["name"]
-                    roleset_rank = roleset["rank"]
+                    roleset_name = roleset.get("Name") or roleset.get("name")
+                    roleset_rank = roleset.get("Rank") or roleset.get("rank")
 
                     if roleset_rank:
                         discord_role = find(lambda r: r.name == roleset_name, guild.roles)
@@ -263,8 +280,11 @@ class BindCommand(Bloxlink.Module):
 
                         for roleset in group.rolesets:
                             if roleset_rank:
-                                if roleset["name"] in pending_roleset_names and roleset["name"] not in new_ranks["binds"]:
-                                    new_ranks["binds"].append(str(roleset["rank"]))
+                                roleset_name = roleset.get("Name") or roleset.get("name")
+                                roleset_rank = roleset.get("Rank") or roleset.get("rank")
+
+                                if roleset_name in pending_roleset_names and roleset_name not in new_ranks["binds"]:
+                                    new_ranks["binds"].append(str(roleset_rank))
                                     found = True
 
                         if not found:

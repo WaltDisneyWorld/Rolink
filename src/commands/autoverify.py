@@ -1,4 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.constants import DEFAULTS
 
 @Bloxlink.command
 class AutoVerifyCommand(Bloxlink.Module):
@@ -13,7 +14,7 @@ class AutoVerifyCommand(Bloxlink.Module):
         response = CommandArgs.response
         guild_data = CommandArgs.guild_data
 
-        toggle = not guild_data.get("autoVerification", True)
+        toggle = not guild_data.get("autoVerification", DEFAULTS.get("autoVerification"))
 
         guild_data["autoVerification"] = toggle
 

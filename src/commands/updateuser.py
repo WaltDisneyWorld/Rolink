@@ -11,7 +11,7 @@ class UpdateUserCommand(Bloxlink.Module):
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_UPDATER")
-        self.aliases = ["update"]
+        self.aliases = ["update", "updateroles"]
         self.arguments = [
             {
                 "prompt": "Please specify user(s) to update. For example: ``@user1 @user2 @user3``",
@@ -30,8 +30,6 @@ class UpdateUserCommand(Bloxlink.Module):
         guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
-        author = CommandArgs.message.author
-
         trello_board = CommandArgs.trello_board
         trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
@@ -47,7 +45,7 @@ class UpdateUserCommand(Bloxlink.Module):
                             trello_binds_list = trello_binds_list,
                             roles             = True,
                             nickname          = True,
-                            author_data       = await self.r.table("users").get(str(author.id)).run())
+                            author_data       = await self.r.table("users").get(str(user.id)).run())
                     except UserNotVerified:
                         await response.send(f"{REACTIONS['ERROR']} {user.mention} **not linked to Bloxlink**")
                     else:
@@ -65,7 +63,7 @@ class UpdateUserCommand(Bloxlink.Module):
                         trello_binds_list = trello_binds_list,
                         roles             = True,
                         nickname          = True,
-                        author_data       = await self.r.table("users").get(str(author.id)).run())
+                        author_data       = await self.r.table("users").get(str(user.id)).run())
 
                     embed = Embed(title=f"Discord Profile for {user}")
                     embed.set_author(name=str(user), icon_url=user.avatar_url, url=roblox_user.profile_link)
