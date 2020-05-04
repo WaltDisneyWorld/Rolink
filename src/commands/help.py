@@ -47,7 +47,7 @@ class HelpCommand(Bloxlink.Module):
                     permissions = command.permissions
                     permission_text = []
 
-                    if permissions.premium or command.category == "Premium":
+                    if (permissions.premium or command.category == "Premium") and not command.free_to_use:
                         permission_text.append("**Premium Command**\nThis command can only be used by Bloxlink Premium members.")
 
                     if permissions.bloxlink_role:

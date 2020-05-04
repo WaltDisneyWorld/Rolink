@@ -6,14 +6,13 @@ from re import search
 VERSION = "v3.0 ALPHA"
 
 RELEASE = env.get("RELEASE", "LOCAL")
-IS_DOCKER = env.get("LABEL")
+IS_DOCKER = bool(env.get("RELEASE"))
 
 
 SHARDS_PER_CLUSTER = int(env.get("SHARDS_PER_CLUSTER", "1"))
 
 CLUSTER_ID = env.get("CLUSTER_ID") or search(r".+\-(\d)", env.get("HOSTNAME", "canary-0"))
-CLUSTER_ID = (CLUSTER_ID and (isinstance(CLUSTER_ID, str) and CLUSTER_ID.isdigit() and int(CLUSTER_ID or int(CLUSTER_ID.group(1))))) or 0
-
+CLUSTER_ID = (CLUSTER_ID and (isinstance(CLUSTER_ID, str) and CLUSTER_ID.isdigit() and int(CLUSTER_ID)) or int(CLUSTER_ID.group(1))) or 0
 
 SHARD_COUNT = int(env.get("SHARD_COUNT", "1"))
 
@@ -32,9 +31,10 @@ for _ in range(SHARDS_PER_CLUSTER):
 
 STARTED = time()
 
-RED_COLOR = 0xE74C3C
+RED_COLOR       = 0xE74C3C
 INVISIBLE_COLOR = 0x36393E
-ORANGE_COLOR = 0xCE8037
+ORANGE_COLOR    = 0xCE8037
+GOLD_COLOR      = 0xFDC333
 
 NICKNAME_TEMPLATES = (
     "{roblox-name} \u2192 changes to their Roblox username\n"
@@ -68,7 +68,6 @@ OPTIONS = {                # fn,  type, max length, desc
     "welcomeMessage":      (None, "string", 1500,  "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"), #
     "joinDM":              (None, None, None,      "Customize the join DM messages of people who join the server."), #
     "persistRoles":        (None, "boolean", None, "Update members' roles/nickname as they type."),
-    "groupLock":           (None, "boolean", None, "Lock your server to members of a group."),
     "allowReVerify":       (None, "boolean", None, "If this is enabled: members can change their Roblox account as many times as they want to in your server; otherwise, only allow 1 account."), #
     "trelloID":            (None,  None, None,     "Link a Trello board that can change Bloxlink settings!"), #
     "nicknameTemplate":    (None,  "string", 100, "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),

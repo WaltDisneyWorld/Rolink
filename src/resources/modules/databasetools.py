@@ -10,7 +10,10 @@ TABLE_STRUCTURE = {
 	"canary": [
 		"guilds",
 	],
-	"patreon": []
+	"patreon": [
+		"refreshTokens",
+		"patrons"
+	]
 }
 
 @Bloxlink.module

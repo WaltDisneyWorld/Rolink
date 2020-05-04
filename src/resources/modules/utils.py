@@ -1,13 +1,18 @@
 from os import listdir
 from re import compile
-from ..structures.Bloxlink import Bloxlink
+from ..structures import Bloxlink, DonatorProfile
 from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound
-from config import RELEASE, PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
+from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
+from ..constants import RELEASE
 from discord.errors import NotFound, Forbidden
 from discord.utils import find
+from discord import Object
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
+from time import time
+from math import ceil
 import asyncio
 
+is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
 
 @Bloxlink.module
 class Utils(Bloxlink.Module):
@@ -58,7 +63,7 @@ class Utils(Bloxlink.Module):
 				raise ServerDisconnectedError
 
 		except ClientOSError:
-			# todo: raise HttpError with non-roblox URLs
+			# TODO: raise HttpError with non-roblox URLs
 			raise RobloxAPIError
 
 	async def get_prefix(self, guild=None, guild_data=None, trello_board=None):
@@ -113,3 +118,75 @@ class Utils(Bloxlink.Module):
 
 
 		return False
+
+
+	async def has_selly_premium(self, author, author_data):
+		premium = author_data.get("premium") or {}
+		expiry = premium and premium.get("expiry")
+		# tier = premium and premium.get("tier", "bronze")
+
+		if not expiry and expiry != 0:
+			return False
+
+		t = time()
+		is_p = expiry == 0 or expiry > t
+		days = expiry != 0 and expiry > t and ceil((expiry - t)/86400) or 0
+
+		if is_p:
+			codes_redeemed = author_data.get("redeemed", {})
+
+			return {
+				"days": days,
+				"codes_redeemed": codes_redeemed,
+				"pro_access": premium.get("pro")
+			}
+		else:
+			return False
+
+
+	async def has_patreon_premium(self, author, author_data):
+		patron_data = await is_patron(author)
+
+		return patron_data
+
+
+	async def is_premium(self, author, author_data=None, rec=True):
+		author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {"id": str(author.id)}
+		premium_data = author_data.get("premium") or {}
+
+		if premium_data.get("transferTo"):
+			return False, premium_data["transferTo"]
+		elif premium_data.get("transferFrom") and rec:
+			transfer_from = premium_data["transferFrom"]
+			transferee_premium, _ = await self.is_premium(Object(id=transfer_from), None, rec=False)
+
+			if transferee_premium:
+				return transferee_premium, _
+
+
+		data_patreon = await self.has_patreon_premium(author, author_data)
+
+		if data_patreon:
+			profile = DonatorProfile(author)
+			profile.load_patreon(data_patreon)
+			profile.add_features("premium", "pro")
+
+			return profile, None
+		else:
+			data_selly = await self.has_selly_premium(author, author_data)
+
+			if data_selly:
+				profile = DonatorProfile(author)
+				profile.load_selly(data_selly)
+
+				features = ["premium"]
+
+				if data_selly.get("pro_access"):
+					features.append("pro")
+
+				profile.add_features(*features)
+
+				return profile, None
+
+
+		return False, None
