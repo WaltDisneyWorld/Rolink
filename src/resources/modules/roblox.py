@@ -6,8 +6,8 @@ from discord.errors import Forbidden, NotFound
 from discord.utils import find
 from discord import Embed, Member
 from datetime import datetime
-from config import WORDS, RELEASE, TRELLO # pylint: disable=no-name-in-module
-from resources.constants import DEFAULTS # pylint: disable=import-error
+from config import WORDS, TRELLO # pylint: disable=no-name-in-module
+from ..constants import RELEASE, DEFAULTS
 import json
 import random
 import re
@@ -1093,7 +1093,7 @@ class Roblox(Bloxlink.Module):
                             "choices": ["code", "game"],
                             "name": "verification_choice"
                         }
-                    ], return_messages=True)
+                    ], return_messages=True, dm=True, no_dm_post=True)
 
 
                     messages += messages1
@@ -1101,8 +1101,8 @@ class Roblox(Bloxlink.Module):
                     if args["verification_choice"] == "code":
                         code = self.generate_code()
 
-                        msg1 = await response.send(f"To confirm that you own this Roblox account, please put this code in your description or status:")
-                        msg2 = await response.send(f"```{code}```")
+                        msg1 = await response.send(f"To confirm that you own this Roblox account, please put this code in your description or status:", dm=True, no_dm_post=True)
+                        msg2 = await response.send(f"```{code}```", dm=True, no_dm_post=True)
 
                         if msg1:
                             messages.append(msg1)
@@ -1114,7 +1114,7 @@ class Roblox(Bloxlink.Module):
                             "name": "verification_next",
                             "type": "choice",
                             "choices": ["done"]
-                        }], embed=False, return_messages=True)
+                        }], embed=False, return_messages=True, dm=True, no_dm_post=True)
 
                         if msg3:
                             messages += msg3
@@ -1142,7 +1142,7 @@ class Roblox(Bloxlink.Module):
                                     "choices": ["done"],
                                     "name": "retry"
                                 }
-                            ], error=True, return_messages=True)
+                            ], error=True, return_messages=True, dm=True, no_dm_post=True)
 
                             messages += messages2
 
@@ -1428,7 +1428,7 @@ class RobloxUser(Bloxlink.Module):
                     # TODO
                     pass
 
-                if everything or "badges" in args:
+                if (everything or "badges" in args) and badges:
                     embed[0].add_field(name="Badges", value=", ".join(badges))
 
         async def groups():
@@ -1494,7 +1494,7 @@ class RobloxUser(Bloxlink.Module):
 
             if embed:
                 if everything or "age" in args:
-                    embed[0].add_field(name="Age", value=f"{age} days")
+                    embed[0].add_field(name="Age", value=f"{age} day{age > 1 and 's' or ''}")
 
                 if everything or "join date" in args:
                     embed[0].add_field(name="Join Date", value=join_date)

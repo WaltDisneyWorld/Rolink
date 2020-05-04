@@ -86,7 +86,7 @@ class VerifyCommand(Bloxlink.Module):
             "choices": ["yes", "no"]
         })
 
-        args, messages = await CommandArgs.prompt(args, return_messages=True)
+        args, messages = await CommandArgs.prompt(args, return_messages=True, dm=True)
         username = username or args["username"]
 
         # TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
@@ -130,7 +130,7 @@ class VerifyCommand(Bloxlink.Module):
 
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-            await CommandArgs.response.send(welcome_message)
+            await CommandArgs.response.send(welcome_message, dm=True, no_dm_post=True)
 
 
         finally:
