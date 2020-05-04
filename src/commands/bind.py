@@ -217,7 +217,7 @@ class BindCommand(Bloxlink.Module):
 
                 prompt_messages += messages
 
-                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x['name']}** {ARROW} {x['rank']}" for x in group.rolesets if x['rank']))
+                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x['name']}** {ARROW} {x.get('Rank') or x.get('rank')}" for x in group.rolesets if x.get('Rank') or x.get('rank')))
 
                 rolesets_embed = await CommandArgs.response.send(embed=rolesets_embed)
 

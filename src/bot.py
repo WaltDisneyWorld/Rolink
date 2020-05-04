@@ -30,7 +30,8 @@ async def main():
 
 
 if __name__ == "__main__":
-	token = environ.get("token") or getattr(config, "TOKEN")
+	token = environ.get("TOKEN") or getattr(config, "TOKEN")
+
 	loop.create_task(main())
 
 	Bloxlink.run(token)

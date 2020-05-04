@@ -4,7 +4,8 @@ from discord import Embed
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import CancelledPrompt, CancelCommand, Error
 from ..constants import RED_COLOR, INVISIBLE_COLOR
-from config import PROMPT, RELEASE, IS_DOCKER # pylint: disable=no-name-in-module
+from config import PROMPT, RELEASE # pylint: disable=no-name-in-module
+from ..constants import IS_DOCKER
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
 broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
@@ -119,12 +120,12 @@ class Arguments:
 							messages.append(client_message)
 
 						if dm:
-							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1)
+							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
 							my_arg = message_content[0]
 
-							if my_arg in ("cluster offline", "cluster timeout"):
-								raise Error("There's a temporary Bloxlink issue preventing this from working.\n"
-											"Please try again later.")
+							if my_arg == "cluster timeout":
+								my_arg = "cancel (timeout)"
+
 						else:
 							message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
 
