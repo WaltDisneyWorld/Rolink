@@ -1,8 +1,8 @@
 from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient
-from config import RETHINKDB, WEBHOOKS # pylint: disable=E0611
-from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT
+from config import WEBHOOKS # pylint: disable=E0611
+from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER
 from . import Args, Permissions
 from ast import literal_eval
 from async_timeout import timeout
@@ -11,6 +11,7 @@ import traceback
 import datetime
 import logging
 import aiohttp
+import aredis
 import asyncio; loop = asyncio.get_event_loop()
 
 from rethinkdb.errors import ReqlDriverError
@@ -31,6 +32,24 @@ logger = logging.getLogger()
 
 
 loaded_modules = {}
+
+try:
+    from config import RETHINKDB
+except ImportError:
+    RETHINKDB = {
+        "HOST": env.get("RETHINKDB_HOST"),
+        "PASSWORD": env.get("RETHINKDB_PASSWORD"),
+        "PORT": int(env.get("RETHINKDB_PORT")),
+        "DB": env.get("RETHINKDB_DB")
+    }
+
+try:
+    from config import REDIS
+except ImportError:
+    REDIS = {
+        "HOST": env.get("REDIS_HOST"),
+        "PORT": int(env.get("REDIS_PORT")),
+    }
 
 
 class BloxlinkStructure(AutoShardedClient):
@@ -180,13 +199,12 @@ class BloxlinkStructure(AutoShardedClient):
                 return True
 
         while True:
-            for host in RETHINKDB["HOSTS"]:
+            for host in [RETHINKDB["HOST"], "rethinkdb", "localhost"]:
                 async with timeout(2):
                     success = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
 
                     if success:
                         return
-
 
     @staticmethod
     def command(*args, **kwargs):
@@ -228,5 +246,6 @@ class Module:
     r = r
     session = aiohttp.ClientSession(loop=loop)
     loop = loop
+    redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"])
 
 Bloxlink.Module = Module

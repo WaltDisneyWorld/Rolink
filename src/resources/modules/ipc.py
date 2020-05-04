@@ -4,14 +4,16 @@ import uuid
 import asyncio
 from ..structures.Bloxlink import Bloxlink
 from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER
-from config import REDIS, PROMPT # pylint: disable=import-error, no-name-in-module
+from config import PROMPT # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
+from os import environ as env
 from psutil import Process
-import aredis
 import async_timeout
 
 eval = Bloxlink.get_module("evalm", attrs="__call__")
+
+
 
 
 @Bloxlink.module
@@ -132,7 +134,6 @@ class IPC(Bloxlink.Module):
 
     async def __setup__(self):
         if IS_DOCKER:
-            self.redis = aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"])
             pubsub = self.redis.pubsub()
             await pubsub.subscribe("GLOBAL", f"CLUSTER_{CLUSTER_ID}")
 

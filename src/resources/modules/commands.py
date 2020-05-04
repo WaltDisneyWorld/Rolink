@@ -1,14 +1,15 @@
 import re
 import traceback
 from concurrent.futures._base import CancelledError
+from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
-from ..structures import Command, Bloxlink, Args
-from resources.constants import MAGIC_ROLES # pylint: disable=import-error
+from ..structures import Bloxlink, Args, Permissions
+from ..constants import MAGIC_ROLES, OWNER # pylint: disable=import-error
 
 
-get_prefix = Bloxlink.get_module("utils", attrs="get_prefix")
+get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_board = Bloxlink.get_module("trello", attrs="get_board")
 
 Locale = Bloxlink.get_module("locale")
@@ -167,6 +168,19 @@ class Commands(Bloxlink.Module):
                                 await response.error(e)
 
                                 return
+                        except Message as e:
+                            message_type = "send" if e.type == "info" else e.type
+                            response_fn = getattr(response, message_type, response.send)
+
+                            if e.args:
+                                await response_fn(e)
+
+                            if subcommand_attrs.get("allow_bypass"):
+                                CommandArgs.has_permission = False
+                            elif command.permissions.allow_bypass:
+                                CommandArgs.has_permission = False
+                            else:
+                                return
 
                         else:
                             CommandArgs.has_permission = True
@@ -197,11 +211,11 @@ class Commands(Bloxlink.Module):
                                     await message.delete()
                                 except (Forbidden, NotFound):
                                     pass
-
-                            if e.args:
-                                await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}", dm=e.dm, no_dm_post=True)
                             else:
-                                await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
+                                if e.args:
+                                    await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}", dm=e.dm, no_dm_post=True)
+                                else:
+                                    await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
 
                             if messages:
                                 for message in messages:
@@ -257,8 +271,6 @@ class Commands(Bloxlink.Module):
 
 
 
-
-
     @staticmethod
     def new_command(command_structure):
         c = command_structure()
@@ -277,3 +289,144 @@ class Commands(Bloxlink.Module):
         commands[command.name] = command
 
         return command_structure
+
+class Command:
+    def __init__(self, command):
+        self.name = command.__class__.__name__.replace("Command", "").lower()
+        self.subcommands = {}
+        self.description = command.__doc__ or "N/A"
+        self.dm_allowed = getattr(command, "dm_allowed", False)
+        self.full_description = getattr(command, "full_description", self.description)
+        self.aliases = getattr(command, "aliases", [])
+        self.permissions = getattr(command, "permissions", Permissions())
+        self.arguments = getattr(command, "arguments", [])
+        self.category = getattr(command, "category", "Miscellaneous")
+        self.examples = getattr(command, "examples", [])
+        self.hidden = getattr(command, "hidden", self.category == "Developer")
+        self.free_to_use = getattr(command, "free_to_use", False)
+        self.fn = command.__main__
+        self.cooldown = getattr(command, "cooldown", 0)
+        self.premium = self.permissions.premium or self.category == "Premium"
+
+        self.usage = []
+        command_args = self.arguments
+
+        if command_args:
+            for arg in command_args:
+                if arg.get("optional"):
+                    if arg.get("default"):
+                        self.usage.append(f'[{arg.get("name")}={arg.get("default")}]')
+                    else:
+                        self.usage.append(f'[{arg.get("name")}]')
+                else:
+                    self.usage.append(f'<{arg.get("name")}>')
+
+        self.usage = " | ".join(self.usage) if self.usage else ""
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self)
+
+    async def check_permissions(self, author, locale, permissions=None):
+        permissions = permissions or self.permissions
+
+        if permissions.developer_only or self.category == "Developer":
+            if author.id != OWNER:
+                raise PermissionError("This command is reserved for the Bloxlink Developer.")
+
+        if (self.premium or permissions.premium) and not self.free_to_use:
+            prem, _ = await is_premium(author)
+
+            if not prem:
+            	raise Message("This command is reserved for Bloxlink Premium subscribers!\n"
+                              "The server owner must have premium for this to work. If you "
+                              "would like the server owner to have premium instead, please use the ``!transfer`` "
+                              "command.\nYou may subscribe to Bloxlink Premium on Patreon: https://patreon.com/bloxlink", type="silly")
+
+
+        try:
+            for role_exception in permissions.exceptions["roles"]:
+                if find(lambda r: r.name == role_exception, author.roles):
+                    return True
+
+            if permissions.bloxlink_role:
+                role_name = permissions.bloxlink_role
+                author_perms = author.guild_permissions
+
+                if role_name == "Bloxlink Manager":
+                    if author_perms.manage_guild or author_perms.administrator:
+                        pass
+                    else:
+                        raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+
+                elif role_name == "Bloxlink Moderator":
+                    if author_perms.kick_members or author_perms.ban_members or author_perms.administrator:
+                        pass
+                    else:
+                        raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
+
+                elif role_name == "Bloxlink Updater":
+                    if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
+                        pass
+                    else:
+                        raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
+                                            "role permission, or the ``Manage Server`` role permission.")
+
+                elif role_name == "Bloxlink Admin":
+                    if author_perms.administrator:
+                        pass
+                    else:
+                        raise PermissionError("You need the ``Administrator`` role permission to run this command.")
+
+            if permissions.allowed.get("discord_perms"):
+                for perm in permissions.allowed["discord_perms"]:
+                    if perm == "Manage Server":
+                        if author_perms.manage_guild or author_perms.administrator:
+                            pass
+                        else:
+                            raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+                    else:
+                        if not getattr(author_perms, perm, False) and not perm.administrator:
+                            raise PermissionError(f"You need the ``{perm}`` permission to run this command.")
+
+
+            for role in permissions.allowed["roles"]:
+                if not find(lambda r: r.name == role, author.roles):
+                    raise PermissionError(f"Missing role: ``{role}``")
+
+            if permissions.allowed.get("functions"):
+                for function in permissions.allowed["functions"]:
+
+                    if iscoroutinefunction(function):
+                        data = [await function(author)]
+                    else:
+                        data = [function(author)]
+
+                    if not data[0]:
+                        raise PermissionError
+
+                    if isinstance(data[0], tuple):
+                        if not data[0][0]:
+                            raise PermissionError(data[0][1])
+
+        except PermissionError as e:
+            if e.args:
+                raise PermissionError(e)
+
+            raise PermissionError("You do not meet the required permissions for this command.")
+
+    def parse_flags(self, content):
+        flags = {m.group(1): m.group(2) or True for m in re.finditer(r"--?(\w+)(?: ([^-]*)|$)", content)}
+
+        if flags:
+            try:
+                content = content[content.index("--"):]
+            except ValueError:
+                try:
+                    content = content[content.index("-"):]
+                except ValueError:
+                    return {}, ""
+
+        return flags, flags and content or ""

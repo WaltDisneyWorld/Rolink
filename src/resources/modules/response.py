@@ -2,7 +2,8 @@ from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException, NotFound
 from ..exceptions import PermissionError, Message
 from ..structures import Bloxlink, Paginate
-from config import PREFIX, REACTIONS, IS_DOCKER # pylint: disable=E0611
+from config import PREFIX, REACTIONS # pylint: disable=E0611
+from ..constants import IS_DOCKER
 import asyncio
 
 loop = asyncio.get_event_loop()

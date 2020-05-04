@@ -3,9 +3,18 @@ from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNot
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import BadUsage
 from time import time
-from config import TRELLO # pylint: disable=E0611
+from os import environ as env
 from resources.constants import OPTIONS
 from re import compile
+
+try:
+    from config import TRELLO
+except ImportError:
+    REDIS = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN")
+    }
+
 
 
 OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
