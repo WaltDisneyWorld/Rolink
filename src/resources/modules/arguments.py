@@ -15,14 +15,12 @@ prompts = {}
 
 @Bloxlink.loader
 class Arguments:
-	def __init__(self, skipped_args, CommandArgs):
+	def __init__(self, CommandArgs):
 		self.message = CommandArgs.message
 		self.author = CommandArgs.message.author
 
 		self.response = CommandArgs.response
 		self.locale = CommandArgs.locale
-
-		self.skipped_args = skipped_args or []
 
 		self.messages = []
 
@@ -69,7 +67,8 @@ class Arguments:
 	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True, dm=False, no_dm_post=False):
 		prompts[self.author.id] = True
 
-		skipped_args = skipped_args or self.skipped_args
+		skipped_args = skipped_args or []
+
 		checked_args = 0
 		err_count = 0
 		resolved_args = {}
@@ -94,7 +93,7 @@ class Arguments:
 					raise CancelledPrompt("Too many failed attempts.", type="delete")
 
 				prompt = arguments[checked_args]
-				skipped_arg = self.skipped_args[checked_args:checked_args+1]
+				skipped_arg = skipped_args[checked_args:checked_args+1]
 				skipped_arg = skipped_arg and skipped_arg[0] or None
 				my_arg = skipped_arg
 				message = self.message
@@ -174,7 +173,7 @@ class Arguments:
 						messages.append(client_message)
 
 					try:
-						self.skipped_args[checked_args] = None
+						skipped_args[checked_args] = None
 					except IndexError:
 						pass
 

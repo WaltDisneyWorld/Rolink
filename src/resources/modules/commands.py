@@ -24,7 +24,7 @@ class Commands(Bloxlink.Module):
         pass
 
     async def more_args(self, content_modified, arg_container, command_args):
-        arguments = Arguments(None, arg_container)
+        arguments = Arguments(arg_container)
         parsed_args = {}
 
         messages = []
@@ -66,8 +66,8 @@ class Commands(Bloxlink.Module):
                         skipped_args.append(arg)
 
 
-            arguments = Arguments(skipped_args, arg_container)
-            parsed_args, messages = await arguments.prompt(command_args, return_messages=True)
+            arguments = Arguments(arg_container)
+            parsed_args, messages = await arguments.prompt(command_args, skipped_args=skipped_args, return_messages=True)
             # TODO: catch PermissionError from resolver and post the event
 
         arg_container.add(
