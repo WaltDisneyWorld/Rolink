@@ -98,8 +98,15 @@ class Response(Bloxlink.Module):
         self.prompt = None
         self.args = CommandArgs
 
+        self.delete_message_queue = []
+
     def loading(self, text="Please wait until the operation completes."):
         return ResponseLoading(self, text)
+
+    def delete(self, *messages):
+        for message in messages:
+            if message:
+                self.delete_message_queue.append(message)
 
     async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None):
         if dm:

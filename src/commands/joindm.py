@@ -28,50 +28,41 @@ class JoinDMCommand(Bloxlink.Module):
     async def verified(self, CommandArgs):
         """set the DM message of people who are VERIFIED on Bloxlink"""
 
-        messages = []
-
         guild_data = CommandArgs.guild_data
         verifiedDM = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
 
         response = CommandArgs.response
 
         if verifiedDM:
-            messages.append(await response.send("When people join your server and are **VERIFIED** on Bloxlink, they will "
-                                f"receive this DM:"))
-            messages.append(await response.send(f"```{verifiedDM}```"))
+            response.delete(await response.send("When people join your server and are **VERIFIED** on Bloxlink, they will "
+                                               f"receive this DM:"))
+            response.delete(await response.send(f"```{verifiedDM}```"))
 
-        try:
-            parsed_args_1 = (await CommandArgs.prompt([{
-                "prompt": "Would you like to **change** the DM people get when they join and are verified, or "
-                          "would you like to **disable** this feature?\n\nPlease specify: (change, disable)",
-                "name": "option",
-                "type": "choice",
-                "choices": ("change", "disable")
-            }]))["option"]
+        parsed_args_1 = (await CommandArgs.prompt([{
+            "prompt": "Would you like to **change** the DM people get when they join and are verified, or "
+                        "would you like to **disable** this feature?\n\nPlease specify: (change, disable)",
+            "name": "option",
+            "type": "choice",
+            "choices": ("change", "disable")
+        }]))["option"]
 
-            if parsed_args_1 == "change":
-                parsed_args_2 = (await CommandArgs.prompt([{
-                    "prompt": "What would you like the text of the Verified Join DM to be? You may use "
-                             f"these templates: ```{NICKNAME_TEMPLATES}```",
-                    "name": "text",
-                    "formatting": False
-                }]))["text"]
+        if parsed_args_1 == "change":
+            parsed_args_2 = (await CommandArgs.prompt([{
+                "prompt": "What would you like the text of the Verified Join DM to be? You may use "
+                            f"these templates: ```{NICKNAME_TEMPLATES}```",
+                "name": "text",
+                "formatting": False
+            }]))["text"]
 
-                guild_data["verifiedDM"] = parsed_args_2
+            guild_data["verifiedDM"] = parsed_args_2
 
-                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
-            elif parsed_args_1 == "disable":
-                guild_data["verifiedDM"] = None
+        elif parsed_args_1 == "disable":
+            guild_data["verifiedDM"] = None
 
-                await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
-        finally:
-            try:
-                for message in messages:
-                    if message:
-                        await message.delete()
-            except (Forbidden, NotFound, HTTPException):
-                pass
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+
 
         raise Message(f"Successfully **{parsed_args_1}d** your DM message.", type="success")
 
@@ -79,51 +70,41 @@ class JoinDMCommand(Bloxlink.Module):
     async def unverified(self, CommandArgs):
         """set the DM message of people who are UNVERIFIED on Bloxlink"""
 
-        messages = []
-
         guild_data = CommandArgs.guild_data
         unverifiedDM = guild_data.get("unverifiedDM")
 
         response = CommandArgs.response
 
         if unverifiedDM:
-            messages.append(await response.send("When people join your server and are **UNVERIFIED** on Bloxlink, they will "
+            response.delete(await response.send("When people join your server and are **UNVERIFIED** on Bloxlink, they will "
                                                f"receive this DM:"))
-            messages.append(await response.send(f"```{unverifiedDM}```"))
+            response.delete(await response.send(f"```{unverifiedDM}```"))
 
 
-        try:
-            parsed_args_1 = (await CommandArgs.prompt([{
-                "prompt": "Would you like to **change** the DM people get when they join and are unverified, or "
-                          "would you like to **disable** this feature?\n\nPlease specify: (change, disable)",
-                "name": "option",
-                "type": "choice",
-                "choices": ("change", "disable")
-            }]))["option"]
+        parsed_args_1 = (await CommandArgs.prompt([{
+            "prompt": "Would you like to **change** the DM people get when they join and are unverified, or "
+                        "would you like to **disable** this feature?\n\nPlease specify: (change, disable)",
+            "name": "option",
+            "type": "choice",
+            "choices": ("change", "disable")
+        }]))["option"]
 
-            if parsed_args_1 == "change":
-                parsed_args_2 = (await CommandArgs.prompt([{
-                    "prompt": "What would you like the text of the Unverified Join DM to be? You may use "
-                             f"these templates: ```{UNVERIFIED_TEMPLATES}```",
-                    "name": "text",
-                    "formatting": False
-                }]))["text"]
+        if parsed_args_1 == "change":
+            parsed_args_2 = (await CommandArgs.prompt([{
+                "prompt": "What would you like the text of the Unverified Join DM to be? You may use "
+                            f"these templates: ```{UNVERIFIED_TEMPLATES}```",
+                "name": "text",
+                "formatting": False
+            }]))["text"]
 
-                guild_data["unverifiedDM"] = parsed_args_2
+            guild_data["unverifiedDM"] = parsed_args_2
 
-                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
 
-            elif parsed_args_1 == "disable":
-                guild_data["unverifiedDM"] = None
+        elif parsed_args_1 == "disable":
+            guild_data["unverifiedDM"] = None
 
-                await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
-        finally:
-            try:
-                for message in messages:
-                    if message:
-                        await message.delete()
-            except (Forbidden, NotFound, HTTPException):
-                pass
+            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
 
         raise Message(f"Successfully **{parsed_args_1}d** your DM message.", type="success")

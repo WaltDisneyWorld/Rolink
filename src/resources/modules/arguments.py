@@ -57,6 +57,9 @@ class Arguments:
 
 			return await self.response.send(text, dm=dm, no_dm_post=True)
 
+		if msg and not dm:
+			self.messages.append(msg)
+
 		return msg
 
 
@@ -64,7 +67,7 @@ class Arguments:
 	def in_prompt(author):
 		return prompts.get(author.id)
 
-	async def prompt(self, arguments, skipped_args=None, error=False, return_messages=False, embed=True, dm=False, no_dm_post=False):
+	async def prompt(self, arguments, skipped_args=None, error=False, embed=True, dm=False, no_dm_post=False):
 		prompts[self.author.id] = True
 
 		skipped_args = skipped_args or []
@@ -72,7 +75,7 @@ class Arguments:
 		checked_args = 0
 		err_count = 0
 		resolved_args = {}
-		messages = []
+		had_args = {x:True for x, y in enumerate(skipped_args)}
 
 		if dm:
 			if IS_DOCKER:
@@ -98,7 +101,7 @@ class Arguments:
 				my_arg = skipped_arg
 				message = self.message
 
-				if prompt.get("optional") and not skipped_arg:
+				if prompt.get("optional") and not had_args.get(checked_args):
 					resolved_args[prompt["name"]] = None
 					checked_args += 1
 
@@ -106,17 +109,12 @@ class Arguments:
 
 				formatting = prompt.get("formatting", True)
 
-
 				if not skipped_arg:
 					try:
 						if formatting:
 							prompt["prompt"] = prompt["prompt"].format(**resolved_args)
 
-						client_message = await self.say(prompt["prompt"], embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
-
-						if client_message:
-							self.messages.append(client_message)
-							messages.append(client_message)
+						await self.say(prompt["prompt"], embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 
 						if dm:
 							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
@@ -130,7 +128,6 @@ class Arguments:
 
 							my_arg = message.content
 							self.messages.append(message)
-							messages.append(message)
 
 						my_arg_lower = my_arg.lower()
 						if my_arg_lower == "cancel":
@@ -167,33 +164,21 @@ class Arguments:
 					checked_args += 1
 					resolved_args[prompt["name"]] = resolved
 				else:
-					client_message = await self.say(error_message, type="error", embed=embed, dm=dm)
-
-					if client_message and not dm:
-						messages.append(client_message)
+					await self.say(error_message, type="error", embed=embed, dm=dm)
 
 					try:
 						skipped_args[checked_args] = None
+						had_args[checked_args] = True
 					except IndexError:
 						pass
 
 					err_count += 1
 
 
-			if return_messages:
-				return resolved_args, messages
-
 			return resolved_args
 
 		finally:
 			del prompts[self.author.id]
-
-			if not dm:
-				for message in self.messages:
-					try:
-						await message.delete()
-					except (Forbidden, NotFound, HTTPException):
-						pass
 
 
 	def _check_prompt(self):
