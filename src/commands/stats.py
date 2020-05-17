@@ -21,8 +21,6 @@ class StatsCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
-
-
         clusters = 0
 
         if IS_DOCKER:
@@ -33,7 +31,6 @@ class StatsCommand(Bloxlink.Module):
 
             stats = await broadcast(None, type="STATS")
             clusters = len(stats)
-            print(stats, flush=True)
 
             for cluster_id, cluster_data in stats.items():
                 if cluster_data in ("cluster offline", "cluster timeout"):
@@ -78,7 +75,7 @@ class StatsCommand(Bloxlink.Module):
 
         uptime = f"{days or ''} {hours or ''} {minutes or ''} {seconds or ''}".strip()
 
-        embed = Embed(description=f"Showing collective stats for **{clusters}** clusters")
+        embed = Embed(description=f"Showing collective stats from **{clusters}** clusters")
         embed.set_author(name=Bloxlink.user.name, icon_url=Bloxlink.user.avatar_url)
 
         embed.add_field(name="Version", value=VERSION)
