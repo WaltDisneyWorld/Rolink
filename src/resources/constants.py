@@ -57,21 +57,23 @@ UNVERIFIED_TEMPLATES = (
 )
 
 OPTIONS = {                # fn,  type, max length, desc
-    "prefix":              (None, "string", 10,    "The prefix is used before commands to activate them"), #
-    "verifiedRoleName":    (None, "string", 20,    "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."), #
-    "verifiedRoleEnabled": (None, "boolean", None, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."), #
-    "Linked Groups":       (None,  None, None,     "Bind groups to your server so group members get specific roles."), #
-    "allowOldRoles":       (None, "boolean", None, "Bloxlink will NOT remove roles if this is enabled."), #
-    "autoRoles":           (None, "boolean", None, "Bloxlink will give all matching/corresponding roles to people who join the server. Set eligible roles with ``{prefix}bind``. Note that this being enabled will override 'autoVerification'."), #
-    "autoVerification":    (None, "boolean", None, "Bloxlink will give the Verified role to people who join the server and are linked to Bloxlink.\nNote that 'autoRoles' being enabled overrides this setting."), #
-    "dynamicRoles":        (None, "boolean", None, "Bloxlink will make missing group roles from your Linked Groups as people need them."), #
-    "welcomeMessage":      (None, "string", 1500,  "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"), #
-    "joinDM":              (None, None, None,      "Customize the join DM messages of people who join the server."), #
-    "persistRoles":        (None, "boolean", None, "Update members' roles/nickname as they type."),
-    "allowReVerify":       (None, "boolean", None, "If this is enabled: members can change their Roblox account as many times as they want to in your server; otherwise, only allow 1 account."), #
-    "trelloID":            (None,  None, None,     "Link a Trello board that can change Bloxlink settings!"), #
-    "nicknameTemplate":    (None,  "string", 100, "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),
-    "unverifiedRoleName":  (None,  "string", 100, "Set the 'Unverified' role name -- the role that Unverified users get."),
+    "prefix":                (None, "string", 10,    "The prefix is used before commands to activate them"), #
+    "verifiedRoleName":      (None, "string", 20,    "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."), #
+    "verifiedRoleEnabled":   (None, "boolean", None, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."), #
+    "unverifiedRoleEnabled": (None, "boolean", None, "The Unverified role is given to people who aren't linked on Bloxlink. Enable/disable it here."), #
+    "Linked Groups":         (None,  None, None,     "Bind groups to your server so group members get specific roles."), #
+    "allowOldRoles":         (None, "boolean", None, "Bloxlink will NOT remove roles if this is enabled."), #
+    "autoRoles":             (None, "boolean", None, "Bloxlink will give all matching/corresponding roles to people who join the server. Set eligible roles with ``{prefix}bind``. Note that this being enabled will override 'autoVerification'."), #
+    "autoVerification":      (None, "boolean", None, "Bloxlink will give the Verified role to people who join the server and are linked to Bloxlink.\nNote that 'autoRoles' being enabled overrides this setting."), #
+    "dynamicRoles":          (None, "boolean", None, "Bloxlink will make missing group roles from your Linked Groups as people need them."), #
+    "welcomeMessage":        (None, "string", 1500,  "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"), #
+    "joinDM":                (None, None, None,      "Customize the join DM messages of people who join the server."), #
+    "persistRoles":          (None, "boolean", None, "Update members' roles/nickname as they type."),
+    "allowReVerify":         (None, "boolean", None, "If this is enabled: members can change their Roblox account as many times as they want to in your server; otherwise, only allow 1 account."), #
+    "trelloID":              (None,  None, None,     "Link a Trello board that can change Bloxlink settings!"), #
+    "nicknameTemplate":      (None,  "string", 100,  "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),
+    "unverifiedRoleName":    (None,  "string", 100,  "Set the 'Unverified' role name -- the role that Unverified users get."),
+    "ageLimit":              (None,  "number", None, "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked. Say ``0`` to disable this."),
 }
 
 DEFAULTS = {
@@ -79,6 +81,7 @@ DEFAULTS = {
     "Linked Groups": "view using ``@Bloxlink viewbinds``",
     "verifiedRoleName": "Verified",
     "verifiedRoleEnabled": True,
+    "unverifiedRoleEnabled": True,
     "allowOldRoles": False,
     "autoRoles": True,
     "autoVerification": True,
@@ -87,7 +90,8 @@ DEFAULTS = {
     "allowReVerify": True,
     "welcomeMessage": "Welcome to **{server-name}**, {roblox-name}!",
     "nicknameTemplate": "{roblox-name}",
-    "unverifiedRoleName": "Unverified"
+    "unverifiedRoleName": "Unverified",
+    "ageLimit": None
 
 }
 
@@ -103,3 +107,5 @@ HELP_DESCRIPTION = "**Welcome to Bloxlink!**\n\n" \
                    "**Invite:** https://blox.link/invite\n" \
                    "**Documentation:** https://github.com/bloxlink/docs\n\n" \
                    "Please use ``{prefix}setup`` to set-up your server."
+
+TRANSFER_COOLDOWN = 5
