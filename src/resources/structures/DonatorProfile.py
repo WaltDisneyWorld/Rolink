@@ -13,16 +13,14 @@ class DonatorProfile:
 
         # selly stuff
         self.days = None
-        self.redeemed_codes = []
 
     def load_patreon(self, payment_data):
         self.attributes["patreon"] = True
         self.amount_cents = payment_data["attributes"]["amount_cents"]
 
-    def load_selly(self, payment_data):
+    def load_selly(self, days):
         self.attributes["selly"] = True
-        self.codes_redeemed = payment_data["codes_redeemed"]
-        self.days = payment_data["days"]
+        self.days = days
 
     def add_features(self, *args):
         for arg in args:

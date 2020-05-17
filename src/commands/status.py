@@ -21,7 +21,6 @@ class StatusCommand(Bloxlink.Module):
         self.category = "Premium"
         self.free_to_use = True
 
-    @Bloxlink.flags
     async def __main__(self, CommandArgs):
         user = CommandArgs.parsed_args.get("user") or CommandArgs.message.author
         response = CommandArgs.response
@@ -31,37 +30,37 @@ class StatusCommand(Bloxlink.Module):
 
         profile, transfer_to = await is_premium(user)
 
-        if profile:
-            attributes, features = profile.attributes, profile.features
-            has_premium = features.get("premium")
+        attributes, features = profile.attributes, profile.features
+        has_premium = features.get("premium")
 
-            if has_premium:
-                embed.add_field(name="Premium Status", value="Active")
-                embed.colour = GOLD_COLOR
+        if has_premium:
+            embed.add_field(name="Premium Status", value="Active")
+            embed.colour = GOLD_COLOR
 
-                if profile.features:
-                    embed.add_field(name="Features", value=", ".join(profile.features.keys()))
+            if attributes.get("selly"):
+                embed.add_field(name="Expiry", value=profile.days == 0 and "Never (unlimited)" or f"**{profile.days}** days left")
+            elif attributes.get("patreon"):
+                amount_cents = profile.amount_cents
+                dollars = int(amount_cents / 100)
+                cents_left = amount_cents % 100
 
-                if attributes.get("PREMIUM_ANYWHERE"):
-                    embed.add_field(name="Attributes", value="This user can use premium in _any_ server.")
+                if cents_left < 10:
+                    cents_left = "0" + str(cents_left)
 
-                if attributes.get("selly"):
-                    embed.add_field(name="Expiry", value=profile.days == 0 and "Never (unlimited)" or f"**{profile.days}** days left")
-                elif attributes.get("patreon"):
-                    amount_cents = profile.amount_cents
-                    dollars = int(amount_cents / 100)
-                    cents_left = amount_cents % 100
+                embed.add_field(name="Amount Pledged", value=f"${dollars}.{cents_left}")
 
-                    if cents_left < 10:
-                        cents_left = "0" + str(cents_left)
+        else:
+            embed.description = f"This user does not have premium. They may donate [here](https://patreon.com/bloxlink)."
 
-                    embed.add_field(name="Amount Pledged", value=f"${dollars}.{cents_left}")
+        if profile.features:
+            embed.add_field(name="Features", value=", ".join(profile.features.keys()))
+
+        if attributes.get("PREMIUM_ANYWHERE"):
+            embed.add_field(name="Attributes", value="This user can use premium in _any_ server.")
 
 
         if transfer_to:
             embed.add_field(name="Transferring To ID", value=transfer_to)
 
-        if not profile and not transfer_to:
-            embed.description = f"This user does not have premium. They may donate [here](https://patreon.com/bloxlink)."
 
         await response.send(embed=embed)

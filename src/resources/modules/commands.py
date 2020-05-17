@@ -16,6 +16,8 @@ Locale = Bloxlink.get_module("locale")
 Response = Bloxlink.get_module("response")
 Arguments = Bloxlink.get_module("arguments")
 
+flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
+
 commands = {}
 
 @Bloxlink.module
@@ -23,11 +25,8 @@ class Commands(Bloxlink.Module):
     def __init__(self):
         pass
 
-    async def more_args(self, content_modified, arg_container, command_args):
-        arguments = Arguments(arg_container)
+    async def more_args(self, content_modified, CommandArgs, command_args, arguments):
         parsed_args = {}
-
-        messages = []
 
         if command_args:
             arg_len = len(command_args)
@@ -65,19 +64,12 @@ class Commands(Bloxlink.Module):
                     else:
                         skipped_args.append(arg)
 
-
-            arguments = Arguments(arg_container)
-            parsed_args, messages = await arguments.prompt(command_args, skipped_args=skipped_args, return_messages=True)
+            parsed_args = await arguments.prompt(command_args, skipped_args=skipped_args)
             # TODO: catch PermissionError from resolver and post the event
 
-        arg_container.add(
-            parsed_args = parsed_args,
-            string_args = content_modified and content_modified.split(" ") or [],
-            prompt = arguments.prompt,
-            prompt_messages = messages
-        )
 
-        return messages
+        return parsed_args, content_modified and content_modified.split(" ") or []
+
 
     async def parse_message(self, message, guild_data=None):
         guild = message.guild
@@ -125,6 +117,7 @@ class Commands(Bloxlink.Module):
 
                         fn = command.fn
                         subcommand_attrs = {}
+                        subcommand = False
 
                         if args:
                             # subcommand checking
@@ -158,7 +151,7 @@ class Commands(Bloxlink.Module):
                         CommandArgs.add(locale=locale, response=response, trello_board=trello_board)
 
                         try:
-                            await command.check_permissions(author, locale, permissions=subcommand_attrs.get("permissions"))
+                            await command.check_permissions(author, guild, locale, **subcommand_attrs)
                         except PermissionError as e:
                             if subcommand_attrs.get("allow_bypass"):
                                 CommandArgs.has_permission = False
@@ -185,11 +178,18 @@ class Commands(Bloxlink.Module):
                         else:
                             CommandArgs.has_permission = True
 
-                        messages = []
+                        if subcommand:
+                            command_args = subcommand_attrs.get("arguments")
+                        else:
+                            command_args = command.arguments
+
+                        arguments = Arguments(CommandArgs)
 
                         try:
-                            messages = await self.more_args(after, CommandArgs, subcommand_attrs.get("arguments") or command.arguments)
-                            response.prompt = CommandArgs.prompt # pylint: disable=no-member
+                            parsed_args, string_args = await self.more_args(after, CommandArgs, command_args, arguments)
+                            CommandArgs.add(parsed_args=parsed_args, string_args=string_args, prompt=arguments.prompt)
+                            response.prompt = arguments.prompt # pylint: disable=no-member
+
                             await fn(CommandArgs)
                         except PermissionError as e:
                             if e.args:
@@ -216,14 +216,6 @@ class Commands(Bloxlink.Module):
                                     await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}", dm=e.dm, no_dm_post=True)
                                 else:
                                     await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
-
-                            if messages:
-                                for message in messages:
-                                    try:
-                                        await message.delete()
-                                    except (Forbidden, NotFound, HTTPException):
-                                        pass
-
                         except Message as e:
                             message_type = "send" if e.type == "info" else e.type
                             response_fn = getattr(response, message_type, response.send)
@@ -244,10 +236,18 @@ class Commands(Bloxlink.Module):
                             await response.error("The option you specified is currently not implemented, but will be coming soon!")
                         except CancelledError:
                             # TODO: save command and args to a database and then re-execute it when the bot restarts
-                            await response.send("I'm sorry, but Bloxlink is currently restarting for updates. Your command will be re-executed when the bot restarts.")
+                            await response.send("I'm sorry, but Bloxlink is currently restarting for updates, so your prompt has been cancelled. Please retry this in a few minutes.")
                         except Exception as e:
                             await response.error(locale("errors.commandError"))
                             Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
+
+                        finally:
+
+                            for message in arguments.messages + response.delete_message_queue:
+                                try:
+                                    await message.delete()
+                                except (Forbidden, NotFound):
+                                    pass
 
                         break
 
@@ -307,6 +307,7 @@ class Command:
         self.fn = command.__main__
         self.cooldown = getattr(command, "cooldown", 0)
         self.premium = self.permissions.premium or self.category == "Premium"
+        self.developer_only = self.permissions.developer_only or self.category == "Developer" or getattr(command, "developer_only", False) or getattr(command, "developer", False)
 
         self.usage = []
         command_args = self.arguments
@@ -329,21 +330,24 @@ class Command:
     def __repr__(self):
         return str(self)
 
-    async def check_permissions(self, author, locale, permissions=None):
+    async def check_permissions(self, author, guild, locale, permissions=None, **kwargs):
         permissions = permissions or self.permissions
 
-        if permissions.developer_only or self.category == "Developer":
+        if permissions.developer_only or self.developer_only:
             if author.id != OWNER:
                 raise PermissionError("This command is reserved for the Bloxlink Developer.")
 
-        if (self.premium or permissions.premium) and not self.free_to_use:
-            prem, _ = await is_premium(author)
+        if (kwargs.get("premium", self.premium) or permissions.premium) and not kwargs.get("free_to_use", self.free_to_use):
+            prem, _ = await is_premium(guild.owner)
 
-            if not prem:
-            	raise Message("This command is reserved for Bloxlink Premium subscribers!\n"
-                              "The server owner must have premium for this to work. If you "
-                              "would like the server owner to have premium instead, please use the ``!transfer`` "
-                              "command.\nYou may subscribe to Bloxlink Premium on Patreon: https://patreon.com/bloxlink", type="silly")
+            if not prem.features.get("premium"):
+                prem, _ = await is_premium(author)
+
+                if not prem.attributes["PREMIUM_ANYWHERE"]:
+                    raise Message("This command is reserved for Bloxlink Premium subscribers!\n"
+                                  "The server owner must have premium for this to work. If you "
+                                  "would like the server owner to have premium instead, please use the ``!transfer`` "
+                                  "command.\nYou may subscribe to Bloxlink Premium on Patreon: https://patreon.com/bloxlink", type="silly")
 
 
         try:
@@ -418,7 +422,7 @@ class Command:
             raise PermissionError("You do not meet the required permissions for this command.")
 
     def parse_flags(self, content):
-        flags = {m.group(1): m.group(2) or True for m in re.finditer(r"--?(\w+)(?: ([^-]*)|$)", content)}
+        flags = {m.group(1): m.group(2) or True for m in flag_pattern.finditer(content)}
 
         if flags:
             try:
