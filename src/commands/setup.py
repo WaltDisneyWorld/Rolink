@@ -1,11 +1,11 @@
 from resources.structures.Bloxlink import Bloxlink
 from resources.constants import ARROW, ORANGE_COLOR, NICKNAME_TEMPLATES, RELEASE
 from resources.exceptions import Error, RobloxNotFound
-from config import TRELLO # pylint: disable=no-name-in-module
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 from discord.errors import Forbidden, HTTPException
 from discord import Embed
 from discord.utils import find
+from os import environ as env
 import asyncio
 import re
 
@@ -16,6 +16,16 @@ get_group, generate_code = Bloxlink.get_module("roblox", attrs=["get_group", "ge
 trello = Bloxlink.get_module("trello", attrs=["trello"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
+
+try:
+    from config import TRELLO
+except ImportError:
+    TRELLO = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 100
+    }
 
 
 @Bloxlink.command

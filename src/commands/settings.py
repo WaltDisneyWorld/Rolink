@@ -1,10 +1,20 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error, CancelledPrompt, PermissionError # pylint: disable=import-error
 from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
-from config import TRELLO # pylint: disable=no-name-in-module
 from discord import Embed
+from os import environ as env
 from discord.errors import Forbidden
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
+
+try:
+    from config import TRELLO
+except ImportError:
+    TRELLO = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 100
+    }
 
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
@@ -25,6 +35,7 @@ class SettingsCommand(Bloxlink.Module):
 
         self.permissions = permission
         self.category = "Administration"
+        self.aliases = ["config"]
 
     async def __main__(self, CommandArgs):
         choice = CommandArgs.string_args and CommandArgs.string_args[0].lower()
@@ -182,7 +193,25 @@ class SettingsCommand(Bloxlink.Module):
                 }, conflict="update").run()
 
                 success_text = f"Successfully saved your new ``{choice}``!"
+            elif option_type == "number":
+                parsed_value = (await CommandArgs.prompt([{
+                    "prompt": f"Please specify a new value for ``{choice}``.",
+                    "name": "choice",
+                    "type": "number",
+                    "footer": "Say **clear** to set as the default value.",
+                    "formatting": False,
+                    "max": option_find[2]
+                }]))["choice"]
 
+                if parsed_value == "clear":
+                    parsed_value = DEFAULTS.get(choice)
+
+                await self.r.db("canary").table("guilds").insert({
+                    "id": str(guild.id),
+                    choice: parsed_value
+                }, conflict="update").run()
+
+                success_text = f"Successfully saved your new ``{choice}``!"
             else:
                 raise Error("An unknown type was specified.")
         else:

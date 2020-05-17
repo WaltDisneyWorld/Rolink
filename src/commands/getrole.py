@@ -1,10 +1,20 @@
 from discord import Embed
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, UserNotVerified # pylint: disable=import-error
-from config import TRELLO # pylint: disable=E0611
+from os import environ as env
 
 update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
 parse_message = Bloxlink.get_module("commands", attrs="parse_message")
+
+try:
+    from config import TRELLO
+except ImportError:
+    TRELLO = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 100
+    }
 
 
 @Bloxlink.command

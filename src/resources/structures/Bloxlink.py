@@ -49,6 +49,7 @@ except ImportError:
     REDIS = {
         "HOST": env.get("REDIS_HOST"),
         "PORT": int(env.get("REDIS_PORT")),
+        "PASSWORD": env.get("REDIS_PASSWORD"),
     }
 
 
@@ -246,6 +247,6 @@ class Module:
     r = r
     session = aiohttp.ClientSession(loop=loop)
     loop = loop
-    redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"])
+    redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
 
 Bloxlink.Module = Module

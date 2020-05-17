@@ -1,7 +1,17 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import PermissionError # pylint: disable=import-error
-from config import TRELLO # pylint: disable=no-name-in-module
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
+from os import environ as env
+
+try:
+    from config import TRELLO
+except ImportError:
+    TRELLO = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 100
+    }
 
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
 

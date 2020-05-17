@@ -6,13 +6,16 @@ from time import time
 from os import environ as env
 from resources.constants import OPTIONS
 from re import compile
+import asyncio
 
 try:
     from config import TRELLO
 except ImportError:
-    REDIS = {
+    TRELLO = {
         "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN")
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 5000
     }
 
 
@@ -109,3 +112,8 @@ class Trello(Bloxlink.Module):
             return options, List
 
         return {}, None
+
+    async def __setup__(self):
+        while True:
+            self.trello_boards = {}
+            await asyncio.sleep(60 * 10)
