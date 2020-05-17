@@ -15,6 +15,9 @@ class MemberJoinEvent(Bloxlink.Module):
 
         @Bloxlink.event
         async def on_member_join(member):
+            if member.bot:
+                return
+
             guild = member.guild
             guild_data = await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
             trello_board = await get_board(guild=guild, guild_data=guild_data)

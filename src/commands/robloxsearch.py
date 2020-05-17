@@ -33,6 +33,11 @@ class RobloxSearchCommand(Bloxlink.Module):
         flags = CommandArgs.flags
         response = CommandArgs.response
 
+        valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "blurb", "age", "banned"]
+
+        if not all(f in valid_flags for f in flags.keys()):
+            raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")
+
         username = ID = False
 
         if "username" in flags:

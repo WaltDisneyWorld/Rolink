@@ -1,13 +1,23 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
 from discord import Embed
-from resources.exceptions import Message, UserNotVerified, Error # pylint: disable=import-error
+from os import environ as env
+from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound # pylint: disable=import-error
 from resources.constants import DEFAULTS, NICKNAME_TEMPLATES
-from config import TRELLO
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 
-verify_as, update_member, get_user, get_nickname = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname"])
+verify_as, update_member, get_user, get_nickname, get_roblox_id = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
+
+try:
+    from config import TRELLO
+except ImportError:
+    TRELLO = {
+        "KEY": env.get("TRELLO_KEY"),
+        "TOKEN": env.get("TRELLO_TOKEN"),
+	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+	    "GLOBAL_CARD_LIMIT": 100
+    }
 
 @Bloxlink.command
 class VerifyCommand(Bloxlink.Module):
@@ -15,6 +25,16 @@ class VerifyCommand(Bloxlink.Module):
 
     def __init__(self):
         self.examples = ["add", "unlink"]
+
+
+    @staticmethod
+    async def validate_username(message, content):
+        try:
+            roblox_id, username = await get_roblox_id(content)
+        except RobloxNotFound:
+            return None, "There was no Roblox account found with that username. Please try again."
+
+        return username
 
     @Bloxlink.flags
     async def __main__(self, CommandArgs):
@@ -68,6 +88,8 @@ class VerifyCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
 
+        response = CommandArgs.response
+
         username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
 
         args = []
@@ -76,7 +98,8 @@ class VerifyCommand(Bloxlink.Module):
             args.append({
                 "prompt": "What's the username of your Roblox account?",
                 "type": "string",
-                "name": "username"
+                "name": "username",
+                "validation": self.validate_username
             })
 
         args.append({
@@ -86,7 +109,7 @@ class VerifyCommand(Bloxlink.Module):
             "choices": ["yes", "no"]
         })
 
-        args, messages = await CommandArgs.prompt(args, return_messages=True, dm=True)
+        args = await CommandArgs.prompt(args, dm=True)
         username = username or args["username"]
 
         # TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
@@ -109,11 +132,11 @@ class VerifyCommand(Bloxlink.Module):
 
         except Message as e:
             if e.type == "error":
-                await CommandArgs.response.error(e)
+                await response.error(e)
             else:
-                await CommandArgs.response.send(e)
+                await response.send(e)
         except Error as e:
-            await CommandArgs.response.error(e)
+            await CommandArgs.response.error(e, dm=True, no_dm_post=True)
         except UserNotVerified:
             raise Message("I cannot update you due to you having the ``Bloxlink Bypass`` role!")
         else:
@@ -130,17 +153,8 @@ class VerifyCommand(Bloxlink.Module):
 
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-            await CommandArgs.response.send(welcome_message, dm=True, no_dm_post=True)
+            await response.send(welcome_message, dm=True, no_dm_post=True)
 
-
-        finally:
-            messages.append(CommandArgs.message)
-
-            for message in messages:
-                try:
-                    await message.delete()
-                except (Forbidden, NotFound):
-                    pass
 
     @Bloxlink.subcommand(permissions=Bloxlink.Permissions().build("BLOXLINK_MANAGER"))
     async def customize(self, CommandArgs):

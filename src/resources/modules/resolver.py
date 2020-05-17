@@ -95,6 +95,7 @@ class Resolver(Bloxlink.Module):
 
             if is_id:
                 user = guild.get_member(is_int)
+
                 if user:
                     return user, None
                 else:
@@ -104,7 +105,13 @@ class Resolver(Bloxlink.Module):
                     except NotFound:
                         return False, "A user with this discord ID does not exist"
             else:
-                return guild.get_member_named(content), None
+                user = guild.get_member_named(content)
+
+                if user:
+                    return user, None
+                else:
+                    return None, "Unable to find a matching user"
+
 
             return False, "Invalid user"
         else:

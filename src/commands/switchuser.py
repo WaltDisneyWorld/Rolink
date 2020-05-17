@@ -150,4 +150,4 @@ class SwitchUserCommand(Bloxlink.Module):
 
 
         except UserNotVerified:
-            raise Error("You're not linked to Bloxlink. Please use ``{prefix}verify add``.")
+            raise Error(f"You're not linked to Bloxlink. Please use ``{prefix}verify add``.")

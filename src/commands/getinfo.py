@@ -36,6 +36,14 @@ class GetinfoCommand(Bloxlink.Module):
 		response = CommandArgs.response
 		prefix = CommandArgs.prefix
 
+		if target.bot:
+			raise Message("Bots can't have Roblox accounts!", type="silly")
+
+		valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "blurb", "age", "banned"]
+
+		if not all(f in valid_flags for f in flags.keys()):
+			raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")
+
 		async with response.loading():
 			try:
 				account, accounts = await get_user(*flags.keys(), author=target, guild=guild, send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))

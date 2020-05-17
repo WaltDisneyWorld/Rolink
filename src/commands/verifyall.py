@@ -56,18 +56,19 @@ class VerifyAllCommand(Bloxlink.Module):
                 await response.send(f"Your server is now being scanned.")
 
         for member in guild.members:
-            try:
-                added, removed, nickname, errors, roblox_user = await update_member(
-                    member,
-                    guild             = guild,
-                    guild_data        = guild_data,
-                    trello_board      = trello_board,
-                    trello_binds_list = trello_binds_list,
-                    roles             = roles,
-                    nickname          = nickname,
-                    author_data       = await self.r.table("users").get(str(member.id)).run())
-            except UserNotVerified:
-                pass
+            if not member.bot:
+                try:
+                    added, removed, nickname, errors, roblox_user = await update_member(
+                        member,
+                        guild             = guild,
+                        guild_data        = guild_data,
+                        trello_board      = trello_board,
+                        trello_binds_list = trello_binds_list,
+                        roles             = roles,
+                        nickname          = nickname,
+                        author_data       = await self.r.table("users").get(str(member.id)).run())
+                except UserNotVerified:
+                    pass
 
 
         len_members = len(guild.members)

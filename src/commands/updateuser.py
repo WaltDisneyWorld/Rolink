@@ -36,23 +36,27 @@ class UpdateUserCommand(Bloxlink.Module):
         async with response.loading():
             if len(users) > 1:
                 for user in users:
-                    try:
-                        added, removed, nickname, errors, roblox_user = await update_member(
-                            user,
-                            guild             = guild,
-                            guild_data        = guild_data,
-                            trello_board      = trello_board,
-                            trello_binds_list = trello_binds_list,
-                            roles             = True,
-                            nickname          = True,
-                            author_data       = await self.r.table("users").get(str(user.id)).run())
-                    except UserNotVerified:
-                        await response.send(f"{REACTIONS['ERROR']} {user.mention} **not linked to Bloxlink**")
-                    else:
-                        await response.send(f"{REACTIONS['DONE']} **Updated** {user.mention}")
+                    if not user.bot:
+                        try:
+                            added, removed, nickname, errors, roblox_user = await update_member(
+                                user,
+                                guild             = guild,
+                                guild_data        = guild_data,
+                                trello_board      = trello_board,
+                                trello_binds_list = trello_binds_list,
+                                roles             = True,
+                                nickname          = True,
+                                author_data       = await self.r.table("users").get(str(user.id)).run())
+                        except UserNotVerified:
+                            await response.send(f"{REACTIONS['ERROR']} {user.mention} **not linked to Bloxlink**")
+                        else:
+                            await response.send(f"{REACTIONS['DONE']} **Updated** {user.mention}")
 
             else:
                 user = users[0]
+
+                if user.bot:
+                    raise Message("Bots can't have Roblox accounts!", type="silly")
 
                 try:
                     added, removed, nickname, errors, roblox_user = await update_member(

@@ -11,6 +11,7 @@ class Paginate:
         self.author = message.author
         self.embed = embed
         self.response = response
+
         self.field_limit = field_limit
         self.channel = channel
         self._pages = pages
@@ -20,40 +21,35 @@ class Paginate:
     @staticmethod
     def get_pages(embed, fields, field_limit=25):
         pages = []
-        i = 1
+        i = 0
 
         len_fields = len(fields)
 
         while True:
             remaining = 5500
-            field = fields[i-1]
+            field = fields[i]
             current_page = []
 
-            while remaining > 0 and i < len_fields + 1:
-                if field_limit and len(current_page) >= field_limit:
-                    remaining = 0
-
+            while remaining > 0 and i != len(fields):
                 # get first 1024 characters, append, remove from old field
                 # if the old field is gone, increment i
                 # if it's 6000, append to pages and clear current_page, and reset remaining
 
                 # check to see if there's room on the current page
                 len_field_name = len(field.name)
-                len_description = len(embed.description)
-
-                if remaining > (len_field_name + len_description + 1):
+                if remaining > len_field_name + 1:
                     # get first 1024 characters with respect to remaining
-                    chars = field.value[0:min(1000, remaining - len_field_name - len_description)]
+                    chars = field.value[0:min(1000, remaining - len_field_name)]
                     len_chars = len(chars)
                     current_page.append({"name": field.name, "value": chars})
-                    remaining -= len_chars - len_field_name - len_description
+                    remaining -= len_chars
                     field.value = field.value[len_chars:] # remove characters
 
                     if not field.value:
                         # no more field, so get next one. there's still room for more, though
-                        if i < len_fields:
+                        if i + 1 < len(fields):
                             i += 1
-                            field = fields[i-1]
+                            field = fields[i]
                         else:
                             break
                 else:
@@ -64,9 +60,50 @@ class Paginate:
 
                     break
 
-            if len_fields <= i:
+            if not field.value and len_fields <= i + 1:
                 pages.append(current_page)
+
                 break
+
+        """
+        current_page = []
+        remaining = 5000
+        skip_over = False
+
+        for field in fields:
+            while remaining:
+
+                if remaining > len(field.name) + 1:
+                    chars = field.value[0:min(1000, remaining - len(field.name))]
+                    current_page.append({"name": field.name, "value": field.value})
+                    field.value = field.value[len(chars):]
+                    remaining -= len(chars)
+                    if not field.value:
+                        #skip_over = True
+
+                        break
+
+                else:
+                    pages.append(current_page)
+                    current_page = []
+                    remaining = 5000
+                    skip_over = True
+
+                    break
+
+                #chars = field.value[0:min(1000, remaining - len(field.name))]
+                #current_page.append({"name": field.name, "value": field.value})
+
+            if not skip_over:
+                remaining = 5000
+                pages.append(current_page)
+                current_page = []
+            else:
+                skip_over = False
+
+
+        """
+
 
 
         return pages
@@ -74,11 +111,8 @@ class Paginate:
     async def turn_page(self, i, pages):
         self.embed.clear_fields()
 
-
         for field in pages[i]:
             self.embed.add_field(name=field["name"], value=field["value"], inline=False)
-            if not self.embed.footer or (self.embed.footer and "Page" in self.embed.footer.text):
-                self.embed.set_footer(text=f"Page {i+1}/{len(pages)}")
 
         if self.sent_message:
             try:

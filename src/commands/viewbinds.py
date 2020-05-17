@@ -30,11 +30,10 @@ class ViewBindsCommand(Bloxlink.Module):
 
         embed = Embed(title="Bloxlink Role Binds")
 
+        text = []
         if group_ids:
-            text = []
-
             for group_id, group_data in group_ids.items():
-              text.append(f"**Group:** {group_data['groupName']} {ARROW} **Nickname:** {group_data['nickname']}")
+              text.append(f"**Group:** {group_data['groupName']} ({group_id}) {ARROW} **Nickname:** {group_data['nickname']}")
 
             text = "\n".join(text)
 
@@ -129,4 +128,4 @@ class ViewBindsCommand(Bloxlink.Module):
         embed.set_author(name="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
         embed.set_footer(text=f"Use {prefix}bind to make a new bind, or {prefix}delbind to delete a bind")
 
-        await CommandArgs.response.send(embed=embed, paginate_field_limit=10)
+        await CommandArgs.response.send(embed=embed)

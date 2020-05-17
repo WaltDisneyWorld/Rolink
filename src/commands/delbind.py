@@ -132,7 +132,7 @@ class DelBindCommand(Bloxlink.Module):
         role_binds = guild_data.get("roleBinds", {"groups": {}, "virtualGroups": {}})
         role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild_data=guild_data, trello_board=trello_board)
 
-        role_binds = guild_data.get("roleBinds", {"groups": {}, "virtualGroups": {}})
+        # role_binds = guild_data.get("roleBinds", {"groups": {}, "virtualGroups": {}})
         group_ids = guild_data.get("groupIDs", {})
 
         if not ((role_binds_trello or {}).get("groups") or group_ids_trello):
@@ -188,14 +188,21 @@ class DelBindCommand(Bloxlink.Module):
 
                 rank_id = parsed_args["rank_id"].lower()
 
-                if rank_id in ("everything", "everything."):
+                if rank_id in ("everything", "everything.", "all"):
                     if found_group:
-                        if role_binds.get(bind_id):
-                            del role_binds[bind_id]
+                        binds = found_group.get("binds", {})
+
+                        if binds.get("everything"):
+                            del binds["everything"]
+                        elif binds.get("all"):
+                            del binds["all"]
+
+                        if not (found_group.get("binds", {}) or found_group.get("ranges", {})):
+                            del role_binds["groups"][bind_id]
 
                     await delete_bind_from_cards(rank="everything", trello_binds_list=trello_binds_list, group=bind_id, bind_data_trello=found_group_trello)
 
-                elif "-" in rank_id:
+                elif "-" in rank_id and not rank_id.lstrip("-").isdigit():
                     rank_id = rank_id.split("-")
 
                     if len(rank_id) == 2:
@@ -234,6 +241,10 @@ class DelBindCommand(Bloxlink.Module):
 
                         if binds.get(rank_id):
                             del binds[rank_id]
+
+                        if not (found_group.get("binds", {}) or found_group.get("ranges", {})):
+                            del role_binds["groups"][bind_id]
+
                     else:
                         raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")
 
