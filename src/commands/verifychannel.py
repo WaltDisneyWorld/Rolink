@@ -55,7 +55,7 @@ class VerifyChannelCommand(Bloxlink.Module):
 
 
         except Forbidden:
-            raise PermissionError("Unable to set permissions to the channels.. Please ensure I have the "
+            raise PermissionError("Unable to set permissions to the channels. Please ensure I have the "
                                   "``Manage Channels`` and ``Manage Roles`` permission.")
 
         try:
@@ -69,7 +69,7 @@ class VerifyChannelCommand(Bloxlink.Module):
                                       "To create another sample channel, right click this channel and click 'Clone " \
                                       "Text Channel', or just run this command again.")
 
-        except Forbidden:
+        except (Forbidden, NotFound):
             raise PermissionError("I was unable to send messages to the created channels. Please give me the "
                                   "proper permissions.")
 

@@ -1,7 +1,8 @@
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
-from resources.exceptions import Error, Message, UserNotVerified  # pylint: disable=import-error
+from resources.exceptions import Error, Message, UserNotVerified, BloxlinkBypass  # pylint: disable=import-error
 from resources.constants import DEFAULTS  # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound, HTTPException
+from discord.utils import find
 
 
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
@@ -87,6 +88,7 @@ class SwitchUserCommand(Bloxlink.Module):
 
                 guild = parsed_args["guild"]
                 username = parsed_args["account"]
+                roblox_id = (parsed_accounts.get(username)).id
 
                 guild_data = await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
 
@@ -101,8 +103,6 @@ class SwitchUserCommand(Bloxlink.Module):
                 try:
                     member = await guild.fetch_member(author.id)
                 except (Forbidden, NotFound):
-                    roblox_id = (parsed_accounts.get(username)).id
-
                     await verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=parsed_args["primary"] == "yes")
                     raise Message("You're not a member of the provided server, so I was only able to update your account internally.\nPlease allow "
                                   "up to 10 minutes for the internal cache to clear.", type="success")
@@ -113,9 +113,11 @@ class SwitchUserCommand(Bloxlink.Module):
                         guild,
                         response     = response,
                         primary      = parsed_args["primary"] == "yes",
-                        username     = username,
-                        trello_board = trello_board)
-
+                        roblox_id    = roblox_id,
+                        trello_board = trello_board,
+                        update_user  = False)
+                except UserNotVerified:
+                    await response.send("test")
                 except Message as e:
                     if e.type == "error":
                         await response.error(e)
@@ -124,20 +126,25 @@ class SwitchUserCommand(Bloxlink.Module):
                 except Error as e:
                     await response.error(e)
                 else:
-                    for role in list(member.roles):
-                        if role != guild.default_role:
-                            try:
-                                await member.remove_roles(role, reason="Switched User")
-                            except Forbidden:
-                                pass
+                    if not find(lambda r: r.name == "Bloxlink Bypass", member.roles):
+                        for role in list(member.roles):
+                            if role != guild.default_role and role.name != "Muted":
+                                try:
+                                    await member.remove_roles(role, reason="Switched User")
+                                except Forbidden:
+                                    pass
+                    try:
+                        added, removed, nickname, errors, roblox_user = await update_member(
+                            member,
+                            guild      = guild,
+                            roles      = True,
+                            nickname   = True,
+                            author_data  = await self.r.table("users").get(str(author.id)).run())
 
-                    added, removed, nickname, errors, roblox_user = await update_member(
-                        member,
-                        guild      = guild,
-                        roles      = True,
-                        nickname   = True,
-                        author_data  = await self.r.table("users").get(str(author.id)).run())
+                    except BloxlinkBypass:
+                        await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, your account was still changed.")
 
+                        return
 
                     welcome_message = guild_data.get("welcomeMessage") or DEFAULTS.get("welcomeMessage")
 
