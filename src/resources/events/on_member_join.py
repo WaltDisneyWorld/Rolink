@@ -1,6 +1,6 @@
 from ..structures.Bloxlink import Bloxlink
-from resources.exceptions import UserNotVerified # pylint: disable=import-error
-from resources.constants import DEFAULTS
+from ..exceptions import UserNotVerified, BloxlinkBypass
+from ..constants import DEFAULTS
 from discord.errors import Forbidden, HTTPException
 
 update_member, get_nickname, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_nickname", "get_user"])
@@ -47,6 +47,9 @@ class MemberJoinEvent(Bloxlink.Module):
                         roles                   = True,
                         nickname                = True,
                         given_trello_options    = True)
+
+                except BloxlinkBypass:
+                    pass
 
                 except UserNotVerified:
                     if required_groups:

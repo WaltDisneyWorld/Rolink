@@ -1,6 +1,6 @@
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error,
-                          CancelCommand, UserNotVerified, RobloxNotFound, PermissionError)
+                          CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass)
 from typing import Tuple
 from discord.errors import Forbidden, NotFound
 from discord.utils import find
@@ -8,12 +8,13 @@ from discord import Embed, Member
 from datetime import datetime
 from config import WORDS # pylint: disable=no-name-in-module
 from os import environ as env
-from ..constants import RELEASE, DEFAULTS
+from ..constants import RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, VIP_MEMBER_COLOR
 import json
 import random
 import re
 import asyncio
 import dateutil.parser as parser
+import math
 
 try:
     from config import TRELLO
@@ -550,7 +551,7 @@ class Roblox(Bloxlink.Module):
                 raise Error("Unable to resolve a guild from author.")
 
         if find(lambda r: r.name == "Bloxlink Bypass", author.roles):
-            raise UserNotVerified
+            raise BloxlinkBypass
 
 
         if trello_board and not given_trello_options:
@@ -1028,9 +1029,6 @@ class Roblox(Bloxlink.Module):
 
                 roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
 
-                if not roblox_user:
-                    raise UserNotVerified
-
                 await roblox_user.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
 
                 if guild:
@@ -1069,7 +1067,7 @@ class Roblox(Bloxlink.Module):
         raise UserNotVerified
 
 
-    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None) -> bool:
+    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None) -> bool:
         if not (username or roblox_id):
             raise BadUsage("Must supply either a username or roblox_id to verify_as.")
 
@@ -1116,12 +1114,17 @@ class Roblox(Bloxlink.Module):
             # TODO: clear cache
             await self.verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=primary)
 
-            await self.update_member(
-                author,
-                guild       = guild,
-                roles       = True,
-                nickname    = True,
-                author_data = author_data)
+            if update_user:
+                try:
+                    await self.update_member(
+                        author,
+                        guild       = guild,
+                        roles       = True,
+                        nickname    = True,
+                        author_data = author_data)
+
+                except BloxlinkBypass:
+                    pass
 
             return username
 
@@ -1191,6 +1194,33 @@ class Roblox(Bloxlink.Module):
 
             # except CancelledPrompt:
             #	pass
+
+    @staticmethod
+    async def apply_perks(roblox_user, embed):
+        if roblox_user:
+            bloxlink_group = roblox_user.groups.get("3587262")
+            user_tags = []
+
+            if bloxlink_group:
+                bloxlink_user_rank = bloxlink_group.user_rank_name
+
+                if bloxlink_user_rank in ("Developer", "Bloxlink"):
+                    user_tags.append("Bloxlink Developer")
+                    user_tags.append("Bloxlink Staff")
+                    embed.colour = DEV_COLOR
+                elif bloxlink_user_rank in ("Helpers", "Mods"):
+                    user_tags.append("Bloxlink Staff")
+                    embed.colour = STAFF_COLOR
+                elif bloxlink_user_rank == "Community Manager":
+                    user_tags.append("Bloxlink Community Manager")
+                    user_tags.append("Bloxlink Staff")
+                    embed.colour = COMMUNITY_MANAGER_COLOR
+                elif bloxlink_user_rank == "VIP Members":
+                    user_tags.append("Bloxlink VIP Member")
+                    embed.colour = VIP_MEMBER_COLOR
+
+            if user_tags:
+                embed.add_field(name="User Tags", value="\n".join(user_tags))
 
 
 
@@ -1395,7 +1425,7 @@ class RobloxUser(Bloxlink.Module):
             if roblox_data.get("presence"):
                 presence = roblox_data["presence"]
             else:
-                presence, _ = await fetch(f"{BASE_URL}/presence/user?userId={roblox_data['id']}")
+                presence, _ = await fetch(f"{API_URL}/users/{roblox_data['id']}/onlinestatus")
 
                 try:
                     presence = json.loads(presence)
@@ -1495,7 +1525,7 @@ class RobloxUser(Bloxlink.Module):
                 description = roblox_data.get("description")
                 age = roblox_data.get("age")
                 join_date = roblox_data.get("join_date")
-                banned = roblox_data.get("banned")
+                banned = roblox_data.get("banned") # <:ban:476838302092230672>
                 created = roblox_data.get("created")
             else:
                 banned = description = age = join_date = created = None
@@ -1509,9 +1539,11 @@ class RobloxUser(Bloxlink.Module):
                 else:
                     description = profile.get("description")
                     created = profile.get("created")
+                    banned = profile.get("isBanned")
 
                     roblox_data["description"] = description
                     roblox_data["created"] = created
+                    roblox_data["banned"] = banned
 
             if not age:
                 today = datetime.today()
@@ -1525,10 +1557,27 @@ class RobloxUser(Bloxlink.Module):
 
             if embed:
                 if everything or "age" in args:
-                    embed[0].add_field(name="Age", value=f"{age} day{age > 1 and 's' or ''}")
+                    text = ""
 
-                if everything or "join date" in args:
-                    embed[0].add_field(name="Join Date", value=join_date)
+                    if age >= 365:
+                        years = math.floor(age/365)
+                        ending = f"year{((years > 1 or years == 0) and 's') or ''}"
+                        text = f"{years} {ending} old"
+                    else:
+                        ending = f"day{((age > 1 or age == 0) and 's') or ''}"
+                        text = f"{age} {ending} old"
+
+                    embed[0].add_field(name="Account Age", value=f"{text} ({join_date})")
+
+                if (everything or "banned" in args) and banned:
+                    embed[0].description = "<:ban:476838302092230672> This user is _banned._"
+
+                    for i, field in enumerate(embed[0].fields):
+                        if field.name == "Username":
+                           embed[0].set_field_at(i, name="Username", value=f"~~{field.value}~~")
+
+                if description and (everything or "description" in args):
+                    embed[0].add_field(name="Description", value=description[0:1000], inline=False)
 
 
             if roblox_user:
@@ -1536,28 +1585,8 @@ class RobloxUser(Bloxlink.Module):
                 roblox_user.age = age
                 roblox_user.join_date = join_date
                 roblox_user.created = created
+                roblox_user.banned = banned
 
-            if embed:
-                if description and (everything or "description" in args):
-                    embed[0].add_field(name="Description", value=description[0:1000])
-
-                # TODO: set age with "created"
-
-
-            """
-            if embed:
-                if banned:
-                    pass # TODO: set description to say account is banned
-
-                embed[0].add_field(name="Join Date", value=join_date)
-                embed[0].add_field(name="Account Age", value=f"{age} days old")
-
-                #embed[0].add_field(name="Description", value=description[:1000].strip("\n"))
-
-                embed[0].title = None
-
-                await embed[2].edit(embed=embed[0])
-            """
 
         # fast operations
         if basic_details or "avatar" in args:
@@ -1577,7 +1606,9 @@ class RobloxUser(Bloxlink.Module):
 
         if embed:
             embed[0].title = None
+            await Roblox.apply_perks(roblox_user, embed=embed[0])
             await embed[2].edit(embed=embed[0])
+
 
         return roblox_data
 

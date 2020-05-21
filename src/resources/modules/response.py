@@ -45,7 +45,7 @@ class ResponseLoading:
         except NotFound:
             pass
 
-    async def _remove_loading(self, errored):
+    async def _remove_loading(self, success=True, error=False):
         try:
             if self.reaction_success:
                 for reaction in self.original_message.reactions:
@@ -56,12 +56,14 @@ class ResponseLoading:
                         except NotFound:
                             pass
 
-                if errored:
+                if error:
                     await self.original_message.add_reaction(REACTIONS["ERROR"])
-                else:
+                elif success:
                     await self.original_message.add_reaction(REACTIONS["DONE"])
+
             elif self.from_reaction_fail_msg is not None:
                 await self.from_reaction_fail_msg.delete()
+
         except NotFound:
             pass
 
@@ -71,18 +73,20 @@ class ResponseLoading:
 
     def __exit__(self, tb_type, tb_value, traceback):
         if (tb_type is None) or (tb_type == Message):
-            loop.create_task(self._remove_loading(errored=False))
+            loop.create_task(self._remove_loading(error=False))
         else:
-            loop.create_task(self._remove_loading(errored=True))
+            loop.create_task(self._remove_loading(error=True))
 
     async def __aenter__(self):
         await self._send_loading()
 
     async def __aexit__(self, tb_type, tb_value, traceback):
-        if (tb_type is None) or (tb_type == Message):
-            await self._remove_loading(errored=False)
+        if tb_type is None:
+            await self._remove_loading(success=True)
+        elif tb_type == Message:
+            await self._remove_loading(success=False, error=False)
         else:
-            await self._remove_loading(errored=True)
+            await self._remove_loading(error=True)
 
 
 
@@ -240,6 +244,14 @@ class Response(Bloxlink.Module):
 
     async def silly(self, text, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
         emoji = self.webhook_only and ":sweat_smile:" or "<:BloxlinkSweaty:506622933502918656>"
+
+        if embed and not dm:
+            embed.color = embed_color
+
+        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+
+    async def info(self, text, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
+        emoji = self.webhook_only and ":mag_right:" or "<:BloxlinkSearch:506622933012054028>"
 
         if embed and not dm:
             embed.color = embed_color

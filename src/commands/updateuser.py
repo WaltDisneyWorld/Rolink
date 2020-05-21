@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Error, UserNotVerified, Message
+from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass # pylint: disable=import-error
 from config import REACTIONS # pylint: disable=no-name-in-module
 from discord import Embed
 
@@ -47,8 +47,10 @@ class UpdateUserCommand(Bloxlink.Module):
                                 roles             = True,
                                 nickname          = True,
                                 author_data       = await self.r.table("users").get(str(user.id)).run())
+                        except BloxlinkBypass:
+                            await response.info(f"{user.mention} **bypassed**")
                         except UserNotVerified:
-                            await response.send(f"{REACTIONS['ERROR']} {user.mention} **not linked to Bloxlink**")
+                            await response.send(f"{REACTIONS['ERROR']} {user.mention} is **not linked to Bloxlink**")
                         else:
                             await response.send(f"{REACTIONS['DONE']} **Updated** {user.mention}")
 
@@ -87,6 +89,9 @@ class UpdateUserCommand(Bloxlink.Module):
                     embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
 
                     await CommandArgs.response.send(embed=embed)
+
+                except BloxlinkBypass:
+                    raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
 
                 except UserNotVerified:
                     raise Error("This user is not linked to Bloxlink.")

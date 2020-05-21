@@ -217,7 +217,7 @@ class Commands(Bloxlink.Module):
                                 else:
                                     await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
                         except Message as e:
-                            message_type = "send" if e.type == "info" else e.type
+                            message_type = "send" if e.type == "send" else e.type
                             response_fn = getattr(response, message_type, response.send)
 
                             if e.args:
@@ -376,7 +376,7 @@ class Command:
                         pass
                     else:
                         raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
-                                            "role permission, or the ``Manage Server`` role permission.")
+                                              "role permission, or the ``Manage Server`` role permission.")
 
                 elif role_name == "Bloxlink Admin":
                     if author_perms.administrator:

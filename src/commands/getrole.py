@@ -1,6 +1,6 @@
 from discord import Embed
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Message, UserNotVerified # pylint: disable=import-error
+from resources.exceptions import Message, UserNotVerified, BloxlinkBypass # pylint: disable=import-error
 from os import environ as env
 
 update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
@@ -74,6 +74,9 @@ class GetRoleCommand(Bloxlink.Module):
                 embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
 
                 await CommandArgs.response.send(embed=embed)
+
+            except BloxlinkBypass:
+                raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
 
             except UserNotVerified:
                 message = CommandArgs.message

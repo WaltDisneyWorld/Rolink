@@ -2,8 +2,8 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from discord.errors import Forbidden, NotFound
 from discord import Embed
 from os import environ as env
-from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound # pylint: disable=import-error
-from resources.constants import DEFAULTS, NICKNAME_TEMPLATES
+from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass # pylint: disable=import-error
+from resources.constants import DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 
 verify_as, update_member, get_user, get_nickname, get_roblox_id = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id"])
@@ -68,6 +68,9 @@ class VerifyCommand(Bloxlink.Module):
                     author_data          = await self.r.table("users").get(str(author.id)).run(),
                     given_trello_options = True)
 
+        except BloxlinkBypass:
+            raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
+
         except UserNotVerified:
             await self.add(CommandArgs)
         else:
@@ -128,7 +131,8 @@ class VerifyCommand(Bloxlink.Module):
                 response = CommandArgs.response,
                 primary  = args["default"] == "yes",
                 username = username,
-                trello_options = trello_options)
+                trello_options = trello_options,
+                update_user = False)
 
         except Message as e:
             if e.type == "error":
@@ -137,17 +141,21 @@ class VerifyCommand(Bloxlink.Module):
                 await response.send(e)
         except Error as e:
             await CommandArgs.response.error(e, dm=True, no_dm_post=True)
-        except UserNotVerified:
-            raise Message("I cannot update you due to you having the ``Bloxlink Bypass`` role!")
         else:
-            added, removed, nickname, errors, roblox_user = await update_member(
-                author,
-                guild                = guild,
-                guild_data           = CommandArgs.guild_data,
-                roles                = True,
-                nickname             = True,
-                author_data          = await self.r.table("users").get(str(author.id)).run(),
-                given_trello_options = True)
+            try:
+                added, removed, nickname, errors, roblox_user = await update_member(
+                    author,
+                    guild                = guild,
+                    guild_data           = CommandArgs.guild_data,
+                    roles                = True,
+                    nickname             = True,
+                    author_data          = await self.r.table("users").get(str(author.id)).run(),
+                    given_trello_options = True)
+
+            except BloxlinkBypass:
+                await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, you were still linked to Bloxlink.", dm=True, no_dm_post=True)
+
+                return
 
             welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
 

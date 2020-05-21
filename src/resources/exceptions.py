@@ -8,18 +8,18 @@ class CancelCommand(BloxlinkException):
     pass
 
 class Messages(CancelCommand):
-    def __init__(self, *args, type="info", **kwargs):
+    def __init__(self, *args, type="send", **kwargs):
         super().__init__(*args, type=type, **kwargs)
 
 class Message(Messages):
-    def __init__(self, *args, type="info", **kwargs):
+    def __init__(self, *args, type="send", **kwargs):
         super().__init__(*args, type=type, **kwargs)
 
 class Error(Messages):
     pass
 
 class CancelledPrompt(CancelCommand):
-    def __init__(self, *args, type="info", dm=False, **kwargs):
+    def __init__(self, *args, type="send", dm=False, **kwargs):
         super().__init__(*args, type=type, dm=dm, **kwargs)
 
 
@@ -39,4 +39,7 @@ class RobloxDown(BloxlinkException):
     pass
 
 class UserNotVerified(BloxlinkException):
+    pass
+
+class BloxlinkBypass(BloxlinkException):
     pass

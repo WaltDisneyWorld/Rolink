@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Error, UserNotVerified, Message
+from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass # pylint: disable=import-error
 from config import REACTIONS, VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
 from discord import Embed
 import heapq
@@ -67,6 +67,10 @@ class VerifyAllCommand(Bloxlink.Module):
                         roles             = roles,
                         nickname          = nickname,
                         author_data       = await self.r.table("users").get(str(member.id)).run())
+
+                except BloxlinkBypass:
+                    pass
+
                 except UserNotVerified:
                     pass
 

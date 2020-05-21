@@ -12,7 +12,7 @@ IS_DOCKER = bool(env.get("RELEASE"))
 SHARDS_PER_CLUSTER = int(env.get("SHARDS_PER_CLUSTER", "1"))
 
 CLUSTER_ID = env.get("CLUSTER_ID") or search(r".+\-(\d)", env.get("HOSTNAME", "canary-0"))
-CLUSTER_ID = (CLUSTER_ID and (isinstance(CLUSTER_ID, str) and CLUSTER_ID.isdigit() and int(CLUSTER_ID)) or int(CLUSTER_ID.group(1))) or 0
+CLUSTER_ID = (CLUSTER_ID and ((isinstance(CLUSTER_ID, str) and CLUSTER_ID.isdigit() and int(CLUSTER_ID)) or int(CLUSTER_ID.group(1)))) or 0
 
 SHARD_COUNT = int(env.get("SHARD_COUNT", "1"))
 
@@ -35,6 +35,12 @@ RED_COLOR       = 0xE74C3C
 INVISIBLE_COLOR = 0x36393E
 ORANGE_COLOR    = 0xCE8037
 GOLD_COLOR      = 0xFDC333
+CYAN_COLOR      = 0x4DD3CC
+
+DEV_COLOR               = 0x4DD3CC
+STAFF_COLOR             = 0x3ca770
+COMMUNITY_MANAGER_COLOR = 0xc4306f
+VIP_MEMBER_COLOR        = 0x3271c2
 
 NICKNAME_TEMPLATES = (
     "{roblox-name} \u2192 changes to their Roblox username\n"
