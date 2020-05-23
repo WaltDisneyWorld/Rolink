@@ -11,7 +11,7 @@ class JoinDMCommand(Bloxlink.Module):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Administration"
         self.arguments = [{
-            "prompt": "Would you like to alter/disable the DM messages of **verified** or **unverified** users?",
+            "prompt": "Would you like to alter/disable the DM messages for **verified** or **unverified** users?",
             "type": "choice",
             "choices": ("verified", "unverified"),
             "name": "subcommand"

@@ -1,7 +1,7 @@
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
-from resources.exceptions import Message, RobloxNotFound
-from resources.constants import ARROW
+from resources.exceptions import Message, RobloxNotFound # pylint: disable=import-error
+from resources.constants import ARROW # pylint: disable=import-error
 import asyncio
 
 get_binds, get_group = Bloxlink.get_module("roblox", attrs=["get_binds", "get_group"])

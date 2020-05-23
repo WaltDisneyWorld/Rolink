@@ -11,7 +11,7 @@ transfer_premium, is_premium = Bloxlink.get_module("utils", attrs=["transfer_pre
 
 @Bloxlink.command
 class TransferCommand(Bloxlink.Module):
-    """view your Bloxlink premium status"""
+    """transfer your Bloxlink premium"""
 
     def __init__(self):
         self.examples = ["@justin", "disable"]
