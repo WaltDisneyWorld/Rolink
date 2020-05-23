@@ -200,6 +200,7 @@ class SettingsCommand(Bloxlink.Module):
                     "type": "number",
                     "footer": "Say **clear** to set as the default value.",
                     "formatting": False,
+                    "exceptions": ["clear"],
                     "max": option_find[2]
                 }]))["choice"]
 

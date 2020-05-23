@@ -138,6 +138,12 @@ class Arguments:
 					except TimeoutError:
 						raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)", dm=dm)
 
+				if my_arg.lower() in prompt.get("exceptions", []):
+					checked_args += 1
+					resolved_args[prompt["name"]] = my_arg
+
+					continue
+
 				resolver = get_resolver(prompt.get("type", "string"))
 				resolved, error_message = await resolver(not dm and message, prompt, my_arg)
 

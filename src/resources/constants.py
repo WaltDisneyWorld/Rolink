@@ -74,12 +74,12 @@ OPTIONS = {                # fn,  type, max length, desc
     "dynamicRoles":          (None, "boolean", None, "Bloxlink will make missing group roles from your Linked Groups as people need them."), #
     "welcomeMessage":        (None, "string", 1500,  "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"), #
     "joinDM":                (None, None, None,      "Customize the join DM messages of people who join the server."), #
-    "persistRoles":          (None, "boolean", None, "Update members' roles/nickname as they type."),
-    "allowReVerify":         (None, "boolean", None, "If this is enabled: members can change their Roblox account as many times as they want to in your server; otherwise, only allow 1 account."), #
+    #"persistRoles":          (None, "boolean", None, "Update members' roles/nickname as they type."),
+    "allowReVerify":         (None, "boolean", None, "If this is enabled: members can change their Roblox account as many times as they want in your server; otherwise, only allow 1 account."), #
     "trelloID":              (None,  None, None,     "Link a Trello board that can change Bloxlink settings!"), #
     "nicknameTemplate":      (None,  "string", 100,  "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),
     "unverifiedRoleName":    (None,  "string", 100,  "Set the 'Unverified' role name -- the role that Unverified users get."),
-    "ageLimit":              (None,  "number", None, "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked. Say ``0`` to disable this."),
+    "ageLimit":              (None,  "number", None, "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked."),
 }
 
 DEFAULTS = {
@@ -115,3 +115,5 @@ HELP_DESCRIPTION = "**Welcome to Bloxlink!**\n\n" \
                    "Please use ``{prefix}setup`` to set-up your server."
 
 TRANSFER_COOLDOWN = 5
+
+SERVER_INVITE = "https://discord.gg/jJKWpsr"
