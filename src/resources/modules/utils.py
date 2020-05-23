@@ -104,6 +104,10 @@ class Utils(Bloxlink.Module):
 		if not self.bloxlink_server:
 			return True
 
+		profile, _ = await self.is_premium(owner)
+		if profile.features.get("premium"):
+			return True
+
 		try:
 			member = self.bloxlink_server.get_member(owner.id) or await self.bloxlink_server.fetch_member(owner.id)
 		except NotFound:
