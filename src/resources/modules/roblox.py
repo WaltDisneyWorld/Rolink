@@ -1131,6 +1131,7 @@ class Roblox(Bloxlink.Module):
         else:
             # prompts
             if response:
+                """
                 args = await response.prompt([
                     {
                         "prompt": f"Welcome, **{username}!** Please select a method of verification: ``code`` or ``game``",
@@ -1139,6 +1140,8 @@ class Roblox(Bloxlink.Module):
                         "name": "verification_choice"
                     }
                 ], dm=True, no_dm_post=True)
+                """
+                args = {"verification_choice": "code"}
 
                 if args["verification_choice"] == "code":
                     code = self.generate_code()
@@ -1576,6 +1579,10 @@ class RobloxUser(Bloxlink.Module):
                         if field.name == "Username":
                            embed[0].set_field_at(i, name="Username", value=f"~~{field.value}~~")
 
+                else:
+                    if "banned" in args:
+                        embed[0].description = "This user is not banned."
+
                 if description and (everything or "description" in args):
                     embed[0].add_field(name="Description", value=description[0:1000], inline=False)
 
@@ -1606,7 +1613,10 @@ class RobloxUser(Bloxlink.Module):
 
         if embed:
             embed[0].title = None
-            await Roblox.apply_perks(roblox_user, embed=embed[0])
+
+            if not args:
+                await Roblox.apply_perks(roblox_user, embed=embed[0])
+
             await embed[2].edit(embed=embed[0])
 
 
