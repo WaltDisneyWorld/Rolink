@@ -11,6 +11,7 @@ from ..constants import MAGIC_ROLES, OWNER # pylint: disable=import-error
 
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_board = Bloxlink.get_module("trello", attrs="get_board")
+get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 
 Locale = Bloxlink.get_module("locale")
 Response = Bloxlink.get_module("response")
@@ -95,6 +96,15 @@ class Commands(Bloxlink.Module):
             del args[0]
 
             if command_name:
+                # merge commands from add-ons
+                guild_addons = guild_data.get("addons")
+
+                if guild_addons:
+                    addon_commands = get_addon_commands(guild_data)
+
+                    if addon_commands:
+                        pass
+
                 for index, command in dict(commands).items():
                     if index == command_name or command_name in command.aliases:
                         ignored_channels = guild_data.get("ignoredChannels", {})
