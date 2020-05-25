@@ -16,8 +16,7 @@ class StatsCommand(Bloxlink.Module):
     """view the current stats of Bloxlink"""
 
     def __init__(self):
-        self.developer = True
-
+        pass
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
