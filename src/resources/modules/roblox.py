@@ -30,6 +30,7 @@ except ImportError:
 nickname_template_regex = re.compile("\{(.*?)\}")
 trello_card_bind_regex = re.compile("(.*?): ?(.*)")
 any_group_nickname = re.compile(r"\{group-rank-(.*?)\}")
+bracket_search = re.compile(r"\[(.*)\]")
 
 
 loop = asyncio.get_event_loop()
@@ -236,6 +237,12 @@ class Roblox(Bloxlink.Module):
 
             group_role = group and group.user_rank_name or "Guest"
 
+            if group_role != "Guest":
+                brackets_match = bracket_search.search(group_role)
+
+                if brackets_match:
+                    group_role = brackets_match.group(0)
+
             template = template or DEFAULTS.get("nicknameTemplate") or ""
 
             if template == "{disable-nicknaming}":
@@ -243,8 +250,15 @@ class Roblox(Bloxlink.Module):
 
             for group_id in any_group_nickname.findall(template):
                 group = roblox_user.groups.get(group_id)
-                group_role = group and group.user_rank_name or "Guest"
-                template = template.replace("{group-rank-"+group_id+"}", group_role)
+                group_role_from_group = group and group.user_rank_name or "Guest"
+
+                if group_role_from_group != "Guest":
+                    brackets_match = bracket_search.search(group_role_from_group)
+
+                    if brackets_match:
+                        group_role_from_group = brackets_match.group(0)
+
+                template = template.replace("{group-rank-"+group_id+"}", group_role_from_group)
 
             template = template.replace(
                 "roblox-name", roblox_user.username
