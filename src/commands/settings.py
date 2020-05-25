@@ -16,14 +16,15 @@ except ImportError:
 	    "GLOBAL_CARD_LIMIT": 100
     }
 
-get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
+get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 
 
 
 RESET_CHOICES = ("everything", "binds")
 
-options_keys = tuple(OPTIONS.keys())
+options_keys = ", ".join([o for o, o_d in OPTIONS.items() if not o_d[3]])
+premium_options_keys = ", ".join([o for o, o_d in OPTIONS.items() if o_d[3]])
 
 @Bloxlink.command
 class SettingsCommand(Bloxlink.Module):
@@ -119,7 +120,7 @@ class SettingsCommand(Bloxlink.Module):
         parsed_args = await CommandArgs.prompt([{
             "prompt": "What value would you like to change? Note that some settings you can't change "
                       "from this command due to the extra complexity, but I will tell you the "
-                      f"appropriate command to use.\n\nOptions: ``{options_keys}``",
+                      f"appropriate command to use.\n\nOptions: ``{options_keys}``\n\nPremium-only options: ``{premium_options_keys}``",
             "name": "choice",
             "type": "choice",
             "formatting": False,
@@ -138,6 +139,12 @@ class SettingsCommand(Bloxlink.Module):
         option_find = OPTIONS.get(choice)
 
         if option_find:
+            if option_find[3]:
+                profile, _ = await is_premium(guild.owner)
+
+                if not profile.features.get("premium"):
+                    raise Error("This option is premium-only! The server owner must have premium for it to be changed.")
+
             option_type = option_find[1]
             trello_board = CommandArgs.trello_board
             card = success_text = parsed_value = None
@@ -403,7 +410,7 @@ class SettingsCommand(Bloxlink.Module):
         option_find = OPTIONS.get(parsed_args)
 
         if option_find:
-            desc = option_find[3]
+            desc = option_find[4]
 
             embed = Embed(title=parsed_args, description=desc.format(prefix=CommandArgs.prefix, templates=NICKNAME_TEMPLATES))
 
