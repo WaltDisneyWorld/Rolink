@@ -9,20 +9,26 @@ get_binds, get_group = Bloxlink.get_module("roblox", attrs=["get_binds", "get_gr
 
 
 async def delete_bind_from_cards(group, trello_binds_list=None, bind_data_trello=None, rank=None, high=None, low=None):
+    if rank in ("main", "everything"):
+        for rank_id, rank_data in bind_data_trello.get("binds", {}).items():
+            cards = rank_data.get("trello", {}).get("cards")
+
+            if cards:
+                for card_data in cards:
+                    try:
+                        await card_data["card"].archive()
+                    except TrelloException:
+                        break
+                    else:
+                        if trello_binds_list:
+                            trello_binds_list.parsed_bind_data = None
+
+        return
+
     cards = bind_data_trello.get("trello", {}).get("cards")
 
     if cards:
-        if rank in ("main", "everything"):
-            for card_data in cards:
-                try:
-                    await card_data["card"].archive()
-                except TrelloException:
-                    break
-                else:
-                    if trello_binds_list:
-                        trello_binds_list.parsed_bind_data = None
-
-        elif low and high:
+        if low and high:
             for card_data in cards:
                 ranks = list(card_data.get("ranks") or [])
                 card = card_data["card"]
@@ -172,7 +178,7 @@ class DelBindCommand(Bloxlink.Module):
 
                         guild_data["groupIDs"] = group_ids
                         await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
-                                                                                                  # cancel bind deletion below
+                                                                                                               # cancel bind deletion below
 
             found_group_trello = role_binds_trello.get("groups", {}).get(bind_id) or {}
             found_group = role_binds.get("groups", {}).get(bind_id) or {}
@@ -188,17 +194,10 @@ class DelBindCommand(Bloxlink.Module):
 
                 rank_id = parsed_args["rank_id"].lower()
 
-                if rank_id in ("everything", "everything.", "all"):
+                if rank_id == "everything":
                     if found_group:
                         binds = found_group.get("binds", {})
-
-                        if binds.get("everything"):
-                            del binds["everything"]
-                        elif binds.get("all"):
-                            del binds["all"]
-
-                        if not (found_group.get("binds", {}) or found_group.get("ranges", {})):
-                            del role_binds["groups"][bind_id]
+                        del role_binds["groups"][bind_id]
 
                     await delete_bind_from_cards(rank="everything", trello_binds_list=trello_binds_list, group=bind_id, bind_data_trello=found_group_trello)
 
@@ -247,6 +246,9 @@ class DelBindCommand(Bloxlink.Module):
 
                     else:
                         raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")
+
+            else:
+                raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")
 
             guild_data["roleBinds"] = role_binds
             guild_data["groupIDs"] = group_ids
