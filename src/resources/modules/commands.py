@@ -359,7 +359,6 @@ class Command:
                                   "would like the server owner to have premium instead, please use the ``!transfer`` "
                                   "command.\nYou may subscribe to Bloxlink Premium on Patreon: https://patreon.com/bloxlink", type="silly")
 
-
         try:
             for role_exception in permissions.exceptions["roles"]:
                 if find(lambda r: r.name == role_exception, author.roles):
@@ -369,30 +368,33 @@ class Command:
                 role_name = permissions.bloxlink_role
                 author_perms = author.guild_permissions
 
-                if role_name == "Bloxlink Manager":
-                    if author_perms.manage_guild or author_perms.administrator:
-                        pass
-                    else:
-                        raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+                if find(lambda r: r.name == "Bloxlink Admin", author.roles):
+                    return True
+                else:
+                    if role_name == "Bloxlink Manager":
+                        if author_perms.manage_guild or author_perms.administrator:
+                            pass
+                        else:
+                            raise PermissionError("You need the ``Manage Server`` permission to run this command.")
 
-                elif role_name == "Bloxlink Moderator":
-                    if author_perms.kick_members or author_perms.ban_members or author_perms.administrator:
-                        pass
-                    else:
-                        raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
+                    elif role_name == "Bloxlink Moderator":
+                        if author_perms.kick_members or author_perms.ban_members or author_perms.administrator:
+                            pass
+                        else:
+                            raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
 
-                elif role_name == "Bloxlink Updater":
-                    if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
-                        pass
-                    else:
-                        raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
-                                              "role permission, or the ``Manage Server`` role permission.")
+                    elif role_name == "Bloxlink Updater":
+                        if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
+                            pass
+                        else:
+                            raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
+                                                "role permission, or the ``Manage Server`` role permission.")
 
-                elif role_name == "Bloxlink Admin":
-                    if author_perms.administrator:
-                        pass
-                    else:
-                        raise PermissionError("You need the ``Administrator`` role permission to run this command.")
+                    elif role_name == "Bloxlink Admin":
+                        if author_perms.administrator:
+                            pass
+                        else:
+                            raise PermissionError("You need the ``Administrator`` role permission to run this command.")
 
             if permissions.allowed.get("discord_perms"):
                 for perm in permissions.allowed["discord_perms"]:

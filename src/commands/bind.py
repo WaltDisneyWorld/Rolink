@@ -152,6 +152,9 @@ class BindCommand(Bloxlink.Module):
                             except (TrelloNotFound, TrelloBadRequest):
                                 pass
 
+                        if trello_binds_list:
+                            trello_binds_list.parsed_bind_data = None
+
                     raise Message("Since your group is already linked, the nickname was updated.", type="success")
                 else:
                     raise Message("This group is already linked.", type="silly")

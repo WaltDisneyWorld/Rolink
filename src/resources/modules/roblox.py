@@ -1036,19 +1036,23 @@ class Roblox(Bloxlink.Module):
 
                     if primary_account:
                         discord_profile.primary_account = RobloxUser(roblox_id=primary_account)
-                        await discord_profile.primary_account.sync()
+
+                        if roblox_account != primary_account:
+                            await discord_profile.primary_account.sync()
+
 
                     discord_profile.accounts = accounts
 
 
                 roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
-
                 await roblox_user.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
 
                 if guild:
                     discord_profile.guilds[guild_id] = roblox_user
 
                 self.cache["discord_profiles"][author_id] = discord_profile
+                self.cache["roblox_users"][roblox_account] = roblox_user
+
                 return roblox_user, accounts
 
             else:
@@ -1067,10 +1071,10 @@ class Roblox(Bloxlink.Module):
                 roblox_id, username = await self.get_roblox_id(username)
 
             if roblox_id:
-                roblox_user = self.cache["roblox_users"].get(roblox_id) or RobloxUser(roblox_id=roblox_id)
-
+                roblox_user = self.cache["roblox_users"].get(roblox_id)
                 if not roblox_user:
-                    raise UserNotVerified
+                    roblox_user = RobloxUser(roblox_id=roblox_id)
+                    self.cache["roblox_users"][roblox_account] = roblox_user
 
                 await roblox_user.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
                 return roblox_user, None
@@ -1225,20 +1229,22 @@ class Roblox(Bloxlink.Module):
                     user_tags.append("Bloxlink Developer")
                     user_tags.append("Bloxlink Staff")
                     embed.colour = DEV_COLOR
+
                 elif bloxlink_user_rank in ("Helpers", "Mods"):
                     user_tags.append("Bloxlink Staff")
                     embed.colour = STAFF_COLOR
+
                 elif bloxlink_user_rank == "Community Manager":
                     user_tags.append("Bloxlink Community Manager")
                     user_tags.append("Bloxlink Staff")
                     embed.colour = COMMUNITY_MANAGER_COLOR
+
                 elif bloxlink_user_rank == "VIP Members":
                     user_tags.append("Bloxlink VIP Member")
                     embed.colour = VIP_MEMBER_COLOR
 
             if user_tags:
                 embed.add_field(name="User Tags", value="\n".join(user_tags))
-
 
 
     async def __setup__(self):
@@ -1249,7 +1255,7 @@ class Roblox(Bloxlink.Module):
 
 
 class DiscordProfile:
-    __slots__ = "id", "primary_account", "accounts", "guilds"
+    __slots__ = ("id", "primary_account", "accounts", "guilds")
 
     def __init__(self, author_id, **kwargs):
         self.id = author_id
@@ -1282,7 +1288,6 @@ class Group(Bloxlink.Module):
         self.load_json(group_data, version=version, my_roles=my_roles, rolesets=rolesets)
 
     def load_json(self, group_data, version, my_roles=None, rolesets=None):
-
         if version == 1 or version == 2:
             self.name = self.name or group_data.get("name", "N/A")
             self.member_count = self.member_count or group_data.get("memberCount", 0)
@@ -1347,16 +1352,17 @@ class RobloxUser(Bloxlink.Module):
         roblox_data = {
             "username": username,
             "id": roblox_id,
-            "groups": {},
+            "groups": None,
             "presence": None,
-            "premium": False,
-            "badges": [],
+            "premium": None,
+            "badges": None,
             "avatar": None,
             "profile_link": roblox_id and f"https://www.roblox.com/users/{roblox_id}/profile",
-            "banned": False,
-            "description": "",
-            "age": 0,
-            "join_data": None
+            "banned": None,
+            "description": None,
+            "age": None,
+            "join_date": None,
+            "created": None
         }
 
 
@@ -1383,11 +1389,13 @@ class RobloxUser(Bloxlink.Module):
             roblox_data["join_date"] = roblox_user_from_cache.join_date
             roblox_data["description"] = roblox_user_from_cache.description
             roblox_data["age"] = roblox_user_from_cache.age
+            roblox_data["created"] = roblox_user_from_cache.created
 
         if roblox_id and not username:
             roblox_id, username = await Roblox.get_roblox_username(roblox_id)
             roblox_data["username"] = username
             roblox_data["id"] = roblox_id
+
         elif not roblox_id and username:
             roblox_id, username = await Roblox.get_roblox_id(username)
             roblox_data["username"] = username
@@ -1417,7 +1425,7 @@ class RobloxUser(Bloxlink.Module):
 
 
         async def avatar():
-            if roblox_data.get("avatar"):
+            if roblox_data["avatar"] is not None:
                 avatar_url = roblox_data["avatar"]
             else:
                 avatar_url, _ = await fetch(f"{BASE_URL}/bust-thumbnail/json?userId={roblox_data['id']}&height=180&width=180")
@@ -1439,7 +1447,7 @@ class RobloxUser(Bloxlink.Module):
                 embed[0].set_author(name=author and str(author) or roblox_data["username"], icon_url=author and author.avatar_url or avatar_url, url=roblox_data.get("profile_link")) # unsure what this does with icon_url if there's no author
 
         async def presence():
-            if roblox_data.get("presence"):
+            if roblox_data["presence"] is not None:
                 presence = roblox_data["presence"]
             else:
                 presence, _ = await fetch(f"{API_URL}/users/{roblox_data['id']}/onlinestatus")
@@ -1472,14 +1480,14 @@ class RobloxUser(Bloxlink.Module):
                 embed[0].add_field(name="Presence", value=presence)
 
         async def membership_and_badges():
-            badges = roblox_data["badges"]
-
-            if roblox_data["premium"]:
+            if roblox_data["premium"] is not None and roblox_data["badges"] is not None:
                 premium = roblox_data["premium"]
+                badges = roblox_data["badges"]
             else:
-                data, _ = await fetch(f"{BASE_URL}/badges/roblox?userId={roblox_data['id']}")
+                premium = False
+                badges = []
 
-                premium = None
+                data, _ = await fetch(f"{BASE_URL}/badges/roblox?userId={roblox_data['id']}")
 
                 try:
                     data = json.loads(data)
@@ -1492,7 +1500,7 @@ class RobloxUser(Bloxlink.Module):
                     else:
                         badges.append(badge["Name"])
 
-                #roblox_data["badges"] = badges
+                roblox_data["badges"] = badges
                 roblox_data["premium"] = premium
 
                 if roblox_user:
@@ -1510,11 +1518,10 @@ class RobloxUser(Bloxlink.Module):
                     embed[0].add_field(name="Badges", value=", ".join(badges))
 
         async def groups():
-            groups = roblox_data["groups"]
-
-            if roblox_data.get("groups"):
+            if roblox_data["groups"] is not None:
                 groups = roblox_data["groups"]
             else:
+                groups = {}
                 #group_json, _ = await fetch(f"{API_URL}/users/{roblox_data['id']}/groups")
                 group_json, _ = await fetch(f"{GROUP_API}/v2/users/{roblox_data['id']}/groups/roles")
                 # https://groups.roblox.com/v2/users/1/groups/roles
@@ -1538,14 +1545,20 @@ class RobloxUser(Bloxlink.Module):
 
 
         async def profile():
-            if roblox_data.get("description") or roblox_data.get("age"):
-                description = roblox_data.get("description")
-                age = roblox_data.get("age")
-                join_date = roblox_data.get("join_date")
-                banned = roblox_data.get("banned") # <:ban:476838302092230672>
-                created = roblox_data.get("created")
+            banned = description = age = created = join_date = None
+
+            if roblox_data["description"] is not None and roblox_data["age"] is not None and roblox_data["join_date"] is not None and roblox_data["created"] is not None:
+                description = roblox_data["description"]
+                age = roblox_data["age"]
+                join_date = roblox_data["join_date"]
+                banned = roblox_data["banned"] # <:ban:476838302092230672>
+                created = roblox_data["created"]
             else:
-                banned = description = age = join_date = created = None
+                banned = None
+                description = None
+                age = None
+                created = None
+                join_date = None
 
                 data, _ = await fetch(f"https://users.roblox.com/v1/users/{roblox_data['id']}")
 
@@ -1562,7 +1575,7 @@ class RobloxUser(Bloxlink.Module):
                     roblox_data["created"] = created
                     roblox_data["banned"] = banned
 
-            if not age:
+            if age is None:
                 today = datetime.today()
                 roblox_user_age = parser.parse(created).replace(tzinfo=None)
                 age = (today - roblox_user_age).days
@@ -1608,7 +1621,6 @@ class RobloxUser(Bloxlink.Module):
                 roblox_user.created = created
                 roblox_user.banned = banned
 
-
         # fast operations
         if basic_details or "avatar" in args:
             await avatar()
@@ -1634,6 +1646,7 @@ class RobloxUser(Bloxlink.Module):
             await embed[2].edit(embed=embed[0])
 
 
+
         return roblox_data
 
     async def sync(self, *args, author=None, basic_details=True, embed=None, everything=False):
@@ -1646,7 +1659,7 @@ class RobloxUser(Bloxlink.Module):
                 basic_details = basic_details,
                 embed = embed,
                 roblox_user = self,
-                author=author
+                author = author
             )
 
         except RobloxAPIError:

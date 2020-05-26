@@ -141,6 +141,8 @@ class DelBindCommand(Bloxlink.Module):
         # role_binds = guild_data.get("roleBinds", {"groups": {}, "virtualGroups": {}})
         group_ids = guild_data.get("groupIDs", {})
 
+        removed_main_group = False
+
         if not ((role_binds_trello or {}).get("groups") or group_ids_trello):
             additional = (not trello_binds_list and "\nAdditionally, you may use "
                          f"``{prefix}setup`` to link a Trello board for bind-to-card creation.") or ""
@@ -179,6 +181,8 @@ class DelBindCommand(Bloxlink.Module):
                         guild_data["groupIDs"] = group_ids
                         await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
                                                                                                                # cancel bind deletion below
+
+                        removed_main_group = True
 
             found_group_trello = role_binds_trello.get("groups", {}).get(bind_id) or {}
             found_group = role_binds.get("groups", {}).get(bind_id) or {}
@@ -248,7 +252,8 @@ class DelBindCommand(Bloxlink.Module):
                         raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")
 
             else:
-                raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")
+                if not removed_main_group:
+                    raise Error(f"No matching bind found for group ``{bind_id}``!")
 
             guild_data["roleBinds"] = role_binds
             guild_data["groupIDs"] = group_ids

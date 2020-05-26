@@ -23,8 +23,11 @@ get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 
 RESET_CHOICES = ("everything", "binds")
 
-options_keys = ", ".join([o for o, o_d in OPTIONS.items() if not o_d[3]])
-premium_options_keys = ", ".join([o for o, o_d in OPTIONS.items() if o_d[3]])
+options_keys = [o for o, o_d in OPTIONS.items() if not o_d[3]]
+premium_option_keys = [o for o, o_d in OPTIONS.items() if o_d[3]]
+options_combined = options_keys + premium_option_keys
+options_strings = ", ".join([o for o, o_d in OPTIONS.items() if not o_d[3]])
+premium_options_strings = ", ".join([o for o, o_d in OPTIONS.items() if o_d[3]])
 
 @Bloxlink.command
 class SettingsCommand(Bloxlink.Module):
@@ -120,11 +123,11 @@ class SettingsCommand(Bloxlink.Module):
         parsed_args = await CommandArgs.prompt([{
             "prompt": "What value would you like to change? Note that some settings you can't change "
                       "from this command due to the extra complexity, but I will tell you the "
-                      f"appropriate command to use.\n\nOptions: ``{options_keys}``\n\nPremium-only options: ``{premium_options_keys}``",
+                      f"appropriate command to use.\n\nOptions: ``{options_strings}``\n\nPremium-only options: ``{premium_options_strings}``",
             "name": "choice",
             "type": "choice",
             "formatting": False,
-            "choices": options_keys
+            "choices": options_combined
         }])
 
         choice = parsed_args["choice"]
