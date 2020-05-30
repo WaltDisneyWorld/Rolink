@@ -6,11 +6,11 @@ from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Bloxlink, Args, Permissions
-from ..constants import MAGIC_ROLES, OWNER # pylint: disable=import-error
+from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-error
 
 
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
-get_board = Bloxlink.get_module("trello", attrs="get_board")
+get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 
 Locale = Bloxlink.get_module("locale")
@@ -88,6 +88,9 @@ class Commands(Bloxlink.Module):
         client_match = re.search(f"<@!?{self.client.user.id}>", content)
         check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or client_match and client_match.group(0)
         check_verify_channel = False
+
+        trello_options = {}
+        trello_options_checked = True
 
         if check:
             after = content[len(check):].strip()
@@ -216,7 +219,14 @@ class Commands(Bloxlink.Module):
                         except RobloxDown:
                             await response.error("The Roblox API is currently offline; please wait until Roblox is back online before re-running this command.")
                         except CancelledPrompt as e:
-                            if e.type == "delete" and not e.dm:
+                            guild_data = guild_data or (guild and (await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
+
+                            if trello_board:
+                                trello_options, _ = await get_options(trello_board)
+                                guild_data.update(trello_options)
+                                trello_options_checked = True
+
+                            if (e.type == "delete" and not e.dm) and guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):
                                 try:
                                     await message.delete()
                                 except (Forbidden, NotFound):
@@ -226,6 +236,7 @@ class Commands(Bloxlink.Module):
                                     await response.send(f"**{locale('prompt.cancelledPrompt')}:** {e}", dm=e.dm, no_dm_post=True)
                                 else:
                                     await response.send(f"**{locale('prompt.cancelledPrompt')}.**", dm=e.dm, no_dm_post=True)
+
                         except Message as e:
                             message_type = "send" if e.type == "send" else e.type
                             response_fn = getattr(response, message_type, response.send)
@@ -252,12 +263,20 @@ class Commands(Bloxlink.Module):
                             Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
 
                         finally:
+                            messages = arguments.messages + response.delete_message_queue
 
-                            for message in arguments.messages + response.delete_message_queue:
-                                try:
-                                    await message.delete()
-                                except (Forbidden, NotFound):
-                                    pass
+                            if messages:
+                                if not trello_options_checked and trello_board:
+                                    trello_options, _ = await get_options(trello_board)
+                                    guild_data.update(trello_options)
+                                    trello_options_checked = True
+
+                                if guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):
+                                    for message in arguments.messages + response.delete_message_queue:
+                                        try:
+                                            await message.delete()
+                                        except (Forbidden, NotFound):
+                                            pass
 
                         break
 
@@ -388,7 +407,7 @@ class Command:
                             pass
                         else:
                             raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
-                                                "role permission, or the ``Manage Server`` role permission.")
+                                                  "role permission, or the ``Manage Server`` role permission.")
 
                     elif role_name == "Bloxlink Admin":
                         if author_perms.administrator:

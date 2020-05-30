@@ -81,6 +81,7 @@ OPTIONS = {                # fn,  type, max length, premium only, desc
     "unverifiedRoleName":    (None,  "string", 100,  False, "Set the 'Unverified' role name -- the role that Unverified users get."),
     "ageLimit":              (None,  "number", None, True,  "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked."),
     "groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
+    "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."), #
 }
 
 DEFAULTS = {
@@ -99,7 +100,8 @@ DEFAULTS = {
     "nicknameTemplate": "{roblox-name}",
     "unverifiedRoleName": "Unverified",
     "ageLimit": None,
-    "groupShoutChannel": None
+    "groupShoutChannel": None,
+    "promptDelete": True,
 
 }
 
