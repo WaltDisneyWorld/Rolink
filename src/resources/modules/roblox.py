@@ -615,15 +615,20 @@ class Roblox(Bloxlink.Module):
                     raise UserNotVerified
 
         except UserNotVerified:
-            if roles and unverify_role:
-                if not unverified_role:
-                    try:
-                        unverified_role = await guild.create_role(name=unverified_role_name)
-                    except Forbidden:
-                        raise PermissionError("I was unable to create the Unverified Role. Please "
-                                              "ensure I have the ``Manage Roles`` permission.")
+            if roles:
+                if unverify_role:
+                    if not unverified_role:
+                        try:
+                            unverified_role = await guild.create_role(name=unverified_role_name)
+                        except Forbidden:
+                            raise PermissionError("I was unable to create the Unverified Role. Please "
+                                                  "ensure I have the ``Manage Roles`` permission.")
 
-                add_roles.add(unverified_role)
+                    add_roles.add(unverified_role)
+
+                if verify_role and verified_role and verified_role in author.roles:
+                    remove_roles.add(verified_role)
+
 
             if nickname:
                 nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
