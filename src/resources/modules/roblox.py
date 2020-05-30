@@ -681,7 +681,7 @@ class Roblox(Bloxlink.Module):
                                                     role = await guild.create_role(name=role_id)
                                                 except Forbidden:
                                                     raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                        "Please ensure I have the ``Manage Roles`` permission.")
+                                                                           "Please ensure I have the ``Manage Roles`` permission.")
                                                 else:
                                                     add_roles.add(role)
 
@@ -717,7 +717,7 @@ class Roblox(Bloxlink.Module):
                                                         role = await guild.create_role(name=role_id)
                                                     except Forbidden:
                                                         raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                                "Please ensure I have the ``Manage Roles`` permission.")
+                                                                               "Please ensure I have the ``Manage Roles`` permission.")
                                                     else:
                                                         add_roles.add(role)
 
@@ -733,6 +733,13 @@ class Roblox(Bloxlink.Module):
 
                                             if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                 possible_nicknames.append([role, resolved_nickname])
+                                else:
+                                    for role_id in bound_roles:
+                                        int_role_id = role_id.isdigit() and int(role_id)
+                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+
+                                        if role and role in author.roles:
+                                            remove_roles.add(role)
 
                         if group:
                             user_rank = group.user_rank_id
@@ -755,7 +762,7 @@ class Roblox(Bloxlink.Module):
                                                     role = await guild.create_role(name=role_id)
                                                 except Forbidden:
                                                     raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                        "Please ensure I have the ``Manage Roles`` permission.")
+                                                                           "Please ensure I have the ``Manage Roles`` permission.")
 
                                         if roles and role:
                                             add_roles.add(role)
@@ -793,7 +800,7 @@ class Roblox(Bloxlink.Module):
                                             group_role = await guild.create_role(name=group.user_rank_name)
                                         except Forbidden:
                                             raise PermissionError(f"Sorry, I wasn't able to create the role {group.user_rank_name}."
-                                                                "Please ensure I have the ``Manage Roles`` permission.")
+                                                                   "Please ensure I have the ``Manage Roles`` permission.")
 
                                 """
                                 for roleset in group.rolesets:
