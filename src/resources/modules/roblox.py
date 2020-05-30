@@ -2,7 +2,7 @@ from ..structures.Bloxlink import Bloxlink
 from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error,
                           CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass)
 from typing import Tuple
-from discord.errors import Forbidden, NotFound
+from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from discord import Embed, Member
 from datetime import datetime
@@ -192,19 +192,37 @@ class Roblox(Bloxlink.Module):
             roblox_accounts["accounts"] = roblox_list
             success = True
 
-        for i,v in guilds.items():
+        for i,v in dict(guilds).items():
             if v == roblox_id:
-                guilds[i] = None
-                roblox_accounts["guilds"] = guilds
+                try:
+                    guild = await Bloxlink.fetch_guild(int(i))
+                except (Forbidden, HTTPException):
+                    pass
+                else:
+                    try:
+                        member = await guild.fetch_member(author.id)
+                    except (Forbidden, NotFound):
+                        pass
+                    else:
+                        for role in member.roles:
+                            if role != guild.default_role and role.name != "Muted":
+                                try:
+                                    await member.remove_roles(role, reason="Unlinked")
+                                except Forbidden:
+                                    pass
+
+                guilds.pop(i, None)
+
                 success = True
 
-        await self.r.table("users").insert(
-            {
-                "id": author_id,
-                "robloxAccounts": roblox_accounts
-            },
-            conflict="update"
-        ).run()
+
+        if user_data["robloxID"] == roblox_id:
+            user_data["robloxID"] = None
+
+        roblox_accounts["guilds"] = guilds
+        user_data["robloxAccounts"] = roblox_accounts
+
+        await self.r.table("users").insert(user_data, conflict="replace").run()
 
         return success
 

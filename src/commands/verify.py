@@ -6,7 +6,7 @@ from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound
 from resources.constants import DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 
-verify_as, update_member, get_user, get_nickname, get_roblox_id = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id"])
+verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
 
 try:
@@ -242,4 +242,48 @@ class VerifyCommand(Bloxlink.Module):
     async def unlink(CommandArgs):
         """unlink an account from Bloxlink"""
 
-        raise NotImplementedError
+        author = CommandArgs.message.author
+        prefix = CommandArgs.prefix
+        response = CommandArgs.response
+
+        try:
+            _, accounts = await get_user("username", author=author, everything=False, basic_details=True)
+
+            if accounts:
+                parsed_accounts = await parse_accounts(accounts)
+                parsed_accounts_str = ", ".join(parsed_accounts.keys())
+
+                parsed_args = await CommandArgs.prompt([
+                    {
+                        "prompt": f"Please choose the account that you would like to unlink from: ```{parsed_accounts_str}```",
+                        "name": "account",
+                        "type": "choice",
+                        "choices": parsed_accounts.keys(),
+                        "formatting": False
+                    },
+                    {
+                        "prompt": "We will now remove ``{account}`` from your account.\n"
+                                  "**__WARNING:__** This will remove __all of your roles__ in server(s) you are linked "
+                                  "as with this account.",
+                        "footer": "Say **next** to continue.",
+                        "type": "choice",
+                        "choices": ["next"],
+                        "name": "_",
+                    }
+                ], dm=True)
+
+                username = parsed_args["account"]
+                roblox_id = (parsed_accounts.get(username)).id
+
+                success = await unverify_member(author, roblox_id)
+
+                if success:
+                    await response.success(f"Successfully unlinked **{username}** from your account! Please note that it may take up to "
+                                            "10 minutes for the unlinking to reflect in every server you share with the bot due to "
+                                            "Bloxlink using a cache for accounts.", dm=True, no_dm_post=True)
+                else:
+                    await response.error(f"Failed to unlink **{username}** from your account.", dm=True, no_dm_post=True)
+
+
+        except UserNotVerified:
+            raise Error(f"You're not linked to Bloxlink. Please use ``{prefix}verify add``.")
