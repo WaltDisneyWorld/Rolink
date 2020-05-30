@@ -71,7 +71,7 @@ class UpdateUserCommand(Bloxlink.Module):
                         nickname          = True,
                         author_data       = await self.r.table("users").get(str(user.id)).run())
 
-                    embed = Embed(title=f"Discord Profile for {user}")
+                    embed = Embed(title=f"Discord Profile for {user}", description="Changed someone’s group rank? Please wait 10 minutes for Bloxlink to catch up!")
                     embed.set_author(name=str(user), icon_url=user.avatar_url, url=roblox_user.profile_link)
 
                     if not (added or removed):
@@ -82,7 +82,7 @@ class UpdateUserCommand(Bloxlink.Module):
                     if removed:
                         embed.add_field(name="Removed Roles", value=", ".join(removed))
                     if nickname:
-                        embed.description = f"**Nickname:** ``{nickname}``"
+                        embed.description = f"**Nickname:** ``{nickname}``\nChanged someone’s group rank? Please wait 10 minutes for Bloxlink to catch up!"
                     if errors:
                         embed.add_field(name="Errors", value=", ".join(errors))
 
