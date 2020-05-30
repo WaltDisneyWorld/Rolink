@@ -80,6 +80,7 @@ OPTIONS = {                # fn,  type, max length, premium only, desc
     "nicknameTemplate":      (None,  "string", 100,  False, "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),
     "unverifiedRoleName":    (None,  "string", 100,  False, "Set the 'Unverified' role name -- the role that Unverified users get."),
     "ageLimit":              (None,  "number", None, True,  "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked."),
+    "groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
 }
 
 DEFAULTS = {
@@ -97,7 +98,8 @@ DEFAULTS = {
     "welcomeMessage": "Welcome to **{server-name}**, {roblox-name}!",
     "nicknameTemplate": "{roblox-name}",
     "unverifiedRoleName": "Unverified",
-    "ageLimit": None
+    "ageLimit": None,
+    "groupShoutChannel": None
 
 }
 

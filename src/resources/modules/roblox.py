@@ -22,8 +22,8 @@ except ImportError:
     TRELLO = {
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
-	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 500
+        "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
+        "GLOBAL_CARD_LIMIT": 500
     }
 
 
@@ -930,17 +930,45 @@ class Roblox(Bloxlink.Module):
 
         return [r.name for r in add_roles], [r.name for r in remove_roles], nickname, errors, roblox_user
 
+    async def get_group_shout(self, group_id):
+        """gets the group shout. not cached."""
 
-    async def get_group(self, group_id, rolesets=False):
+        text, response = await fetch(self.session, f"https://groups.roblox.com/v1/groups/{group_id}", raise_on_failure=False)
+
+        if response.status != 200:
+            raise RobloxNotFound
+
+        try:
+            response = json.loads(text)
+            return response
+
+        except json.decoder.JSONDecodeError:
+            return {}
+
+    async def get_group(self, group_id, with_shout=False, rolesets=False):
         group_id = str(group_id)
         group = self.cache["groups"].get(group_id)
+        shout = None
 
         if group and group.rolesets:
-            return group
+            if with_shout:
+                if group.shout:
+                    return group
+            else:
+                return group
 
-        #text, _ = await fetch(f"{API_URL}/groups/{group_id}", raise_on_failure=False)
 
         text, _ = await fetch(f"{API_URL}/groups/{group_id}", raise_on_failure=False)
+
+        if with_shout:
+            group_api_v1, _ = await fetch(f"https://groups.roblox.com/v1/groups/{group_id}", raise_on_failure=False)
+
+            try:
+                group_api_v1_json = json.loads(group_api_v1)
+            except json.decoder.JSONDecodeError:
+                raise RobloxAPIError
+            else:
+                shout = group_api_v1_json.get("shout")
 
         try:
             json_data = json.loads(text)
@@ -949,6 +977,7 @@ class Roblox(Bloxlink.Module):
         else:
             if json_data.get("Id"):
                 rolesets = json_data.get("Roles")
+                json_data["shout"] = shout
 
                 if not group:
                     group = Group(group_id=group_id, group_data=json_data, version="old", rolesets=rolesets)
@@ -1278,9 +1307,11 @@ class Group(Bloxlink.Module):
         self.description = None
         self.owner = None
         self.member_count = None
+        self.emblem_url = None
         self.rolesets = []
         self.version = version
         self.url = f"https://www.roblox.com/My/Groups.aspx?gid={self.group_id}"
+        self.shout = None
 
         self.user_rank_name = None
         self.user_rank_id = None
@@ -1288,6 +1319,9 @@ class Group(Bloxlink.Module):
         self.load_json(group_data, version=version, my_roles=my_roles, rolesets=rolesets)
 
     def load_json(self, group_data, version, my_roles=None, rolesets=None):
+        self.shout = group_data.get("shout") or self.shout
+        self.emblem_url = self.emblem_url or group_data.get("EmblemUrl")
+
         if version == 1 or version == 2:
             self.name = self.name or group_data.get("name", "N/A")
             self.member_count = self.member_count or group_data.get("memberCount", 0)

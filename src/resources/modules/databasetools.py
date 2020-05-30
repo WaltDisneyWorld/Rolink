@@ -6,9 +6,11 @@ TABLE_STRUCTURE = {
 	"bloxlink": [
 		"users",
 		"guilds",
+		"groupShouts"
 	],
 	"canary": [
 		"guilds",
+		"groupShouts"
 	],
 	"patreon": [
 		"refreshTokens",

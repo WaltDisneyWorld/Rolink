@@ -18,6 +18,7 @@ except ImportError:
 
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
+parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 
 
 
@@ -93,7 +94,7 @@ class SettingsCommand(Bloxlink.Module):
             value = None
 
             if option_data[0]:
-                value = option_data[0](guild_data) # pylint: disable=not-callable
+                value = option_data[0](guild, guild_data) # pylint: disable=not-callable
             else:
                 try:
                     value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False"))).format(prefix=prefix)
@@ -119,6 +120,7 @@ class SettingsCommand(Bloxlink.Module):
         prefix = CommandArgs.prefix
         guild = CommandArgs.message.guild
         response = CommandArgs.response
+        message = CommandArgs.message
 
         parsed_args = await CommandArgs.prompt([{
             "prompt": "What value would you like to change? Note that some settings you can't change "
@@ -138,6 +140,10 @@ class SettingsCommand(Bloxlink.Module):
             raise Message(f"You can link your group from ``{prefix}bind``!", type="success")
         elif choice == "joinDM":
             raise Message(f"You can customize this setting from ``{prefix}joindm``!", type="success")
+        elif choice == "groupShoutChannel":
+            message.content = f"{prefix}shoutproxy"
+            return await parse_message(message)
+
 
         option_find = OPTIONS.get(choice)
 
