@@ -116,8 +116,7 @@ class SwitchUserCommand(Bloxlink.Module):
                         roblox_id    = roblox_id,
                         trello_board = trello_board,
                         update_user  = False)
-                except UserNotVerified:
-                    await response.send("test")
+
                 except Message as e:
                     if e.type == "error":
                         await response.error(e)
