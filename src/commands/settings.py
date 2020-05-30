@@ -408,19 +408,14 @@ class SettingsCommand(Bloxlink.Module):
     async def help(self, CommandArgs):
         """provides a description of all changeable settings"""
 
-        parsed_args = (await CommandArgs.prompt([{
-            "prompt": f"Which option would you like more information on?\n\nOptions: ``{options_keys}``",
-            "name": "choice",
-            "type": "choice",
-            "formatting": False,
-            "choices": options_keys
-        }]))["choice"]
+        guild = CommandArgs.message.guild
 
-        option_find = OPTIONS.get(parsed_args)
+        embed = Embed(title="Bloxlink Settings Help")
+        embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
+        embed.set_author(name=guild.name, icon_url=guild.icon_url)
 
-        if option_find:
-            desc = option_find[4]
+        for option_name, option_data in OPTIONS.items():
+            desc = option_data[4].format(prefix=CommandArgs.prefix, templates=NICKNAME_TEMPLATES)
+            embed.add_field(name=option_name, value=desc, inline=False)
 
-            embed = Embed(title=parsed_args, description=desc.format(prefix=CommandArgs.prefix, templates=NICKNAME_TEMPLATES))
-
-            await CommandArgs.response.send(embed=embed)
+        await CommandArgs.response.send(embed=embed)
