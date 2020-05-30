@@ -21,17 +21,21 @@ class EvalM(Bloxlink.Module):
 		# remove `foo`
 		return content.strip('` \n')
 
-	async def __call__(self, code, message=None, codeblock=True):
-		env = {
+	async def __call__(self, code, message=None, env=None, codeblock=True):
+		env = env or {}
+
+		load_env = {
 			"client": self.client,
 			"channel": message and message.channel,
 			"author": message and message.author,
 			"guild": message and message.guild,
 			"message": message,
+			"r": self.r,
 			"_": self._last_result
 		}
 
-		env.update(globals())
+		load_env.update(globals())
+		load_env.update(env)
 
 		body = self.cleanup_code(code)
 		stdout = io.StringIO()
@@ -39,7 +43,7 @@ class EvalM(Bloxlink.Module):
 		to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
 
 		try:
-			exec(to_compile, env)
+			exec(to_compile, load_env)
 		except Exception as e:
 			embed = Embed(
 				title="Evaluation Error",
@@ -49,7 +53,7 @@ class EvalM(Bloxlink.Module):
 
 			return embed
 
-		func = env['func']
+		func = load_env['func']
 		try:
 			with redirect_stdout(stdout):
 				ret = await func()
