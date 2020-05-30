@@ -1,5 +1,5 @@
 from ..structures.Bloxlink import Bloxlink
-from ..exceptions import UserNotVerified, BloxlinkBypass
+from ..exceptions import UserNotVerified, BloxlinkBypass, PermissionError
 from ..constants import DEFAULTS, SERVER_INVITE
 from discord.errors import Forbidden, HTTPException
 
@@ -62,6 +62,9 @@ class MemberJoinEvent(Bloxlink.Module):
 
                     except UserNotVerified:
                         pass
+
+                    except PermissionError:
+                        return
 
                 required_groups = guild_data.get("groupLocked") # TODO: integrate with Trello
 

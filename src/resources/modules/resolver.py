@@ -170,9 +170,15 @@ class Resolver(Bloxlink.Module):
                 pass
 
             if is_id:
-                return guild.get_channel(is_int), None
+                channel = guild.get_channel(is_int)
+
+                if channel:
+                    return channel, None
             else:
-                return find(lambda c: c.name == content, guild.text_channels), None
+                channel = find(lambda c: c.name == content, guild.text_channels)
+
+                if channel:
+                    return channel, None
 
         return False, "Invalid channel"
 
