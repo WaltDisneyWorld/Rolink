@@ -59,6 +59,7 @@ class BloxlinkStructure(AutoShardedClient):
     def __init__(self, *args, **kwargs): # pylint: disable=W0235
         super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
         loop.run_until_complete(self.get_session())
+        loop.run_until_complete(self.load_database())
 
     async def get_session(self):
         self.session = aiohttp.ClientSession(headers={"Connection": "close"})
@@ -177,9 +178,7 @@ class BloxlinkStructure(AutoShardedClient):
 
         return (mod and (isinstance(mod, list) and mod[0]) or mod) or module
 
-
-    @staticmethod
-    async def load_database():
+    async def load_database(self, save_conn=True):
         async def connect(host, password, db, port):
             try:
                 conn = await r.connect(
@@ -191,13 +190,16 @@ class BloxlinkStructure(AutoShardedClient):
                 )
                 conn.repl()
 
+                if save_conn:
+                    self.conn = conn
+
                 print("Connected to RethinkDB", flush=True)
 
             except ReqlDriverError as e:
                 print(f"Unable to connect to Database: {e}. Retrying with a different host.", flush=True)
 
             else:
-                return True
+                return conn
 
         while True:
             for host in [RETHINKDB["HOST"], "rethinkdb", "localhost"]:
@@ -248,5 +250,6 @@ class Module:
     session = aiohttp.ClientSession(loop=loop)
     loop = loop
     redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
+    conn = Bloxlink.conn
 
 Bloxlink.Module = Module

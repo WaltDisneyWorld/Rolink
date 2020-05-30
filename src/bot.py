@@ -21,8 +21,6 @@ async def register_modules():
 
 
 async def main():
-	await Bloxlink.load_database()
-
 	wait_for_database_ready = Bloxlink.get_module("databasetools", attrs="wait")
 	await wait_for_database_ready()
 
