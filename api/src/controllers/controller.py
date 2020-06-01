@@ -115,7 +115,7 @@ async def user_verify(request):
     user_data["robloxAccounts"] = roblox_accounts
 
     await r.table("users").insert(user_data, conflict="update").run()
-    await r.table("gameVerification").get(discord_id).delete().run()
+    await r.table("gameVerification").get(roblox_id).delete().run()
 
     json_data = {
         "status": "ok"
