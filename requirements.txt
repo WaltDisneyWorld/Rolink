@@ -1,4 +1,5 @@
-discord.py==1.3.2
+#discord.py==1.3.2
+git+https://github.com/Rapptz/discord.py@sharding-rework
 rethinkdb==2.4.0
 aiodns==2.0.0
 cchardet==2.1.4
