@@ -74,7 +74,6 @@ class VerifyCommand(Bloxlink.Module):
         except UserNotVerified:
             await self.add(CommandArgs)
         else:
-
             welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
             welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
@@ -132,6 +131,7 @@ class VerifyCommand(Bloxlink.Module):
                 primary  = args["default"] == "yes",
                 username = username,
                 trello_options = trello_options,
+                guild_data = guild_data,
                 update_user = False)
 
         except Message as e:
@@ -140,7 +140,7 @@ class VerifyCommand(Bloxlink.Module):
             else:
                 await response.send(e)
         except Error as e:
-            await CommandArgs.response.error(e, dm=True, no_dm_post=True)
+            await response.error(e, dm=True, no_dm_post=True)
         else:
             try:
                 added, removed, nickname, errors, roblox_user = await update_member(
@@ -286,4 +286,4 @@ class VerifyCommand(Bloxlink.Module):
 
 
         except UserNotVerified:
-            raise Error(f"You're not linked to Bloxlink. Please use ``{prefix}verify add``.")
+            raise Error(f"You're not linked to Bloxlink. Please use ``{prefix}verify add`` to add a new account.")

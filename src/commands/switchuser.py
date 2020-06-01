@@ -99,6 +99,15 @@ class SwitchUserCommand(Bloxlink.Module):
                     guild_data.update(options_trello)
 
                 allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
+                roblox_accounts = author_data.get("robloxAccounts", {})
+
+                if guild and not allow_reverify:
+                    guild_accounts = roblox_accounts.get("guilds", {})
+                    chosen_account = guild_accounts.get(str(guild.id))
+
+                    if chosen_account and chosen_account != roblox_id:
+                        raise Error("You already selected your account for this server. ``allowReVerify`` must be "
+                                    "enabled for you to change it.")
 
                 try:
                     member = await guild.fetch_member(author.id)
