@@ -8,7 +8,7 @@ from discord import Embed, Member
 from datetime import datetime
 from config import WORDS # pylint: disable=no-name-in-module
 from os import environ as env
-from ..constants import RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, VIP_MEMBER_COLOR
+from ..constants import RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, VIP_MEMBER_COLOR, ARROW
 import json
 import random
 import re
@@ -114,7 +114,10 @@ class Roblox(Bloxlink.Module):
         if RELEASE == "LOCAL":
             return True
 
-        html_text, _ = await fetch(f"https://www.roblox.com/users/{roblox_id}/profile", raise_on_failure=True)
+        try:
+            html_text, _ = await fetch(f"https://www.roblox.com/users/{roblox_id}/profile", raise_on_failure=True)
+        except RobloxNotFound:
+            raise Error("You cannot link as a banned user. Please try again with another user.")
 
         return code in html_text
 
@@ -129,6 +132,7 @@ class Roblox(Bloxlink.Module):
             parsed_accounts[roblox_user.username] = roblox_user
 
         return parsed_accounts
+
 
     async def verify_member(self, author, roblox, guild=None, author_data=None, primary_account=False, allow_reverify=True):
         # TODO: make this insert a new DiscordProfile or append the account to it
@@ -1051,7 +1055,7 @@ class Roblox(Bloxlink.Module):
 
         raise RobloxNotFound
 
-    async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, send_embed=False, response=None) -> Tuple:
+    async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, send_embed=False, response=None, cache=True) -> Tuple:
         guild = guild or getattr(author, "guild", False)
         guild_id = guild and str(guild.id)
 
@@ -1068,18 +1072,19 @@ class Roblox(Bloxlink.Module):
             author_id = str(author.id)
             author_data = author_data or await self.r.table("users").get(author_id).run() or {}
 
-            discord_profile = self.cache["discord_profiles"].get(author_id)
+            if cache:
+                discord_profile = self.cache["discord_profiles"].get(author_id)
 
-            if discord_profile:
-                if guild:
-                    roblox_account = discord_profile.guilds.get(guild_id)
-                else:
-                    roblox_account = discord_profile.primary_account
+                if discord_profile:
+                    if guild:
+                        roblox_account = discord_profile.guilds.get(guild_id)
+                    else:
+                        roblox_account = discord_profile.primary_account
 
-                if roblox_account:
-                    await roblox_account.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
+                    if roblox_account:
+                        await roblox_account.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
 
-                    return roblox_account, discord_profile.accounts
+                        return roblox_account, discord_profile.accounts
 
 
             roblox_accounts = author_data.get("robloxAccounts", {})
@@ -1148,19 +1153,18 @@ class Roblox(Bloxlink.Module):
         if not (username or roblox_id):
             raise BadUsage("Must supply either a username or roblox_id to verify_as.")
 
-        guild_data = guild_data or {}
+        guild = guild or author.guild
+
+        author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {}
+        guild_data = guild_data or (guild and await self.r.table("guilds").get(str(guild.id)).run()) or {}
+
+        allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
+
         trello_options = trello_options or {}
 
         if not trello_options and trello_board:
             trello_options, _ = await get_options(trello_board)
-
-        if trello_options:
             guild_data.update(trello_options)
-
-        allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
-
-        guild = guild or author.guild
-        author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {}
 
         invalid_roblox_names = 0
 
@@ -1187,7 +1191,17 @@ class Roblox(Bloxlink.Module):
         if not username:
             roblox_id, username = await self.get_roblox_username(roblox_id)
 
-        if roblox_id in author_data.get("robloxAccounts", {}).get("accounts", []) or author_data.get("robloxID") == roblox_id:
+        roblox_accounts = author_data.get("robloxAccounts", {})
+
+        if guild and not allow_reverify:
+            guild_accounts = roblox_accounts.get("guilds", {})
+            chosen_account = guild_accounts.get(str(guild.id))
+
+            if chosen_account and chosen_account != roblox_id:
+                raise Error("You already selected your account for this server. ``allowReVerify`` must be "
+                            "enabled for you to change it.")
+
+        if roblox_id in roblox_accounts.get("accounts", []) or author_data.get("robloxID") == roblox_id:
             # TODO: clear cache
             await self.verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=primary)
 
@@ -1207,18 +1221,19 @@ class Roblox(Bloxlink.Module):
 
         else:
             # prompts
+            failures = 0
+            failed = False
             if response:
-                """
                 args = await response.prompt([
                     {
-                        "prompt": f"Welcome, **{username}!** Please select a method of verification: ``code`` or ``game``",
+                        "prompt": f"Welcome, **{username}!** Please select a method of verification:\n"
+                                "``game`` " + ARROW + " verify by joining a Roblox game;\n"
+                                "``code`` " + ARROW + " verify by putting a code on your Roblox status or description.",
                         "type": "choice",
-                        "choices": ["code", "game"],
+                        "choices": ["game", "code"],
                         "name": "verification_choice"
                     }
                 ], dm=True, no_dm_post=True)
-                """
-                args = {"verification_choice": "code"}
 
                 if args["verification_choice"] == "code":
                     code = self.generate_code()
@@ -1240,9 +1255,6 @@ class Roblox(Bloxlink.Module):
                         await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, guild=guild, author_data=author_data, primary_account=primary)
 
                         return username
-
-                    failures = 0
-                    failed = False
 
                     while not await self.validate_code(roblox_id, code):
                         if failures == 5:
@@ -1270,10 +1282,53 @@ class Roblox(Bloxlink.Module):
                         raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
 
                 elif args["verification_choice"] == "game":
-                    raise NotImplementedError
+                    await self.r.table("gameVerification").insert({
+                        "id": roblox_id,
+                        "discordTag": str(author),
+                        "discordID": str(author.id),
+                        "primary": primary,
+                        "guild": guild and str(guild.id),
+                        "prefix": "!" #FIXME
+                    }, conflict="replace").run()
 
-            # except CancelledPrompt:
-            #	pass
+                    _ = await response.prompt([{
+                        "prompt": "Please go to this game https://www.roblox.com/games/1271943503/- to complete the verification process. Then, say ``done`` to "
+                                  "get your roles.",
+                        "name": "verification_next",
+                        "type": "choice",
+                        "choices": ["done"]
+                    }], dm=True, no_dm_post=True)
+
+                    while True:
+                        if failures == 5:
+                            failed = True
+                            break
+
+                        try:
+                            _, accounts = await self.get_user(author=author, cache=False)
+
+                            if not roblox_id in accounts:
+                                raise UserNotVerified
+
+                        except UserNotVerified:
+                            _ = await response.prompt([{
+                                "prompt": "It appears that you didn't pass verification via the Roblox game. Please go to "
+                                          "https://www.roblox.com/games/1271943503/- and try again. Then, say ``done``.",
+                                "name": "verification_next",
+                                "type": "choice",
+                                "choices": ["done"]
+                            }], error=True, dm=True, no_dm_post=True)
+
+                            failures += 1
+
+                        else:
+                            # await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, author_data=author_data, guild=guild, primary_account=primary)
+                            return username
+
+
+                    if failed:
+                        raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
+
 
     @staticmethod
     async def apply_perks(roblox_user, embed):

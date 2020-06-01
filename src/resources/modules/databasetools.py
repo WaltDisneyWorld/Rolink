@@ -6,7 +6,8 @@ TABLE_STRUCTURE = {
 	"bloxlink": [
 		"users",
 		"guilds",
-		"groupShouts"
+		"groupShouts",
+		"gameVerification"
 	],
 	"canary": [
 		"guilds",
