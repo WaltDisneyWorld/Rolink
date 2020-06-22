@@ -24,8 +24,9 @@ class Utils(Bloxlink.Module):
     async def __setup__(self):
         try:
             self.bloxlink_server = self.bloxlink_server or self.client.get_guild(372036754078826496) or await self.client.fetch_guild(372036754078826496)
-        except Forbidden:
+        except (Forbidden, AttributeError):
             self.bloxlink_server = None
+
 
     @staticmethod
     def get_files(directory):
@@ -45,9 +46,16 @@ class Utils(Bloxlink.Module):
         finally:
             loop.close()
 
-    async def fetch(self, url, raise_on_failure=True, retry=HTTP_RETRY_LIMIT):
+    async def fetch(self, url, method="GET", params=None, headers=None, raise_on_failure=True, retry=HTTP_RETRY_LIMIT):
+        params = params or {}
+        headers = headers or {}
+
+        for k, v in params.items():
+            if isinstance(v, bool):
+                params[k] = "true" if v else "false"
+
         try:
-            async with self.session.get(url) as response:
+            async with self.session.request(method, url, params=params, headers=headers) as response:
                 text = await response.text()
 
                 if raise_on_failure:
