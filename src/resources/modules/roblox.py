@@ -27,8 +27,8 @@ except ImportError:
     }
 
 
-nickname_template_regex = re.compile("\{(.*?)\}")
-trello_card_bind_regex = re.compile("(.*?): ?(.*)")
+nickname_template_regex = re.compile(r"\{(.*?)\}")
+trello_card_bind_regex = re.compile(r"(.*?): ?(.*)")
 any_group_nickname = re.compile(r"\{group-rank-(.*?)\}")
 bracket_search = re.compile(r"\[(.*)\]")
 
@@ -132,6 +132,25 @@ class Roblox(Bloxlink.Module):
             parsed_accounts[roblox_user.username] = roblox_user
 
         return parsed_accounts
+
+
+    @staticmethod
+    def count_binds(guild_data, role_binds=None, group_ids=None):
+        guild_data = guild_data or {}
+
+        role_binds = role_binds or guild_data.get("roleBinds", {})
+        group_ids = group_ids or guild_data.get("groupIDs", {})
+
+        bind_count = 0
+
+        for bind_category, binds in role_binds.items():
+            for bind_id, bind_data in binds.items():
+                if bind_data:
+                    bind_count += 1
+
+        bind_count += len(group_ids)
+
+        return bind_count
 
 
     async def verify_member(self, author, roblox, guild=None, author_data=None, primary_account=False, allow_reverify=True):
@@ -342,8 +361,13 @@ class Roblox(Bloxlink.Module):
 
     async def parse_trello_binds(self, trello_board=None, trello_binds_list=None):
         card_binds = {
-            "binds": {},
-            "entire group": {}
+            "groups": {
+                "binds": {},
+                "entire group": {}
+            },
+            "assets": {
+
+            }
         }
 
         if trello_board or trello_binds_list:
@@ -359,7 +383,8 @@ class Roblox(Bloxlink.Module):
                         is_bind = False
                         is_main_group = False
                         treat_as_bind = False
-                        new_bind = {"trello_str": {}, "nickname": None}
+                        bind_category = None
+                        new_bind = {"trello_str": {}, "nickname": None, "trello": True, "card": card}
 
                         for card_bind_data in card.description.split("\n"):
                             card_bind_data_search = trello_card_bind_regex.search(card_bind_data)
@@ -373,6 +398,11 @@ class Roblox(Bloxlink.Module):
                                     if card_attr in ("group", "groupid", "group id"):
                                         new_bind["group"] = card_value
                                         new_bind["trello_str"]["group"] = card_value
+                                        bind_category = "group"
+
+                                    elif card_attr in ("asset", "assetid", "asset id"):
+                                        bind_category = "asset"
+                                        new_bind["asset_id"] = card_value
 
                                     elif card_attr == "nickname":
                                         if card_value.lower() not in ("none", "false", "n/a"):
@@ -398,139 +428,165 @@ class Roblox(Bloxlink.Module):
                                         new_bind["roles"] = roles
                                         new_bind["trello_str"]["roles"] = card_value
 
+                                    elif card_attr == "asset name":
+                                        new_bind["assetName"] = card_value
+                                        new_bind["trello_str"]["asset_name"] = card_value
+
+
                         bind_nickname = new_bind.get("nickname")
                         bound_roles = new_bind.get("roles", set())
 
-                        if new_bind.get("group"):
-                            if not (new_bind.get("roles") or is_bind):
-                                is_main_group = True
-
+                        if bind_category == "group":
+                            if new_bind.get("group"):
+                                if not (new_bind.get("roles") or is_bind):
+                                    is_main_group = True
+                                else:
+                                    treat_as_bind = True
                             else:
-                                treat_as_bind = True
-                        else:
-                            continue
+                                continue
 
-                        if treat_as_bind:
-                            if new_bind.get("ranks"):
-                                ranges = []
+                            if treat_as_bind:
+                                if new_bind.get("ranks"):
+                                    ranges = []
 
-                                for rank in new_bind["ranks"]:
-                                    is_range = False
-                                    new_range = None
+                                    for rank in new_bind["ranks"]:
+                                        is_range = False
+                                        new_range = None
 
-                                    if rank == "everyone":
-                                        rank = "all"
-                                    elif "-" in rank and not rank.lstrip("-").isdigit():
-                                        range_data = rank.split("-")
+                                        if rank == "everyone":
+                                            rank = "all"
+                                        elif "-" in rank and not rank.lstrip("-").isdigit():
+                                            range_data = rank.split("-")
 
-                                        if len(range_data) == 2:
-                                            if not range_data[0].isdigit() and range_data[0] != "0":
-                                                raise Error(f"Mess up on Trello configuration for range: ``{range_data[0]}`` is not an integer.")
-                                            elif not range_data[1].isdigit() and range_data[1] != "0":
-                                                raise Error(f"Mess up on Trello configuration for range: ``{range_data[1]}`` is not an integer.")
+                                            if len(range_data) == 2:
+                                                if not range_data[0].isdigit() and range_data[0] != "0":
+                                                    raise Error(f"Mess up on Trello configuration for range: ``{range_data[0]}`` is not an integer.")
+                                                elif not range_data[1].isdigit() and range_data[1] != "0":
+                                                    raise Error(f"Mess up on Trello configuration for range: ``{range_data[1]}`` is not an integer.")
 
-                                            is_range = True
-                                            new_range = {
-                                                "low": int(range_data[0].strip()),
-                                                "high": int(range_data[1].strip()),
-                                                "nickname": bind_nickname,
-                                                "roles": bound_roles,
-                                                "trello": {
-                                                    "cards": [{
-                                                        "card": card,
-                                                        "trello_str": new_bind["trello_str"],
-                                                        "ranks": new_bind.get("ranks"),
-                                                        "roles": bound_roles
-                                                    }]
+                                                is_range = True
+                                                new_range = {
+                                                    "low": int(range_data[0].strip()),
+                                                    "high": int(range_data[1].strip()),
+                                                    "nickname": bind_nickname,
+                                                    "roles": bound_roles,
+                                                    "trello": {
+                                                        "cards": [{
+                                                            "card": card,
+                                                            "trello_str": new_bind["trello_str"],
+                                                            "ranks": new_bind.get("ranks"),
+                                                            "roles": bound_roles
+                                                        }]
+                                                    }
                                                 }
-                                            }
-                                            #ranges.append(new_range)
+                                                #ranges.append(new_range)
 
-                                    card_binds["binds"][new_bind["group"]] = card_binds["binds"].get(new_bind["group"]) or {}
-                                    card_binds["binds"][new_bind["group"]]["binds"] = card_binds["binds"][new_bind["group"]].get("binds") or {}
-                                    card_binds["binds"][new_bind["group"]]["ranges"] = card_binds["binds"][new_bind["group"]].get("ranges") or []
-                                    card_binds["binds"][new_bind["group"]]["ranges"] += ranges
+                                        card_binds["groups"]["binds"][new_bind["group"]] = card_binds["groups"]["binds"].get(new_bind["group"]) or {}
+                                        card_binds["groups"]["binds"][new_bind["group"]]["binds"] = card_binds["groups"]["binds"][new_bind["group"]].get("binds") or {}
+                                        card_binds["groups"]["binds"][new_bind["group"]]["ranges"] = card_binds["groups"]["binds"][new_bind["group"]].get("ranges") or []
+                                        card_binds["groups"]["binds"][new_bind["group"]]["ranges"] += ranges
 
-                                    new_rank = {"nickname": bind_nickname, "roles": bound_roles, "trello": {"cards": [{"roles": set(bound_roles), "card": card, "trello_str": new_bind["trello_str"], "ranks": new_bind.get("ranks") }]}}
+                                        new_rank = {"nickname": bind_nickname, "roles": bound_roles, "trello": {"cards": [{"roles": set(bound_roles), "card": card, "trello_str": new_bind["trello_str"], "ranks": new_bind.get("ranks") }]}}
 
-                                    if not is_range:
-                                        old_rank = card_binds["binds"][new_bind["group"]]["binds"].get(rank)
+                                        if not is_range:
+                                            old_rank = card_binds["groups"]["binds"][new_bind["group"]]["binds"].get(rank)
 
-                                        if old_rank:
-                                            new_rank["roles"].update(old_rank["roles"])
-                                            new_rank["trello"]["cards"] += old_rank["trello"]["cards"]
+                                            if old_rank:
+                                                new_rank["roles"].update(old_rank["roles"])
+                                                new_rank["trello"]["cards"] += old_rank["trello"]["cards"]
 
-                                        card_binds["binds"][new_bind["group"]]["binds"][rank] = new_rank
-                                    else:
-                                        new_range.update({
-                                            "high": new_range["high"],
-                                            "low": new_range["low"]
-                                        })
+                                            card_binds["groups"]["binds"][new_bind["group"]]["binds"][rank] = new_rank
+                                        else:
+                                            new_range.update({
+                                                "high": new_range["high"],
+                                                "low": new_range["low"]
+                                            })
 
-                                        for range_ in card_binds["binds"][new_bind["group"]]["ranges"]:
-                                            if range_["high"] == new_range["high"] and range_["low"] == new_range["low"]:
-                                                old_range = range_
+                                            for range_ in card_binds["groups"]["binds"][new_bind["group"]]["ranges"]:
+                                                if range_["high"] == new_range["high"] and range_["low"] == new_range["low"]:
+                                                    old_range = range_
 
-                                                new_range["roles"].update(old_range["roles"])
-                                                new_range["trello"]["cards"] += old_range["trello"]["cards"]
+                                                    new_range["roles"].update(old_range["roles"])
+                                                    new_range["trello"]["cards"] += old_range["trello"]["cards"]
 
-                                                break
+                                                    break
 
-                                        card_binds["binds"][new_bind["group"]]["ranges"].append(new_range)
+                                            card_binds["groups"]["binds"][new_bind["group"]]["ranges"].append(new_range)
 
-                            else:
+                                else:
+                                    new_rank = {
+                                        "nickname": bind_nickname,
+                                        "roles": bound_roles,
+                                        "trello": {
+                                            "cards": [{
+                                                "card": card,
+                                                "trello_str": new_bind["trello_str"],
+                                                "ranks": new_bind.get("ranks"),
+                                                "roles": bound_roles
+                                            }]
+                                        }
+                                    }
+
+                                    card_binds["groups"]["binds"][new_bind["group"]] = card_binds["groups"]["binds"].get(new_bind["group"]) or {}
+                                    card_binds["groups"]["binds"][new_bind["group"]]["binds"] = card_binds["groups"]["binds"][new_bind["group"]].get("binds") or {}
+
+                                    old_rank = card_binds["groups"]["binds"][new_bind["group"]]["binds"].get("all")
+
+                                    if old_rank:
+                                        new_rank["roles"] = new_rank["roles"].union(old_rank["roles"])
+                                        new_rank["trello"]["cards"] += old_rank["trello"]["cards"]
+
+                                    card_binds["groups"]["binds"][new_bind["group"]]["binds"]["all"] = new_rank
+
+                            elif is_main_group:
+                                try:
+                                    group = await self.get_group(new_bind["group"])
+                                except RobloxNotFound:
+                                    group_name = f"Invalid Group: {new_bind['group']}"
+                                else:
+                                    group_name = group.name
+
                                 new_rank = {
                                     "nickname": bind_nickname,
-                                    "roles": bound_roles,
+                                    "groupName": group_name,
+                                    "roles": bound_roles, # set(),
                                     "trello": {
                                         "cards": [{
                                             "card": card,
                                             "trello_str": new_bind["trello_str"],
-                                            "ranks": new_bind.get("ranks"),
-                                            "roles": bound_roles
+                                            "ranks": new_bind.get("ranks")
                                         }]
                                     }
                                 }
 
-                                card_binds["binds"][new_bind["group"]] = card_binds["binds"].get(new_bind["group"]) or {}
-                                card_binds["binds"][new_bind["group"]]["binds"] = card_binds["binds"][new_bind["group"]].get("binds") or {}
-
-                                old_rank = card_binds["binds"][new_bind["group"]]["binds"].get("all")
+                                old_rank = card_binds["groups"]["entire group"].get(new_bind["group"])
 
                                 if old_rank:
-                                    new_rank["roles"].union(old_rank["roles"])
+                                    new_rank["roles"] = new_rank["roles"].union(old_rank["roles"])
                                     new_rank["trello"]["cards"] += old_rank["trello"]["cards"]
 
-                                card_binds["binds"][new_bind["group"]]["binds"]["all"] = new_rank
+                                card_binds["groups"]["entire group"][new_bind["group"]] = new_rank
 
-                        elif is_main_group:
-                            try:
-                                group = await self.get_group(new_bind["group"])
-                            except RobloxNotFound:
-                                group_name = f"Invalid Group: {new_bind['group']}"
-                            else:
-                                group_name = group.name
-
+                        elif bind_category == "asset":
                             new_rank = {
                                 "nickname": bind_nickname,
-                                "groupName": group_name,
-                                "roles": set(),
+                                "assetName": new_bind.get("assetName"),
+                                "roles": bound_roles,
                                 "trello": {
                                     "cards": [{
                                         "card": card,
                                         "trello_str": new_bind["trello_str"],
-                                        "ranks": new_bind.get("ranks")
                                     }]
                                 }
                             }
-
-                            old_rank = card_binds["entire group"].get(new_bind["group"])
+                            old_rank = card_binds["assets"].get(new_bind["asset_id"])
 
                             if old_rank:
-                                new_rank["roles"].union(old_rank["roles"])
+                                new_rank["roles"] = new_rank["roles"].union(old_rank["roles"])
                                 new_rank["trello"]["cards"] += old_rank["trello"]["cards"]
 
-                            card_binds["entire group"][new_bind["group"]] = new_rank
+                            card_binds["assets"][new_bind["asset_id"]] = new_rank
+
 
                     trello_binds_list.parsed_bind_data = card_binds
 
@@ -545,10 +601,20 @@ class Roblox(Bloxlink.Module):
         group_ids = dict(guild_data.get("groupIDs") or {})
 
         role_binds["groups"] = dict(role_binds.get("groups", {}))
+        role_binds["assets"] = dict(role_binds.get("assets", {}))
 
         if card_binds:
-            role_binds["groups"].update(card_binds["binds"])
-            group_ids.update(card_binds["entire group"])
+            group_binds = card_binds["groups"].get("binds")
+            asset_binds = card_binds["assets"]
+
+            if group_binds:
+                role_binds["groups"].update(group_binds)
+
+            if asset_binds:
+                role_binds["assets"].update(asset_binds)
+
+
+            group_ids.update(card_binds["groups"]["entire group"])
 
 
         return role_binds, group_ids, trello_binds_list
@@ -668,6 +734,62 @@ class Roblox(Bloxlink.Module):
                 if role_binds:
                     if isinstance(role_binds, list):
                         role_binds = role_binds[0]
+
+
+                    for asset_id, asset_data in role_binds.get("assets", {}).items():
+                        bind_nickname = asset_data.get("nickname")
+                        bound_roles = asset_data.get("roles")
+
+                        text, response = await fetch(f"https://inventory.roblox.com/v1/users/{roblox_user.id}/items/Asset/{asset_id}", raise_on_failure=False)
+
+                        try:
+                            json_data = json.loads(text)
+                        except json.decoder.JSONDecodeError:
+                            raise RobloxAPIError
+
+                        if response.status != 200:
+                            errors = json_data.get("errors", [])
+
+                            if errors:
+                                raise Error(f"Asset bind error for asset ID {asset_id}: ``{errors[0]['message']}``")
+                            else:
+                                raise Error(f"Asset bind error for asset ID {asset_id}")
+
+                        if json_data.get("data"):
+                            # TODO: cache this
+
+                            for role_id in bound_roles:
+                                int_role_id = role_id.isdigit() and int(role_id)
+                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+
+                                if not role:
+                                    if asset_data.get("trello"):
+                                        try:
+                                            role = await guild.create_role(name=role_id)
+                                        except Forbidden:
+                                            raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
+                                                                   "Please ensure I have the ``Manage Roles`` permission.")
+                                        else:
+                                            add_roles.add(role)
+
+                                else:
+                                    add_roles.add(role)
+
+                            if nickname and bind_nickname and bind_nickname != "skip":
+                                if author.top_role == role:
+                                    top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+
+                                resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+
+                                if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                    possible_nicknames.append([role, resolved_nickname])
+                        else:
+                            for role_id in bound_roles:
+                                int_role_id = role_id.isdigit() and int(role_id)
+                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+
+                                if role and role in author.roles:
+                                    remove_roles.add(role)
 
                     for group_id, data in role_binds.get("groups", {}).items():
                         group = roblox_user.groups.get(group_id)
@@ -1227,8 +1349,8 @@ class Roblox(Bloxlink.Module):
                 args = await response.prompt([
                     {
                         "prompt": f"Welcome, **{username}!** Please select a method of verification:\n"
-                                "``game`` " + ARROW + " verify by joining a Roblox game;\n"
-                                "``code`` " + ARROW + " verify by putting a code on your Roblox status or description.",
+                                "``game`` " + ARROW + " verify by joining a Roblox game\n"
+                                "``code`` " + ARROW + " verify by putting a code on your Roblox status or description",
                         "type": "choice",
                         "choices": ["game", "code"],
                         "name": "verification_choice"
@@ -1432,6 +1554,7 @@ class Group(Bloxlink.Module):
 
     def __repr__(self):
         return self.__str__()
+
 
 class RobloxUser(Bloxlink.Module):
     __slots__ = ("username", "id", "discord_id", "verified", "complete", "more_details", "groups",
