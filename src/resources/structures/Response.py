@@ -90,8 +90,6 @@ class ResponseLoading:
 
 
 
-
-@Bloxlink.loader
 class Response(Bloxlink.Module):
     def __init__(self, CommandArgs):
         self.webhook_only = CommandArgs.guild_data.get("customBot", {}).get("enabled")

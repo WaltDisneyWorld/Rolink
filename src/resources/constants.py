@@ -8,6 +8,7 @@ VERSION = "v3.0 ALPHA"
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
 
+DBL_API = "https://top.gg/api"
 
 SHARDS_PER_CLUSTER = int(env.get("SHARDS_PER_CLUSTER", "1"))
 
@@ -121,3 +122,20 @@ HELP_DESCRIPTION = "**Welcome to Bloxlink!**\n\n" \
 TRANSFER_COOLDOWN = 5
 
 SERVER_INVITE = "https://discord.gg/jJKWpsr"
+
+TABLE_STRUCTURE = {
+	"bloxlink": [
+		"users",
+		"guilds",
+		"groupShouts",
+		"gameVerification"
+	],
+	"canary": [
+		"guilds",
+		"groupShouts"
+	],
+	"patreon": [
+		"refreshTokens",
+		"patrons"
+	]
+}

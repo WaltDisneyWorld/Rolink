@@ -2,7 +2,7 @@ from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient
 from config import WEBHOOKS # pylint: disable=E0611
-from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER
+from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE
 from . import Args, Permissions
 from ast import literal_eval
 from async_timeout import timeout
@@ -14,7 +14,7 @@ import aiohttp
 import aredis
 import asyncio; loop = asyncio.get_event_loop()
 
-from rethinkdb.errors import ReqlDriverError
+from rethinkdb.errors import ReqlDriverError, ReqlOpFailedError
 
 try:
     from rethinkdb import RethinkDB; r = RethinkDB() # pylint: disable=no-name-in-module
@@ -55,10 +55,12 @@ except ImportError:
 
 class BloxlinkStructure(AutoShardedClient):
     db_host_validated = False
+    conn = None
 
     def __init__(self, *args, **kwargs): # pylint: disable=W0235
         super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
         loop.run_until_complete(self.get_session())
+        loop.set_exception_handler(self._handle_async_error)
         loop.run_until_complete(self.load_database())
 
     async def get_session(self):
@@ -69,12 +71,14 @@ class BloxlinkStructure(AutoShardedClient):
         if level.upper() == LOG_LEVEL:
             print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
 
-
     def error(self, text, title=None):
         logger.exception(text)
         loop.create_task(self._error(text, title=title))
 
     async def _error (self, text, title=None):
+        if not text:
+            return
+
         webhook_data = {
             "username": "Cluster Instance",
 
@@ -91,25 +95,46 @@ class BloxlinkStructure(AutoShardedClient):
         if title:
             webhook_data["embeds"][0]["title"] = title
 
-        await self.session.post(WEBHOOKS["ERRORS"], json=webhook_data)
+        try:
+            await self.session.post(WEBHOOKS["ERRORS"], json=webhook_data)
+        except Exception as e:
+            logger.exception(e)
+            pass
+
+    def _handle_async_error(self, loop, context):
+        exception = context.get("exception")
+        future_info = context.get("future")
+        title = None
+
+        if exception:
+            title = exception.__class__.__name__
+
+        if future_info:
+            msg = str(future_info)
+        else:
+            if exception:
+                msg = str(exception)
+            else:
+                msg = str(context["message"])
+
+        self.error(str(msg), title)
 
     @staticmethod
     def module(module):
         new_module = module()
-        module_name = module.__name__
 
-        failed = False
+        module_name = module.__name__.lower()
+        module_dir = module.__module__.lower() # ".".join((module.__module__, module.__qualname__))
+
         if hasattr(new_module, "__setup__"):
-            try:
-                loop.create_task(new_module.__setup__())
-            except Exception as e:
-                Bloxlink.log(f"ERROR | Module {module_name.lower()}.__setup__() failed: {e}")
-                Bloxlink.error(str(e), title=f"Error source: {module_name.lower()}.py")
-                failed = True
+            loop.create_task(new_module.__setup__())
 
-        if not failed:
-            Bloxlink.log(f"Loaded {module_name}")
-            loaded_modules[module_name.lower()] = new_module
+        Bloxlink.log(f"Loaded {module_name}")
+
+        if loaded_modules.get(module_dir):
+            loaded_modules[module_dir][module_name] = new_module
+        else:
+            loaded_modules[module_dir] = {module_name: new_module}
 
         return new_module
 
@@ -123,62 +148,107 @@ class BloxlinkStructure(AutoShardedClient):
         for attr in dir(module):
             stuff[attr] = getattr(module, attr)
 
-        loaded_modules[module.__name__.lower()] = [load, stuff]
+        #loaded_modules[module.__name__.lower()] = [load, stuff]
+
+        #return load
 
     @staticmethod
-    def get_module(name, *, path="resources.modules", attrs=None):
+    def get_module(dir_name, *, name_override=None, path="resources.modules", attrs=None):
+        modules = loaded_modules.get(dir_name)
+        name_obj = (name_override or dir_name).lower()
+
+        class_obj = None
         module = None
 
-        if loaded_modules.get(name):
-            module = loaded_modules.get(name)
-        else:
-            import_name = f"{path}.{name}".replace("src/", "").replace("/",".").replace(".py","")
+        if not modules:
+            import_name = f"{path}.{dir_name}".replace("src/", "").replace("/",".").replace(".py","")
+
             try:
                 module = import_module(import_name)
             except (ModuleNotFoundError, ImportError) as e:
                 Bloxlink.log(f"ERROR | {e}")
                 traceback_text = traceback.format_exc()
                 traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
-                Bloxlink.error(traceback_text, title=f"Error source: {name}.py")
+                Bloxlink.error(traceback_text, title=f"Error source: {dir_name}.py")
 
             except Exception as e:
-                Bloxlink.log(f"ERROR | Module {name} failed to load: {e}")
+                Bloxlink.log(f"ERROR | Module {dir_name} failed to load: {e}")
                 traceback_text = traceback.format_exc()
                 traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
-                Bloxlink.error(traceback_text, title=f"Error source: {name}.py")
+                Bloxlink.error(traceback_text, title=f"Error source: {dir_name}.py")
+            else:
+                for attr_name in dir(module):
+                    if attr_name.lower() == name_obj:
+                        class_obj = getattr(module, attr_name)
+                        break
 
-        mod = loaded_modules.get(name)
+        if not attrs:
+            return module or class_obj
 
-        if attrs:
-            attrs_list = []
+        if class_obj is None and module:
+            for attr_name in dir(module):
+                if attr_name.lower() == name_obj:
+                    class_obj = getattr(module, attr_name)
 
-            if not isinstance(attrs, list):
-                attrs = [attrs]
+                    break
 
-            if mod:
+
+        if class_obj is not None:
+            if attrs:
+                attrs_list = list()
+
+                if not isinstance(attrs, list):
+                    attrs = [attrs]
 
                 for attr in attrs:
-                    if isinstance(mod, list):
-                        if attr in mod[1]:
-                            attrs_list.append(mod[1][attr])
-                    else:
-                        if hasattr(mod, attr):
-                            attrs_list.append(getattr(mod, attr))
+                    if hasattr(class_obj, attr):
+                        attrs_list.append(getattr(class_obj, attr))
 
-                if hasattr(mod, attr) and not getattr(mod, attr) in attrs_list:
-                    attrs_list.append(getattr(mod, attr))
+                if len(attrs_list) == 1:
+                    return attrs_list[0]
+                else:
+                    if not attrs_list:
+                        return None
 
-            if len(attrs_list) == 1:
-                return attrs_list[0]
+                    return (*attrs_list,)
             else:
-                if not attrs_list:
-                    return None
+                return class_obj
 
-                return (*attrs_list,)
+        raise RuntimeError(f"Unable to find module {name_obj} from {dir_name}")
 
-        return (mod and (isinstance(mod, list) and mod[0]) or mod) or module
+
+    async def check_database(self, conn):
+        for missing_database in set(TABLE_STRUCTURE.keys()).difference(await r.db_list().run()):
+            if RELEASE in ("LOCAL", "CANARY"):
+                await r.db_create(missing_database).run()
+
+                for table in TABLE_STRUCTURE[missing_database]:
+                    await r.db(missing_database).table_create(table).run()
+            else:
+                print(f"CRITICAL: Missing database: {missing_database}", flush=True)
+
+        for db_name, table_names in TABLE_STRUCTURE.items():
+            try:
+                await r.db(db_name).wait().run()
+            except ReqlOpFailedError as e:
+                if RELEASE == "LOCAL":
+                    await r.db_create(db_name).run()
+                else:
+                    print(f"CRITICAL: {e}", flush=True)
+
+            for table_name in table_names:
+                try:
+                    await r.db(db_name).table(table_name).wait().run()
+                except ReqlOpFailedError as e:
+                    if RELEASE == "LOCAL":
+                        await r.db(db_name).table_create(table_name).run()
+                    else:
+                        print(f"CRITICAL: {e}", flush=True)
 
     async def load_database(self, save_conn=True):
+        if self.conn:
+            return self.conn
+
         async def connect(host, password, db, port):
             try:
                 conn = await r.connect(
@@ -203,11 +273,17 @@ class BloxlinkStructure(AutoShardedClient):
 
         while True:
             for host in [RETHINKDB["HOST"], "rethinkdb", "localhost"]:
-                async with timeout(2):
-                    success = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
+                try:
+                    async with timeout(2):
+                        conn = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
 
-                    if success:
-                        return
+                        if conn:
+                            # check for missing databases/tables
+                            await self.check_database(conn)
+
+                            return
+                except asyncio.TimeoutError:
+                    pass
 
     @staticmethod
     def command(*args, **kwargs):

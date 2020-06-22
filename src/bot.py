@@ -17,19 +17,20 @@ async def register_modules():
 		files = get_files(directory)
 
 		for filename in [f.replace(".py", "") for f in files]:
-			Bloxlink.get_module(path=directory, name=filename)
+			Bloxlink.get_module(path=directory, dir_name=filename)
 
 
 async def main():
-	wait_for_database_ready = Bloxlink.get_module("databasetools", attrs="wait")
-	await wait_for_database_ready()
-
 	await register_modules()
 
 
 if __name__ == "__main__":
 	token = environ.get("TOKEN") or getattr(config, "TOKEN")
 
-	loop.create_task(main())
+	try:
+		loop.create_task(main())
 
-	Bloxlink.run(token)
+		Bloxlink.run(token)
+
+	finally:
+		loop.run_until_complete(Bloxlink.session.close())

@@ -5,7 +5,7 @@ from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
-from ..structures import Bloxlink, Args, Permissions
+from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response
 from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-error
 
 
@@ -13,9 +13,6 @@ get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_p
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 
-Locale = Bloxlink.get_module("locale")
-Response = Bloxlink.get_module("response")
-Arguments = Bloxlink.get_module("arguments")
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
 

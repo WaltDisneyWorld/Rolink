@@ -13,7 +13,6 @@ broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
 prompts = {}
 
 
-@Bloxlink.loader
 class Arguments:
 	def __init__(self, CommandArgs):
 		self.message = CommandArgs.message
@@ -21,6 +20,8 @@ class Arguments:
 
 		self.response = CommandArgs.response
 		self.locale = CommandArgs.locale
+
+		self.prefix = CommandArgs.prefix
 
 		self.messages = []
 
@@ -112,7 +113,7 @@ class Arguments:
 				if not skipped_arg:
 					try:
 						if formatting:
-							prompt["prompt"] = prompt["prompt"].format(**resolved_args)
+							prompt["prompt"] = prompt["prompt"].format(**resolved_args, prefix=self.prefix)
 
 						await self.say(prompt["prompt"], embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 

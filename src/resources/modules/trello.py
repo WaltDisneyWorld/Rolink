@@ -9,9 +9,9 @@ from re import compile
 import asyncio
 
 try:
-    from config import TRELLO
+    from config import TRELLO as TRELLO_CONFIG
 except ImportError:
-    TRELLO = {
+    TRELLO_CONFIG = {
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
@@ -27,7 +27,7 @@ OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
 class Trello(Bloxlink.Module):
     def __init__(self):
         self.trello_boards = {}
-        self.trello = TrelloClient(key=TRELLO.get("KEY"), token=TRELLO.get("TOKEN"), cache_mode="none")
+        self.trello = TrelloClient(key=TRELLO_CONFIG.get("KEY"), token=TRELLO_CONFIG.get("TOKEN"), cache_mode="none")
         self.option_regex = compile("(.+):(.+)")
 
     async def get_board(self, guild_data, guild):
@@ -40,7 +40,7 @@ class Trello(Bloxlink.Module):
                 trello_board = self.trello_boards.get(guild.id)
 
                 try:
-                    trello_board = trello_board or await self.trello.get_board(trello_id, card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    trello_board = trello_board or await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["GLOBAL_CARD_LIMIT"])
 
                     if trello_board:
                         if not self.trello_boards.get(guild.id):
@@ -50,11 +50,11 @@ class Trello(Bloxlink.Module):
 
                         if hasattr(trello_board, "expiration"):
                             if t_now > trello_board.expiration:
-                                await trello_board.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
-                                trello_board.expiration = t_now + TRELLO["TRELLO_BOARD_CACHE_EXPIRATION"]
+                                await trello_board.sync(card_limit=TRELLO_CONFIG["GLOBAL_CARD_LIMIT"])
+                                trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
 
                         else:
-                            trello_board.expiration = t_now + TRELLO["TRELLO_BOARD_CACHE_EXPIRATION"]
+                            trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
 
                 except TrelloBadRequest:
                     pass
