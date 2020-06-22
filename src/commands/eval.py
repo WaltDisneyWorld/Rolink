@@ -1,7 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
 from resources.constants import IS_DOCKER # pylint: disable=import-error
-from resources.exceptions import Error # pylint: disable=import-error
+from resources.exceptions import Error, CancelCommand # pylint: disable=import-error
 import async_timeout
 import asyncio
 
@@ -34,19 +34,22 @@ class EvalCommand(Bloxlink.Module):
         timeout_flag = flags.get("timeout", 10)
 
         if IS_DOCKER and global_flag:
-            stats = await broadcast(code, type="EVAL", timeout=timeout_flag != "0" and int(timeout_flag), waiting_for=waiting_for_flag)
-            embed = Embed(title="Evaluation Result")
+            async with response.loading():
+                stats = await broadcast(code, type="EVAL", timeout=timeout_flag != "0" and int(timeout_flag), waiting_for=waiting_for_flag)
+                embed = Embed(title="Evaluation Result")
 
-            for cluster_id, cluster_data in stats.items():
-                embed.add_field(name=f"Cluster {cluster_id}", value=cluster_data, inline=False)
+                for cluster_id, cluster_data in stats.items():
+                    embed.add_field(name=f"Cluster {cluster_id}", value=cluster_data, inline=False)
 
-            await response.send(embed=embed)
+                await response.send(embed=embed)
 
         else:
-            try:
-                async with async_timeout.timeout(timeout_flag != "0" and int(timeout_flag)):
-                    embed = await eval(code, message, codeblock=False)
-            except asyncio.TimeoutError:
-                raise Error("This evaluation timed out.")
-            else:
-                await response.send(embed=embed)
+            async with response.loading():
+                try:
+                    async with async_timeout.timeout(timeout_flag != "0" and int(timeout_flag)):
+                        embed = await eval(code, message, codeblock=False)
+                except asyncio.TimeoutError:
+                    raise Error("This evaluation timed out.")
+                else:
+                    if embed:
+                        await response.send(embed=embed)

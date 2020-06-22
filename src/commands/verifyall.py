@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass # pylint: disable=import-error
+from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, RobloxNotFound # pylint: disable=import-error
 from config import REACTIONS, VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
 from discord import Embed
 import heapq
@@ -72,6 +72,16 @@ class VerifyAllCommand(Bloxlink.Module):
                     pass
 
                 except UserNotVerified:
+                    pass
+
+                except PermissionError:
+                    pass
+
+                except RobloxAPIError:
+                    await response.error("A Roblox API error has occured, so this scan was cancelled.")
+                    break
+
+                except RobloxNotFound:
                     pass
 
 

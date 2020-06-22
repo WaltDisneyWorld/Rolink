@@ -225,7 +225,7 @@ class SettingsCommand(Bloxlink.Module):
 
                 await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
-                    choice: parsed_value
+                    choice: int(parsed_value)
                 }, conflict="update").run()
 
                 success_text = f"Successfully saved your new ``{choice}``!"

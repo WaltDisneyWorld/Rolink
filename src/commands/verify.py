@@ -196,13 +196,13 @@ class VerifyCommand(Bloxlink.Module):
         if choice == "welcomeMessage":
             welcome_message = (await CommandArgs.prompt([{
                 "prompt": f"What would you like your welcome message to be? This will be shown in ``{prefix}verify`` messages.\nYou may "
-                           f"use these templates: ```{NICKNAME_TEMPLATES}```",
+                          f"use these templates: ```{NICKNAME_TEMPLATES}```",
                 "name": "welcome_message",
                 "formatting": False,
                 "max": 1500
             }]))["welcome_message"]
 
-            if trello_board:
+            if trello_board and trello_binds_list:
                 try:
                     if card:
                         if card.name == choice:

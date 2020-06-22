@@ -1,7 +1,7 @@
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import UserNotVerified, BloxlinkBypass, PermissionError
 from ..constants import DEFAULTS, SERVER_INVITE
-from discord.errors import Forbidden, HTTPException
+from discord.errors import Forbidden, HTTPException, NotFound
 
 update_member, get_nickname, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_nickname", "get_user"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
@@ -66,11 +66,14 @@ class MemberJoinEvent(Bloxlink.Module):
                     except PermissionError:
                         return
 
+                    except NotFound:
+                        return
+
                 required_groups = guild_data.get("groupLocked") # TODO: integrate with Trello
 
                 if roblox_user:
                     if age_limit:
-                        if age_limit > roblox_user.age:
+                        if int(age_limit) > roblox_user.age:
                             try:
                                 await member.send(f"_Bloxlink Age-Limit_\nYou were kicked from **{guild.name}** for not being old enough "
                                                   f"in Roblox days. If this is a mistake, then please join {SERVER_INVITE} and link a "

@@ -5,7 +5,7 @@ from discord import Embed
 from ..structures.Bloxlink import Bloxlink
 from ..constants import RED_COLOR, INVISIBLE_COLOR
 
-# A lot of code adapted from https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py
+# Adapted from https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py
 
 @Bloxlink.module
 class EvalM(Bloxlink.Module):
@@ -45,46 +45,67 @@ class EvalM(Bloxlink.Module):
 		try:
 			exec(to_compile, load_env)
 		except Exception as e:
+			description = codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}"
+
+			if not description:
+				return
+
 			embed = Embed(
 				title="Evaluation Error",
-				description=codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}",
+				description=description,
 				color=RED_COLOR
 			)
 
 			return embed
 
 		func = load_env['func']
+
 		try:
 			with redirect_stdout(stdout):
 				ret = await func()
 
 		except Exception as e:
 			value = stdout.getvalue()
-			#await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
+			description = codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}"
+
+			if not description:
+				return
+
 			embed = Embed(
 				title="Evaluation Error",
-				description=codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}" ,
+				description=description,
 				color=RED_COLOR
 			)
 
 			return embed
+
 		else:
 			value = stdout.getvalue()
 
 			if ret is None:
 				if value:
+					description = codeblock and f"```py\n{value[0:2000]}```" or value[0:2000]
+
+					if not description:
+						return
+
 					embed = Embed(
 						title="Evaluation Result",
-						description=codeblock and f"```py\n{value[0:2000]}```" or value[0:2000],
+						description=description,
 						color=INVISIBLE_COLOR
 					)
 
 					return embed
 			else:
 				self._last_result = ret
+				description = codeblock and f"```py\n{value}{str(ret)[0:2000]}```" or f"{value}{str(ret)[0:2000]}"
+
+				if not description:
+					return
+
 				embed = Embed(
 					title="Evaluation Result",
-					description=codeblock and f"```py\n{value}{str(ret)[0:2000]}```" or f"{value}{str(ret)[0:2000]}",
+					description=description,
 					color=INVISIBLE_COLOR
 				)
 

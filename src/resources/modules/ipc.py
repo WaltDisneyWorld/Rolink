@@ -90,7 +90,7 @@ class IPC(Bloxlink.Module):
                 data = json.dumps({
                     "nonce": nonce,
                     "cluster_id": CLUSTER_ID,
-                    "data": message_.content,
+                    "data": getattr(message_, "content", message_),
                     "type": "CLIENT_RESULT",
                     "original_cluster": original_cluster,
                     "waiting_for": waiting_for
