@@ -24,6 +24,8 @@ class Arguments:
 		self.prefix = CommandArgs.prefix
 
 		self.messages = []
+		self.dm_post = None
+		self.cancelled = False
 
 
 	async def say(self, text, type=None, footer=None, embed_title=None, is_prompt=True, embed_color=INVISIBLE_COLOR, embed=True, dm=False):
@@ -87,7 +89,7 @@ class Arguments:
 				else:
 					await m.delete()
 					if not no_dm_post:
-						await self.response.send("**Please check your DMs to continue.**")
+						self.dm_post = await self.response.send(f"{self.author.mention}, **please check your DMs to continue.**")
 			else:
 				dm = False
 

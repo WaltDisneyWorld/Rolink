@@ -216,6 +216,8 @@ class Commands(Bloxlink.Module):
                         except RobloxDown:
                             await response.error("The Roblox API is currently offline; please wait until Roblox is back online before re-running this command.")
                         except CancelledPrompt as e:
+                            arguments.cancelled = True
+
                             guild_data = guild_data or (guild and (await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
 
                             if trello_board:
@@ -261,6 +263,18 @@ class Commands(Bloxlink.Module):
 
                         finally:
                             messages = arguments.messages + response.delete_message_queue
+
+                            if arguments.dm_post:
+                                if arguments.cancelled:
+                                    content = f"{author.mention}, **this DM prompt has been cancelled.**"
+                                else:
+                                    content = f"{author.mention}, **this DM prompt has finished.**"
+
+                                try:
+                                    await arguments.dm_post.edit(content=content)
+                                except (NotFound, Forbidden):
+                                    pass
+
 
                             if messages:
                                 if not trello_options_checked and trello_board:
