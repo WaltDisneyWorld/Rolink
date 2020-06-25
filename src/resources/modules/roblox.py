@@ -777,7 +777,7 @@ class Roblox(Bloxlink.Module):
                                 else:
                                     add_roles.add(role)
 
-                                if nickname and bind_nickname and bind_nickname != "skip":
+                                if role and nickname and bind_nickname and bind_nickname != "skip":
                                     if author.top_role == role:
                                         top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
 
@@ -839,7 +839,7 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             add_roles.add(role)
 
-                                        if nickname and bind_nickname and bind_nickname != "skip":
+                                        if role and nickname and bind_nickname and bind_nickname != "skip":
                                             if author.top_role == role:
                                                 top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
@@ -875,7 +875,7 @@ class Roblox(Bloxlink.Module):
                                             else:
                                                 add_roles.add(role)
 
-                                            if nickname and bind_nickname and bind_nickname != "skip":
+                                            if role and nickname and bind_nickname and bind_nickname != "skip":
                                                 if author.top_role == role:
                                                     top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
@@ -914,17 +914,18 @@ class Roblox(Bloxlink.Module):
                                                     raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
                                                                            "Please ensure I have the ``Manage Roles`` permission.")
 
-                                        if roles and role:
-                                            add_roles.add(role)
+                                        if role:
+                                            if roles:
+                                                add_roles.add(role)
 
-                                            if nickname and author.top_role == role and bind_nickname:
-                                                top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                if nickname and author.top_role == role and bind_nickname:
+                                                    top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                        if nickname and bind_nickname and bind_nickname != "skip":
-                                            resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                            if nickname and bind_nickname and bind_nickname != "skip":
+                                                resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                            if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                                possible_nicknames.append([role, resolved_nickname])
+                                                if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                                    possible_nicknames.append([role, resolved_nickname])
                                 else:
                                     for role_id in bound_roles:
                                         int_role_id = role_id.isdigit() and int(role_id)
@@ -1175,7 +1176,7 @@ class Roblox(Bloxlink.Module):
 
         raise RobloxNotFound
 
-    async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, send_embed=False, response=None, cache=True) -> Tuple:
+    async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, group_ids=None, send_embed=False, response=None, cache=True) -> Tuple:
         guild = guild or getattr(author, "guild", False)
         guild_id = guild and str(guild.id)
 
@@ -1202,7 +1203,7 @@ class Roblox(Bloxlink.Module):
                         roblox_account = discord_profile.primary_account
 
                     if roblox_account:
-                        await roblox_account.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
+                        await roblox_account.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
 
                         return roblox_account, discord_profile.accounts
 
@@ -1229,7 +1230,7 @@ class Roblox(Bloxlink.Module):
 
 
                 roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
-                await roblox_user.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
 
                 if guild:
                     discord_profile.guilds[guild_id] = roblox_user
@@ -1260,7 +1261,7 @@ class Roblox(Bloxlink.Module):
                     roblox_user = RobloxUser(roblox_id=roblox_id)
                     self.cache["roblox_users"][roblox_account] = roblox_user
 
-                await roblox_user.sync(*args, author=author, embed=embed, everything=everything, basic_details=basic_details)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
                 return roblox_user, None
 
             raise BadUsage("Unable to resolve a user")
@@ -1592,7 +1593,7 @@ class RobloxUser(Bloxlink.Module):
         self.profile_link = roblox_id and f"https://www.roblox.com/users/{roblox_id}/profile"
 
     @staticmethod
-    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, embed=None):
+    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, group_ids=None, embed=None):
         if everything:
             basic_details = True
 
@@ -1612,6 +1613,10 @@ class RobloxUser(Bloxlink.Module):
             "created": None
         }
 
+
+        if group_ids:
+            group_ids[0].update(group_ids[1].get("groups", {}.keys()))
+            group_ids = group_ids[0]
 
         roblox_user_from_cache = None
 
@@ -1786,9 +1791,17 @@ class RobloxUser(Bloxlink.Module):
                     if roblox_user:
                         roblox_user.groups = groups
 
-            #if embed:
-            #   if groups and (everything or "groups" in args):
-            #        embed[0].add_field(name="Groups", value=(", ".join(x.name for x in groups.values()))[:1000])
+            if embed and group_ids and groups and (everything or "groups" in args):
+                group_ranks = []
+
+                for group_id in group_ids:
+                    group = groups.get(group_id)
+
+                    if group:
+                        group_ranks.append(f"[{group.name}]({group.url}) {ARROW} {group.user_rank_name}")
+
+                if group_ranks:
+                    embed[0].add_field(name="Group Ranks", value=("\n".join(group_ranks)[:1000]), inline=False)
 
 
         async def profile():
@@ -1875,14 +1888,14 @@ class RobloxUser(Bloxlink.Module):
         #if basic_details or "presence" in args:
         #    await presence()
 
-        if everything or "premium" in args or "badges" in args:
-            await membership_and_badges()
-
         if basic_details or "groups" in args:
             await groups()
 
         if everything or "description" in args or "blurb" in args or "age" in args or "banned" in args:
             await profile()
+
+        if everything or "premium" in args or "badges" in args:
+            await membership_and_badges()
 
         if embed:
             embed[0].title = None
@@ -1896,7 +1909,7 @@ class RobloxUser(Bloxlink.Module):
 
         return roblox_data
 
-    async def sync(self, *args, author=None, basic_details=True, embed=None, everything=False):
+    async def sync(self, *args, author=None, basic_details=True, group_ids=None, embed=None, everything=False):
         try:
             await self.get_details(
                 *args,
@@ -1905,6 +1918,7 @@ class RobloxUser(Bloxlink.Module):
                 everything = everything,
                 basic_details = basic_details,
                 embed = embed,
+                group_ids = group_ids,
                 roblox_user = self,
                 author = author
             )

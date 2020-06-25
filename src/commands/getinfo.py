@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink
 from resources.exceptions import UserNotVerified, Message, Error
 from discord import Embed
 
-get_user = Bloxlink.get_module("roblox", attrs=["get_user"])
+get_user, get_binds = Bloxlink.get_module("roblox", attrs=["get_user", "get_binds"])
 
 
 @Bloxlink.command
@@ -45,8 +45,10 @@ class GetinfoCommand(Bloxlink.Module):
 			raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")
 
 		async with response.loading():
+			role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
+
 			try:
-				account, accounts = await get_user(*flags.keys(), author=target, guild=guild, send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
+				account, accounts = await get_user(*flags.keys(), author=target, guild=guild, group_ids=(group_ids, role_binds), send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
 			except UserNotVerified:
 				raise Error(f"**{target}** is not linked to Bloxlink.")
 			else:
