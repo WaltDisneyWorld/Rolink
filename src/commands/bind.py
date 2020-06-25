@@ -79,7 +79,7 @@ class BindCommand(Bloxlink.Module):
             }
         ])
 
-        bind_choice = parsed_args["bind_choice"]
+        bind_choice = parsed_args["bind_choice"].lower()
         nickname = parsed_args["nickname"]
 
         if trello_board:

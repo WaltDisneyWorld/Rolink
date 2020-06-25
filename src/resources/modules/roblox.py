@@ -671,6 +671,8 @@ class Roblox(Bloxlink.Module):
         unverified_role_name = guild_data.get("unverifiedRoleName", DEFAULTS.get("unverifiedRoleName"))
         verified_role_name = guild_data.get("verifiedRoleName", DEFAULTS.get("verifiedRoleName"))
 
+        allow_old_roles = guild_data.get("allowOldRoles", DEFAULTS.get("allowOldRoles"))
+
         if unverify_role:
             unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
 
@@ -775,20 +777,20 @@ class Roblox(Bloxlink.Module):
                                 else:
                                     add_roles.add(role)
 
-                            if nickname and bind_nickname and bind_nickname != "skip":
-                                if author.top_role == role:
-                                    top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+                                if nickname and bind_nickname and bind_nickname != "skip":
+                                    if author.top_role == role:
+                                        top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
 
-                                resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+                                    resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
 
-                                if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                    possible_nicknames.append([role, resolved_nickname])
+                                    if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                        possible_nicknames.append([role, resolved_nickname])
                         else:
                             for role_id in bound_roles:
                                 int_role_id = role_id.isdigit() and int(role_id)
                                 role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                if role and role in author.roles:
+                                if not allow_old_roles and role and role in author.roles:
                                     remove_roles.add(role)
 
                     for group_id, data in role_binds.get("groups", {}).items():
@@ -813,7 +815,7 @@ class Roblox(Bloxlink.Module):
                                             int_role_id = role_id.isdigit() and int(role_id)
                                             role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, author.roles)
 
-                                            if role:
+                                            if role and not allow_old_roles:
                                                 remove_roles.add(role)
 
                                 elif (bind_id == "all" or rank == user_rank) or (rank and (rank < 0 and user_rank >= abs(rank))):
@@ -837,20 +839,20 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             add_roles.add(role)
 
-                                    if nickname and bind_nickname and bind_nickname != "skip":
-                                        if author.top_role == role:
-                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                        if nickname and bind_nickname and bind_nickname != "skip":
+                                            if author.top_role == role:
+                                                top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                            resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                        if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                            possible_nicknames.append([role, resolved_nickname])
+                                            if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                                possible_nicknames.append([role, resolved_nickname])
                                 else:
                                     for role_id in bound_roles:
                                         int_role_id = role_id.isdigit() and int(role_id)
                                         role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                        if role and role in author.roles:
+                                        if not allow_old_roles and role and role in author.roles:
                                             remove_roles.add(role)
 
                             else:
@@ -873,21 +875,20 @@ class Roblox(Bloxlink.Module):
                                             else:
                                                 add_roles.add(role)
 
+                                            if nickname and bind_nickname and bind_nickname != "skip":
+                                                if author.top_role == role:
+                                                    top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                        if nickname and bind_nickname and bind_nickname != "skip":
-                                            if author.top_role == role:
-                                                top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
 
-                                            resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
-
-                                            if resolved_nickname and not resolved_nickname in possible_nicknames:
-                                                possible_nicknames.append([role, resolved_nickname])
+                                                if resolved_nickname and not resolved_nickname in possible_nicknames:
+                                                    possible_nicknames.append([role, resolved_nickname])
                                 else:
                                     for role_id in bound_roles:
                                         int_role_id = role_id.isdigit() and int(role_id)
                                         role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                        if role and role in author.roles:
+                                        if not allow_old_roles and role and role in author.roles:
                                             remove_roles.add(role)
 
                         if group:
@@ -929,7 +930,7 @@ class Roblox(Bloxlink.Module):
                                         int_role_id = role_id.isdigit() and int(role_id)
                                         role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
 
-                                        if role and role in author.roles:
+                                        if not allow_old_roles and role and role in author.roles:
                                             remove_roles.add(role)
 
                 if group_roles and group_ids:
@@ -972,7 +973,7 @@ class Roblox(Bloxlink.Module):
                                             if rank_name != group.user_rank_name:
                                                 has_role = find(lambda r: r.name == rank_name, author.roles)
 
-                                                if has_role:
+                                                if not allow_old_roles and has_role:
                                                     remove_roles.add(has_role)
 
                                                 matching_group["rankName"] = group.user_rank_name
@@ -999,7 +1000,7 @@ class Roblox(Bloxlink.Module):
 
                                 group_nickname = group_data.get("nickname")
 
-                                if nickname and group_nickname:
+                                if nickname and group_nickname and group_role:
                                     if author.top_role == group_role and group_nickname:
                                         top_role_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user)
 
@@ -1019,7 +1020,7 @@ class Roblox(Bloxlink.Module):
                                         rank_name = matching_group["rankName"]
                                         has_role = find(lambda r: r.name == rank_name, author.roles)
 
-                                        if has_role:
+                                        if not allow_old_roles and has_role:
                                             remove_roles.add(has_role)
 
                                         matching_group["rankName"] = "Guest"
@@ -1040,9 +1041,6 @@ class Roblox(Bloxlink.Module):
             try:
                 if add_roles:
                     await author.add_roles(*add_roles, reason="Adding group roles")
-
-                if guild_data.get("allowOldRoles", DEFAULTS.get("allowOldRoles")):
-                    remove_roles = set()
 
                 if remove_roles:
                     await author.remove_roles(*remove_roles, reason="Removing old roles")
@@ -1547,6 +1545,13 @@ class Group(Bloxlink.Module):
             self.rolesets = self.rolesets or group_data.get("Roles", [])
 
             self.version = "old"
+
+        for roleset in self.rolesets:
+            if roleset.get("name"):
+                roleset["name"] = roleset["name"].strip()
+
+            elif roleset.get("Name"):
+                roleset["Name"] = roleset["Name"].strip()
 
 
     def __str__(self):
