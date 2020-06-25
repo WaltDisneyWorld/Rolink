@@ -12,5 +12,8 @@ class GuildJoinEvent(Bloxlink.Module):
 
         @Bloxlink.event
         async def on_guild_join(guild):
+            """
             if not await validate_guild(guild):
                 await guild.leave()
+            """
+            pass

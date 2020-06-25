@@ -11,6 +11,7 @@ from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 from time import time
 from math import ceil
 import asyncio
+import aiohttp
 
 is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
 
@@ -18,14 +19,17 @@ is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
 class Utils(Bloxlink.Module):
     def __init__(self):
         self.option_regex = compile("(.+):(.+)")
-        self.bloxlink_server = self.client.get_guild(372036754078826496)
+        #self.bloxlink_server = self.client.get_guild(372036754078826496)
 
 
     async def __setup__(self):
+        """
         try:
             self.bloxlink_server = self.bloxlink_server or self.client.get_guild(372036754078826496) or await self.client.fetch_guild(372036754078826496)
         except (Forbidden, AttributeError):
             self.bloxlink_server = None
+        """
+        pass
 
 
     @staticmethod
@@ -55,28 +59,29 @@ class Utils(Bloxlink.Module):
                 params[k] = "true" if v else "false"
 
         try:
-            async with self.session.request(method, url, params=params, headers=headers) as response:
-                text = await response.text()
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, url, params=params, headers=headers) as response:
+                    text = await response.text()
 
-                if raise_on_failure:
-                    if response.status >= 500:
-                        if retry != 0:
-                            retry -= 1
-                            await asyncio.sleep(1.0)
+                    if raise_on_failure:
+                        if response.status >= 500:
+                            if retry != 0:
+                                retry -= 1
+                                await asyncio.sleep(1.0)
 
-                            return await self.fetch(url, raise_on_failure=raise_on_failure, retry=retry)
+                                return await self.fetch(url, raise_on_failure=raise_on_failure, retry=retry)
 
-                        raise RobloxAPIError
+                            raise RobloxAPIError
 
-                    elif response.status == 400:
-                        raise RobloxAPIError
-                    elif response.status == 404:
-                        raise RobloxNotFound
+                        elif response.status == 400:
+                            raise RobloxAPIError
+                        elif response.status == 404:
+                            raise RobloxNotFound
 
-                if text == "The service is unavailable.":
-                    raise RobloxDown
+                    if text == "The service is unavailable.":
+                        raise RobloxDown
 
-                return text, response
+                    return text, response
 
         except ServerDisconnectedError:
             if retry != 0:
@@ -119,7 +124,7 @@ class Utils(Bloxlink.Module):
 
         return prefix or PREFIX, None
 
-
+    """
     async def validate_guild(self, guild):
         owner = guild.owner
 
@@ -141,6 +146,7 @@ class Utils(Bloxlink.Module):
 
 
         return False
+    """
 
 
     async def add_features(self, user, features, *, days=-1, code=None, premium_anywhere=None):

@@ -15,9 +15,11 @@ class MessageEvent:
 		async def on_message(message):
 			author = message.author
 
+			"""
 			if RELEASE != "LOCAL" and getattr(message, "guild", None):
 				if not await validate_guild(message.guild):
 					return
+			"""
 
 			if author.bot or not message.channel or Arguments.in_prompt(author):
 				return
