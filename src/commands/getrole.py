@@ -1,10 +1,12 @@
 from discord import Embed
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, UserNotVerified, BloxlinkBypass # pylint: disable=import-error
+from resources.constants import DEFAULTS
 from os import environ as env
 
-update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
+update_member, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["update_member", "count_binds", "get_binds"])
 parse_message = Bloxlink.get_module("commands", attrs="parse_message")
+get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 
 try:
     from config import TRELLO
@@ -28,33 +30,36 @@ class GetRoleCommand(Bloxlink.Module):
     @Bloxlink.flags
     async def __main__(self, CommandArgs):
         author = CommandArgs.message.author
+        guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
-        trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+        prefix = CommandArgs.prefix
 
-        if not (CommandArgs.guild_data.get("groupIDs") or CommandArgs.guild_data.get("roleBinds")):
-            if trello_binds_list:
-                if not trello_binds_list.synced:
-                    await trello_binds_list.sync(limit=TRELLO["GLOBAL_CARD_LIMIT"])
+        if trello_board:
+            trello_options, _ = await get_options(trello_board)
+            guild_data.update(trello_options)
 
-                if len(await trello_binds_list.get_cards()) == 0:
-                    raise Message("Your Trello board has no bounded roles! Please create binds under a "
-                                  f"list called ``Bloxlink Binds``, or use ``{CommandArgs.prefix}bind`` to make a new bind.",
-                                  type="silly")
-            else:
-                raise Message(f"This server has no bind configuration! Please run ``{CommandArgs.prefix}bind`` to make a new bind.",
-                              type="silly")
+        role_binds, group_ids, trello_binds_list = await get_binds(guild_data=guild_data, trello_board=trello_board)
+
+        group_required = guild_data.get("groupRequired", DEFAULTS.get("groupRequired"))
+
+        if group_required and count_binds(guild_data, role_binds=role_binds, group_ids=group_ids) == 0:
+            raise Message(f"This server has no bind configuration! Please run ``{prefix}bind`` to make a new bind. If "
+                          f"binds aren't needed, then this message may be disabled by using ``{prefix}settings`` and "
+                           "disabling ``groupRequired``.",
+                            type="silly")
 
         async with CommandArgs.response.loading():
             try:
                 added, removed, nickname, errors, roblox_user = await update_member(
                     CommandArgs.message.author,
-                    guild             = CommandArgs.message.guild,
-                    guild_data        = CommandArgs.guild_data,
-                    trello_board      = trello_board,
-                    trello_binds_list = trello_binds_list,
-                    roles             = True,
-                    nickname          = True,
-                    author_data       = await self.r.table("users").get(str(author.id)).run())
+                    guild                = CommandArgs.message.guild,
+                    guild_data           = CommandArgs.guild_data,
+                    trello_board         = trello_board,
+                    trello_binds_list    = trello_binds_list,
+                    roles                = True,
+                    nickname             = True,
+                    author_data          = await self.r.table("users").get(str(author.id)).run(),
+                    given_trello_options = True)
 
                 embed = Embed(title=f"Discord Profile for {roblox_user.username}", description="Changed someone’s group rank? Please wait 10 minutes for Bloxlink to catch up!")
                 embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
