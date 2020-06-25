@@ -4,6 +4,8 @@ from discord import Embed
 
 @Bloxlink.command
 class InviteCommand(Bloxlink.Module):
+    """invite the bot to your server"""
+
     def __init__(self):
         pass
 

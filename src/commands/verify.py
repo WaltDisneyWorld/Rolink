@@ -25,6 +25,7 @@ class VerifyCommand(Bloxlink.Module):
 
     def __init__(self):
         self.examples = ["add", "unlink"]
+        self.category = "Account"
 
 
     @staticmethod

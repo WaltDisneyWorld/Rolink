@@ -15,7 +15,7 @@ class SwitchUserCommand(Bloxlink.Module):
     """change your linked Roblox account in a server"""
 
     def __init__(self):
-        pass
+        self.category = "Account"
 
 
     @staticmethod
