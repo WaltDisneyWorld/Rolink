@@ -359,6 +359,9 @@ class Command:
     async def check_permissions(self, author, guild, locale, permissions=None, **kwargs):
         permissions = permissions or self.permissions
 
+        if author.id == OWNER:
+            return True
+
         if permissions.developer_only or self.developer_only:
             if author.id != OWNER:
                 raise PermissionError("This command is reserved for the Bloxlink Developer.")
