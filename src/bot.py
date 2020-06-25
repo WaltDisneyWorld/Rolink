@@ -27,10 +27,6 @@ async def main():
 if __name__ == "__main__":
 	token = environ.get("TOKEN") or getattr(config, "TOKEN")
 
-	try:
-		loop.create_task(main())
+	loop.create_task(main())
 
-		Bloxlink.run(token)
-
-	finally:
-		loop.run_until_complete(Bloxlink.session.close())
+	Bloxlink.run(token)
