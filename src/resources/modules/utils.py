@@ -19,17 +19,13 @@ is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
 class Utils(Bloxlink.Module):
     def __init__(self):
         self.option_regex = compile("(.+):(.+)")
-        #self.bloxlink_server = self.client.get_guild(372036754078826496)
+        self.premium_cache = {}
 
 
     async def __setup__(self):
-        """
-        try:
-            self.bloxlink_server = self.bloxlink_server or self.client.get_guild(372036754078826496) or await self.client.fetch_guild(372036754078826496)
-        except (Forbidden, AttributeError):
-            self.bloxlink_server = None
-        """
-        pass
+        while True:
+            self.premium_cache = {}
+            await asyncio.sleep(10 * 60)
 
 
     @staticmethod
@@ -124,31 +120,6 @@ class Utils(Bloxlink.Module):
 
         return prefix or PREFIX, None
 
-    """
-    async def validate_guild(self, guild):
-        owner = guild.owner
-
-        if not self.bloxlink_server:
-            return True
-
-        profile, _ = await self.is_premium(owner)
-        if profile.features.get("premium"):
-            return True
-
-        try:
-            member = self.bloxlink_server.get_member(owner.id) or await self.bloxlink_server.fetch_member(owner.id)
-        except NotFound:
-            return False
-
-        if member:
-            if find(lambda r: r.name == "3.0 Access", member.roles):
-                return True
-
-
-        return False
-    """
-
-
     async def add_features(self, user, features, *, days=-1, code=None, premium_anywhere=None):
         user_data = await self.r.table("users").get(str(user.id)).run() or {"id": str(user.id)}
         user_data_premium = user_data.get("premium") or {}
@@ -196,6 +167,7 @@ class Utils(Bloxlink.Module):
 
         user_data["premium"] = user_data_premium
 
+        self.clear_premium_cache_from_user(user)
 
         await self.r.table("users").insert(user_data, conflict="update").run()
 
@@ -248,8 +220,17 @@ class Utils(Bloxlink.Module):
         await self.r.table("users").insert(transfer_from_data, conflict="update").run()
         await self.r.table("users").insert(transfer_to_data,   conflict="update").run()
 
+        self.clear_premium_cache_from_user(transfer_to, transfer_from)
 
-    async def is_premium(self, author, author_data=None, rec=True):
+
+    async def is_premium(self, author, author_data=None, cache=True, rec=True):
+        if cache:
+            premium_cache = self.premium_cache.get(author.id)
+
+            if premium_cache:
+                return premium_cache[0], premium_cache[1]
+
+
         profile = DonatorProfile(author)
 
         author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {"id": str(author.id)}
@@ -257,13 +238,20 @@ class Utils(Bloxlink.Module):
 
         if rec:
             if premium_data.get("transferTo"):
+                if cache:
+                    self.premium_cache[author.id] = (profile, premium_data["transferTo"])
+
                 return profile, premium_data["transferTo"]
+
             elif premium_data.get("transferFrom"):
                 transfer_from = premium_data["transferFrom"]
                 transferee_data = await self.r.table("users").get(str(transfer_from)).run() or {}
-                transferee_premium, _ = await self.is_premium(Object(id=transfer_from), transferee_data, rec=False)
+                transferee_premium, _ = await self.is_premium(Object(id=transfer_from), transferee_data, rec=False, cache=False)
 
                 if transferee_premium:
+                    if cache:
+                        self.premium_cache[author.id] = (transferee_premium, _)
+
                     return transferee_premium, _
                 else:
                     premium_data["transferFrom"] = None
@@ -278,6 +266,7 @@ class Utils(Bloxlink.Module):
 
         if author_data.get("flags", {}).get("premiumAnywhere"):
             profile.attributes["PREMIUM_ANYWHERE"] = True
+            profile.add_features("premium", "pro")
 
         data_patreon = await self.has_patreon_premium(author, author_data)
 
@@ -294,5 +283,12 @@ class Utils(Bloxlink.Module):
             if data_selly["pro_access"]:
                 profile.add_features("pro")
 
+        if cache:
+            self.premium_cache[author.id] = (profile, None)
 
         return profile, None
+
+
+    def clear_premium_cache_from_user(self, *users):
+        for user in users:
+            self.premium_cache.pop(user.id, None)

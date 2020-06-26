@@ -3,10 +3,10 @@ from resources.exceptions import Message, Error # pylint: disable=import-error
 from resources.constants import TRANSFER_COOLDOWN # pylint: disable=import-error
 import time
 import math
-from discord import Embed
+from discord import Embed, Object
 
 
-transfer_premium, is_premium = Bloxlink.get_module("utils", attrs=["transfer_premium", "is_premium"])
+transfer_premium, is_premium, clear_premium_cache_from_user = Bloxlink.get_module("utils", attrs=["transfer_premium", "is_premium", "clear_premium_cache_from_user"])
 
 
 @Bloxlink.command
@@ -80,7 +80,7 @@ class TransferCommand(Bloxlink.Module):
 
         author_data = await self.r.table("users").get(str(author.id)).run() or {"id": str(author.id)}
 
-        premium_status, _ = await is_premium(author, author_data=author_data, rec=True)
+        premium_status, _ = await is_premium(author, author_data=author_data, cache=False, rec=True)
 
         if premium_status:
             author_data_premium = author_data.get("premium", {})
@@ -105,6 +105,8 @@ class TransferCommand(Bloxlink.Module):
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(transferee_data, conflict="update").run()
 
+                clear_premium_cache_from_user(author, Object(id=int(transfer_from)))
+
                 raise Message("Successfully **disabled** the premium transfer!", type="success")
 
             else:
@@ -119,6 +121,8 @@ class TransferCommand(Bloxlink.Module):
 
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(recipient_data, conflict="update").run()
+
+                clear_premium_cache_from_user(author, Object(id=int(transfer_to)))
 
                 await response.success("Successfully **disabled** your premium transfer!")
 
