@@ -22,6 +22,7 @@ class UpdateUserCommand(Bloxlink.Module):
             }
         ]
         self.category = "Administration"
+        self.cooldown = 2
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response

@@ -20,12 +20,12 @@ class RobloxSearchCommand(Bloxlink.Module):
                 "name": "target"
             }
         ]
-
         self.examples = [
             "roblox",
             "569422833",
             "569422833 --username"
         ]
+        self.cooldown = 5
 
     @Bloxlink.flags
     async def __main__(self, CommandArgs):

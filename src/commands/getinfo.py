@@ -27,6 +27,7 @@ class GetinfoCommand(Bloxlink.Module):
 			"@justin --avatar",
 			"@justin --avatar --groups"
 		]
+		self.cooldown = 5
 
 	@Bloxlink.flags
 	async def __main__(self, CommandArgs):

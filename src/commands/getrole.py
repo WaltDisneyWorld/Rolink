@@ -26,6 +26,7 @@ class GetRoleCommand(Bloxlink.Module):
     def __init__(self):
         self.aliases = ["getroles", "give me roles please"]
         self.category = "Account"
+        self.cooldown = 5
 
 
     @Bloxlink.flags

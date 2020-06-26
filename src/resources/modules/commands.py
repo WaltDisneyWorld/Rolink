@@ -1,9 +1,13 @@
 import re
 import traceback
+import time
+import math
+import asyncio
 from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
+from discord import Embed
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response
 from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-error
@@ -21,7 +25,13 @@ commands = {}
 @Bloxlink.module
 class Commands(Bloxlink.Module):
     def __init__(self):
-        pass
+        self.cooldown_cache = {}
+        self._cooldown_cache = {} # backup
+
+    async def __setup__(self):
+        while True:
+            self.cooldown_cache = dict(self._cooldown_cache)
+            await asyncio.sleep(10 * 60)
 
     async def more_args(self, content_modified, CommandArgs, command_args, arguments):
         parsed_args = {}
@@ -110,12 +120,46 @@ class Commands(Bloxlink.Module):
                         ignored_channels = guild_data.get("ignoredChannels", {})
 
                         if ignored_channels.get(channel_id):
-                            if not find(lambda r: r.name in MAGIC_ROLES, author.roles):
-                                if guild.owner != author:
-                                    author_perms = author.guild_permissions
+                            if guild.owner != author and not find(lambda r: r.name in MAGIC_ROLES, author.roles):
+                                author_perms = author.guild_permissions
 
-                                    if not (author_perms.manage_guild or author_perms.administrator):
-                                        return
+                                if not (author_perms.manage_guild or author_perms.administrator):
+                                    return
+
+
+                        if command.cooldown:
+                            cooldown_from_cache = self.cooldown_cache.get(command.name, {}).get(author.id) or 0
+                            time_now = time.time()
+
+                            profile, _ = await is_premium(author)
+
+                            if not profile.features.get("premium"):
+                                if cooldown_from_cache < time_now:
+                                    self.cooldown_cache[command.name].pop(author.id, None)
+                                else:
+                                    seconds = math.ceil(cooldown_from_cache - time_now)
+                                    embed = Embed(title="Slow down!")
+                                    embed.description = "This command has a short cooldown since it's relatively expensive for the bot. " \
+                                                        f"You'll need to wait **{seconds}** more second(s).\n\nDid you know? __Bloxlink Premium__ " \
+                                                        f"subscribers NEVER see any cooldowns. Find out more information with ``{prefix}donate``."
+
+                                    try:
+                                        m = await channel.send(embed=embed)
+                                    except (NotFound, Forbidden):
+                                        pass
+                                    else:
+                                        await asyncio.sleep(10)
+
+                                        try:
+                                            await m.delete()
+                                            await message.delete()
+                                        except (NotFound, Forbidden):
+                                            pass
+
+                                    return
+
+                                self.cooldown_cache[command.name][author.id] = time_now + command.cooldown
+
 
                         if not (command.dm_allowed or guild):
                             try:
@@ -171,6 +215,7 @@ class Commands(Bloxlink.Module):
                                 await response.error(e)
 
                                 return
+
                         except Message as e:
                             message_type = "send" if e.type == "info" else e.type
                             response_fn = getattr(response, message_type, response.send)
@@ -309,10 +354,7 @@ class Commands(Bloxlink.Module):
                         pass
 
 
-
-
-    @staticmethod
-    def new_command(command_structure):
+    def new_command(self, command_structure):
         c = command_structure()
         command = Command(c)
         subcommands = {}
@@ -326,6 +368,8 @@ class Commands(Bloxlink.Module):
                 command.subcommands[attr_name] = attr
                 #subcommands[attr_name] = attr
 
+        self.cooldown_cache[command.name] = {}
+        self._cooldown_cache[command.name] = {}
         commands[command.name] = command
 
         return command_structure
