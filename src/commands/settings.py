@@ -209,6 +209,7 @@ class SettingsCommand(Bloxlink.Module):
                 }, conflict="update").run()
 
                 success_text = f"Successfully saved your new ``{choice}``!"
+
             elif option_type == "number":
                 parsed_value = (await CommandArgs.prompt([{
                     "prompt": f"Please specify a new value for ``{choice}``.",
@@ -226,6 +227,28 @@ class SettingsCommand(Bloxlink.Module):
                 await self.r.db("canary").table("guilds").insert({
                     "id": str(guild.id),
                     choice: int(parsed_value)
+                }, conflict="update").run()
+
+                success_text = f"Successfully saved your new ``{choice}``!"
+
+            elif option_type == "choice":
+                choices = ", ".join(option_find[2])
+                parsed_value = (await CommandArgs.prompt([{
+                    "prompt": f"Please pick a new value for ``{choice}``: ``{choices}``",
+                    "name": "choice",
+                    "type": "choice",
+                    "footer": "Say **clear** to set as the default value.",
+                    "formatting": False,
+                    "exceptions": ["clear"],
+                    "choices": option_find[2]
+                }]))["choice"]
+
+                if parsed_value == "clear":
+                    parsed_value = DEFAULTS.get(choice)
+
+                await self.r.db("canary").table("guilds").insert({
+                    "id": str(guild.id),
+                    choice: parsed_value
                 }, conflict="update").run()
 
                 success_text = f"Successfully saved your new ``{choice}``!"

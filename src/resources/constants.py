@@ -63,7 +63,7 @@ UNVERIFIED_TEMPLATES = (
     "{server-name} \u2192 changes to the server name"
 )
 
-OPTIONS = {                # fn,  type, max length, premium only, desc
+OPTIONS = {                # fn,  type, max length or choices, premium only, desc
     "prefix":                (None, "string", 10,    False, "The prefix is used before commands to activate them"),
     "verifiedRoleName":      (None, "string", 20,    False, "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."),
     "verifiedRoleEnabled":   (None, "boolean", None, False, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."),
@@ -72,7 +72,7 @@ OPTIONS = {                # fn,  type, max length, premium only, desc
     "allowOldRoles":         (None, "boolean", None, False, "Bloxlink will NOT remove roles if this is enabled."),
     "autoRoles":             (None, "boolean", None, False, "Bloxlink will give all matching/corresponding roles to people who join the server. Set eligible roles with ``{prefix}bind``. Note that this being enabled will override 'autoVerification'."),
     "autoVerification":      (None, "boolean", None, False, "Bloxlink will give the Verified role to people who join the server and are linked to Bloxlink.\nNote that 'autoRoles' being enabled overrides this setting."),
-    "dynamicRoles":          (None, "boolean", None, False, "Bloxlink will make missing group roles from your Linked Groups as people need them."), #
+    "dynamicRoles":          (None, "boolean", None, False, "Bloxlink will make missing group roles from your Linked Groups as people need them."),
     "welcomeMessage":        (None, "string", 1500,  False, "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"),
     "joinDM":                (None, None, None,      False, "Customize the join DM messages of people who join the server."),
     #"persistRoles":          (None, "boolean", None, True, "Update members' roles/nickname as they type."),
@@ -84,6 +84,7 @@ OPTIONS = {                # fn,  type, max length, premium only, desc
     "groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
     "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."),
     "groupRequired":         (None, "boolean", None, False, "Toggle whether ``{prefix}getrole`` should require at least one role bind to work."),
+    "trelloBindMode":        (None, "choice", ("merge", "replace"), False, "Choose 'replace' if trello binds should replace the server binds, or 'merge' if trello binds should be merged with the server binds. Default = merge."),
 }
 
 DEFAULTS = {
@@ -104,8 +105,8 @@ DEFAULTS = {
     "ageLimit": None,
     "groupShoutChannel": None,
     "promptDelete": True,
-    "groupRequired": True
-
+    "groupRequired": True,
+    "trelloBindMode": "merge"
 }
 
 ARROW = "\u2192"
