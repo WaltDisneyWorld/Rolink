@@ -100,14 +100,14 @@ class VerifyCommand(Bloxlink.Module):
 
         if not username:
             args.append({
-                "prompt": "What's the username of your Roblox account?",
+                "prompt": "What's the **username** of your Roblox account?",
                 "type": "string",
                 "name": "username",
                 "validation": self.validate_username
             })
 
         args.append({
-            "prompt": "Would you like to set this as your default Roblox account for new servers? ``yes/no``",
+            "prompt": "Would you like to set this as your **default** Roblox account for new servers? ``yes/no``",
             "name": "default",
             "type": "choice",
             "choices": ["yes", "no"]
@@ -151,6 +151,7 @@ class VerifyCommand(Bloxlink.Module):
                     guild_data           = CommandArgs.guild_data,
                     roles                = True,
                     nickname             = True,
+                    trello_board         = trello_board,
                     author_data          = await self.r.table("users").get(str(author.id)).run(),
                     given_trello_options = True)
 
@@ -170,7 +171,7 @@ class VerifyCommand(Bloxlink.Module):
     async def customize(self, CommandArgs):
         """customize the behavior of !verify"""
 
-        # TODO: able to set: "forced groups", allowReVerify
+        # TODO: able to set: "forced groups"
 
         prefix = CommandArgs.prefix
         guild = CommandArgs.message.guild

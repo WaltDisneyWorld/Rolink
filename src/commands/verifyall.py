@@ -2,6 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, RobloxNotFound # pylint: disable=import-error
 from config import REACTIONS, VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
 from discord import Embed
+from discord.errors import Forbidden, NotFound
 import heapq
 import time
 import asyncio
@@ -68,21 +69,12 @@ class VerifyAllCommand(Bloxlink.Module):
                         nickname          = nickname,
                         author_data       = await self.r.table("users").get(str(member.id)).run())
 
-                except BloxlinkBypass:
+                except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden):
                     pass
 
-                except UserNotVerified:
-                    pass
-
-                except PermissionError:
-                    pass
-
-                except RobloxAPIError:
-                    await response.error("A Roblox API error has occured, so this scan was cancelled.")
+                except NotFound:
+                    await response.error("Please do not delete roles/channels while a scan is going on... This scan is now cancelled.")
                     break
-
-                except RobloxNotFound:
-                    pass
 
 
         len_members = len(guild.members)

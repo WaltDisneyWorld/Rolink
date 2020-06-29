@@ -64,7 +64,7 @@ class BloxlinkStructure(AutoShardedClient):
         loop.run_until_complete(self.load_database())
 
     async def get_session(self):
-        self.session = aiohttp.ClientSession(headers={"Connection": "close"})
+        self.session = aiohttp.ClientSession() # headers={"Connection": "close"}
 
     @staticmethod
     def log(*text, level=LOG_LEVEL):
@@ -274,7 +274,7 @@ class BloxlinkStructure(AutoShardedClient):
         while True:
             for host in [RETHINKDB["HOST"], "rethinkdb", "localhost"]:
                 try:
-                    async with timeout(2):
+                    async with timeout(5):
                         conn = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
 
                         if conn:
@@ -282,6 +282,7 @@ class BloxlinkStructure(AutoShardedClient):
                             await self.check_database(conn)
 
                             return
+
                 except asyncio.TimeoutError:
                     pass
 
