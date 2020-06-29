@@ -44,9 +44,8 @@ class ViewBindsCommand(Bloxlink.Module):
 
             for category, bind_data in role_binds.items():
                 if category == "groups":
-                    for group_id, group_data in role_binds["groups"].items():
+                    for group_id, group_data in bind_data.items():
                         text = []
-
                         for rank_id, rank_data in group_data.get("binds", {}).items():
                             role_names = set()
 
@@ -127,9 +126,13 @@ class ViewBindsCommand(Bloxlink.Module):
 
                 elif category in ("assets", "badges"):
                     text = []
-                    role_names = set()
+                    category_non_plural = category[:-1]
+                    category_non_plural_title = category_non_plural.title()
 
                     for bind_id, bind_vg_data in bind_data.items():
+                        display_name = bind_vg_data.get("displayName") or "(No Name)"
+                        role_names = set()
+
                         if bind_vg_data["roles"]:
                             for role_ in bind_vg_data["roles"]:
                                 role_cache_find = role_cache.get(role_)
@@ -155,16 +158,10 @@ class ViewBindsCommand(Bloxlink.Module):
                                             role_names.add("(Deleted Role(s))")
                                             role_cache[role_] = "(Deleted Role(s))"
 
-                            if category == "assets":
-                                text.append(f"**Asset:** {bind_vg_data['assetName']} ({bind_id}) {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {bind_vg_data['nickname']}")
-                            else:
-                                text.append(f"**Asset:** {bind_vg_data['assetName']} ({bind_id}) {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {bind_vg_data['nickname']}")
+                            text.append(f"**{category_non_plural_title}:** {display_name} ({bind_id}) {ARROW} **Roles:** {', '.join(role_names)} {ARROW} **Nickname:** {bind_vg_data['nickname']}")
 
                         else:
-                            if category == "assets":
-                                text.append(f"**Asset:** {bind_vg_data['assetName']} ({bind_id}) {ARROW} **Roles:** (No Roles) {ARROW} **Nickname:** {bind_vg_data['nickname']}")
-                            else:
-                                text.append(f"**Asset:** {bind_vg_data['assetName']} ({bind_id}) {ARROW} **Roles:** (No Roles) {ARROW} **Nickname:** {bind_vg_data['nickname']}")
+                            text.append(f"**{category_non_plural_title}:** {display_name} ({bind_id}) {ARROW} **Roles:** (No Roles) {ARROW} **Nickname:** {bind_vg_data['nickname']}")
 
 
                     if text:

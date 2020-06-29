@@ -58,6 +58,7 @@ class GetRoleCommand(Bloxlink.Module):
                     guild_data           = CommandArgs.guild_data,
                     trello_board         = trello_board,
                     trello_binds_list    = trello_binds_list,
+                    binds                = (role_binds, group_ids),
                     roles                = True,
                     nickname             = True,
                     author_data          = await self.r.table("users").get(str(author.id)).run(),

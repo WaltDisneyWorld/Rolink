@@ -114,7 +114,7 @@ async def delete_bind_from_cards(type="group", bind_id=None, trello_binds_list=N
                                 trello_binds_list.parsed_bind_data = None
 
 
-    elif type == "asset":
+    elif type in ("asset", "badge"):
         cards = bind_data_trello.get("trello", {}).get("cards", [])
 
         for card in cards:
@@ -279,35 +279,45 @@ class UnBindCommand(Bloxlink.Module):
             raise Message("All bind removals were successful.", type="success")
 
         else:
-            if bind_category in ("assets", "asset"):
+            bind_category = bind_category.lower()
+
+            if bind_category.endswith("s"):
+                bind_category = bind_category[:-1]
+
+            bind_category_plural = f"{bind_category}s"
+
+            if bind_category in ("asset", "badge"):
+                bind_category_title = bind_category.title()
+
                 bind_id = str((await CommandArgs.prompt([
                     {
-                        "prompt": "Please specify the **Asset ID** to delete from.",
+                        "prompt": f"Please specify the **{bind_category_title} ID** to delete from.",
                         "name": "bind_id",
-                        "type": "number"
+                        "type": "number",
+                        "formatting": False
                     },
                 ]))["bind_id"])
 
-                all_assets = role_binds_trello.get("assets", {})
-                asset_binds = role_binds.get("assets")
+                all_binds = role_binds_trello.get(bind_category_plural, {})
+                saving_binds = role_binds.get(bind_category_plural)
 
-                if not all_assets.get(bind_id):
-                    raise Error("This asset is not bounded!")
+                if not all_binds.get(bind_id):
+                    raise Error(f"This {bind_category} is not bounded!")
 
-                if asset_binds:
-                    asset_binds.pop(bind_id, None)
+                if saving_binds:
+                    saving_binds.pop(bind_id, None)
 
-                    if not asset_binds:
-                        role_binds.pop("assets", None)
+                    if not saving_binds:
+                        role_binds.pop(bind_category_plural, None)
 
                     guild_data["roleBinds"] = role_binds
 
                     await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
-                found_asset_trello = role_binds_trello.get("assets", {}).get(bind_id) or {}
+                found_bind_trello = role_binds_trello.get("assets", {}).get(bind_id) or {}
 
-                if found_asset_trello:
-                    await delete_bind_from_cards(type="asset", bind_id=bind_id, trello_binds_list=trello_binds_list, bind_data_trello=found_asset_trello)
+                if found_bind_trello:
+                    await delete_bind_from_cards(type=bind_category, bind_id=bind_id, trello_binds_list=trello_binds_list, bind_data_trello=found_bind_trello)
 
 
                 raise Message("All bind removals were successful.", type="success")

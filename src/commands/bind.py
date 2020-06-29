@@ -62,8 +62,9 @@ class BindCommand(Bloxlink.Module):
                 "prompt": "A bind is a link between a Roblox group or asset and a Discord role. Please select a "
                           "bind type:\n"
                           f"``group`` {ARROW} bind a Roblox group rank to a Discord role\n"
-                          f"``asset`` {ARROW} bind a Roblox asset to a Discord role",
-                         #f"``badge`` {ARROW} bind a Roblox badge to a Discord role",
+                          f"``asset`` {ARROW} bind a Roblox catalog asset to a Discord role\n"
+                          f"``badge`` {ARROW} bind a Roblox badge to a Discord role\n",
+                          # f"``gamepass`` {ARROW} bind a Roblox badge to a Discord role",
                 "name": "bind_choice",
                 "choices": ["group", "asset", "badge"],
                 "formatting": False
@@ -117,7 +118,7 @@ class BindCommand(Bloxlink.Module):
         if bind_choice == "group":
             parsed_args_group = await CommandArgs.prompt([
                 {
-                    "prompt": "Please specify the Group ID to integrate with. The group ID is the rightmost numbers on your Group URL.",
+                    "prompt": "Please specify the **Group ID** to integrate with. The group ID is the rightmost numbers on your Group URL.",
                     "name": "group",
                     "validation": self.validate_group
                 },
@@ -218,7 +219,7 @@ class BindCommand(Bloxlink.Module):
 
                 discord_role = await CommandArgs.prompt([
                     {
-                        "prompt": "Please provide a Discord role name for this bind.",
+                        "prompt": "Please provide a **Discord role name** for this bind.",
                         "name": "role",
                         "type": "role"
                     }
@@ -514,56 +515,67 @@ class BindCommand(Bloxlink.Module):
 
             await response.success(text)
 
-        elif bind_choice == "asset":
-            asset_parsed_args = await CommandArgs.prompt([
+        elif bind_choice in ("asset", "badge"):
+            bind_choice_title = bind_choice.title()
+            bind_choice_plural = f"{bind_choice}s"
+
+            vg_parsed_args = await CommandArgs.prompt([
                 {
-                   "prompt": "Please provide the Asset ID to use for this bind.",
-                   "name": "asset_id",
-                   "type": "number"
+                   "prompt": f"Please provide the **{bind_choice_title} ID** to use for this bind.",
+                   "name": "bind_id",
+                   "type": "number",
+                   "formatting": False
                 },
                 {
-                   "prompt": "Please provide a Discord role name for this bind.",
+                   "prompt": "Please provide a **Discord role name** for this bind.",
                    "name": "role",
                    "type": "role"
                 },
             ])
 
-            discord_role = asset_parsed_args["role"]
+            discord_role = vg_parsed_args["role"]
 
-            asset_id = str(asset_parsed_args["asset_id"])
+            bind_id = str(vg_parsed_args["bind_id"])
             role_id = str(discord_role.id)
 
-            text, response_ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={asset_id}")
+            if bind_choice == "asset":
+                text, response_ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={bind_id}")
+                json_data = await response_.json()
 
-            json_data = await response_.json()
+                display_name = json_data.get("Name")
 
-            asset_name = json_data.get("Name")
+            elif bind_choice == "badge":
+                text, response_ = await fetch(f"https://badges.roblox.com/v1/badges/{bind_id}")
+                json_data = await response_.json()
+
+                display_name = json_data.get("displayName")
+
 
             role_binds = guild_data.get("roleBinds") or {}
 
             if isinstance(role_binds, list):
                 role_binds = role_binds[0]
 
-            role_binds["assets"] = role_binds.get("assets") or {}
-            role_binds["assets"][asset_id] = role_binds["assets"].get(asset_id) or {}
+            role_binds[bind_choice_plural] = role_binds.get(bind_choice_plural) or {}
+            role_binds[bind_choice_plural][bind_id] = role_binds[bind_choice_plural].get(bind_id) or {}
 
-            role_binds["assets"][asset_id]["nickname"] = nickname
-            role_binds["assets"][asset_id]["assetName"] = asset_name
+            role_binds[bind_choice_plural][bind_id]["nickname"] = nickname
+            role_binds[bind_choice_plural][bind_id]["displayName"] = display_name
 
-            role_binds["assets"][asset_id]["roles"] = role_binds["assets"][asset_id].get("roles", [])
+            role_binds[bind_choice_plural][bind_id]["roles"] = role_binds[bind_choice_plural][bind_id].get("roles", [])
 
-            roles = role_binds["assets"][asset_id]["roles"]
+            roles = role_binds[bind_choice_plural][bind_id]["roles"]
 
             if not role_id in roles:
                 roles.append(role_id)
 
-            role_binds["assets"][asset_id]["roles"] = roles
+            role_binds[bind_choice_plural][bind_id]["roles"] = roles
 
             if trello_binds_list:
                 make_binds_card = True
 
                 if trello_card_binds:
-                    trello_bind_vg = trello_card_binds["assets"].get(asset_id)
+                    trello_bind_vg = trello_card_binds.get(bind_choice_plural, {}).get(bind_id)
 
                     if trello_bind_vg:
                         trello_bind_roles = set(trello_bind_vg.get("roles", set()))
@@ -572,8 +584,8 @@ class BindCommand(Bloxlink.Module):
                             trello_card = card["card"]
 
                             card_bind_data = [
-                                f"Asset ID: {asset_id}",
-                                f"Asset Name: {asset_name}",
+                                f"{bind_choice_title} ID: {bind_id}",
+                                f"Display Name: {display_name}",
                                 f"Nickname: {(nickname != 'skip' and nickname) or rank.get('nickname') or card_data_.get('nickname') or 'None'}",
                             ]
 
@@ -600,8 +612,8 @@ class BindCommand(Bloxlink.Module):
 
                 if make_binds_card:
                     card_bind_data = [
-                        f"Asset ID: {asset_id}",
-                        f"Asset Name: {asset_name}",
+                        f"{bind_choice_title} ID: {bind_id}",
+                        f"Display Name: {display_name}",
                         f"Nickname: {nickname != 'skip' and nickname or 'None'}",
                         f"Roles: {discord_role.name}",
                     ]
@@ -609,7 +621,7 @@ class BindCommand(Bloxlink.Module):
                     trello_card_desc = "\n".join(card_bind_data)
 
                     try:
-                        card = await trello_binds_list.create_card(name="Bloxlink Asset Bind", desc=trello_card_desc)
+                        card = await trello_binds_list.create_card(name=f"Bloxlink {bind_choice_title} Bind", desc=trello_card_desc)
                     except TrelloUnauthorized:
                         await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
                                              "Trello board.")
@@ -623,4 +635,4 @@ class BindCommand(Bloxlink.Module):
                 "roleBinds": role_binds
             }, conflict="update").run()
 
-            await response.success(f"Successfully **bound** Asset ``{asset_name}`` ({asset_id}) with Discord role **{discord_role}!**")
+            await response.success(f"Successfully **bound** {bind_choice_title} ``{display_name}`` ({bind_id}) with Discord role **{discord_role}!**")
