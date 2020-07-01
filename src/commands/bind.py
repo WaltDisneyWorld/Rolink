@@ -1,7 +1,7 @@
 import re
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
 from resources.exceptions import PermissionError, Error, RobloxNotFound, Message, CancelCommand  # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES, ARROW  # pylint: disable=import-error
+from resources.constants import NICKNAME_TEMPLATES, ARROW, LIMITS  # pylint: disable=import-error
 from discord import Embed
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
@@ -10,10 +10,11 @@ from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRe
 bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
-get_group, parse_trello_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds"])
-fetch = Bloxlink.get_module("utils", attrs="fetch")
+get_group, parse_trello_binds, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds", "count_binds", "get_binds"])
+fetch, is_premium = Bloxlink.get_module("utils", attrs=["fetch", "is_premium"])
 
 API_URL = "https://api.roblox.com"
+FREE_BIND_COUNT, PREM_BIND_COUNT = LIMITS["BINDS"]["FREE"], LIMITS["BINDS"]["PREMIUM"]
 
 @Bloxlink.command
 class BindCommand(Bloxlink.Module):
@@ -56,6 +57,23 @@ class BindCommand(Bloxlink.Module):
         response = CommandArgs.response
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
+        prefix = CommandArgs.prefix
+
+        role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild_data=guild_data, trello_board=trello_board)
+
+        bind_count = count_binds(guild_data, role_binds=role_binds_trello, group_ids=group_ids_trello)
+
+        if bind_count >= FREE_BIND_COUNT:
+            profile, _ = await is_premium(guild.owner)
+
+            if not profile.features.get("premium"):
+                raise Error(f"You've exceeded the free bind limit of **{FREE_BIND_COUNT}.** Please delete some with "
+                            f"``{prefix}delbind`` before adding any more.\nPremium users may bind up to **{PREM_BIND_COUNT}** binds! "
+                            f"See ``{prefix}donate`` for instructions on receiving premium.")
+
+            if bind_count >= PREM_BIND_COUNT:
+                raise Error(f"You've exceeded the premium bind limit of **{PREM_BIND_COUNT}.** Please delete some with "
+                            f"``{prefix}delbind`` before adding any more.")
 
         parsed_args = await CommandArgs.prompt([
             {

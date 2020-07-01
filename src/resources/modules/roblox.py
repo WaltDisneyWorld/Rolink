@@ -146,7 +146,10 @@ class Roblox(Bloxlink.Module):
         for bind_category, binds in role_binds.items():
             for bind_id, bind_data in binds.items():
                 if bind_data:
-                    bind_count += 1
+                    if bind_category == "groups":
+                        bind_count += len(bind_data.get("binds")) + len(bind_data.get("ranges"))
+                    else:
+                        bind_count += 1
 
         bind_count += len(group_ids)
 
@@ -601,6 +604,10 @@ class Roblox(Bloxlink.Module):
         guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
         role_binds = dict(guild_data.get("roleBinds") or {})
         group_ids = dict(guild_data.get("groupIDs") or {})
+
+        role_binds["groups"] = role_binds.get("groups", {})
+        role_binds["assets"] = role_binds.get("assets", {})
+        role_binds["badges"] = role_binds.get("badges", {})
 
         if trello_board:
             card_binds, trello_binds_list = await self.parse_trello_binds(trello_board=trello_board, trello_binds_list=trello_binds_list)
