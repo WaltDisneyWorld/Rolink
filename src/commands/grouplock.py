@@ -78,7 +78,9 @@ class GroupLockCommand(Bloxlink.Module):
             if len(groups) >= 15:
                 raise Message("15 groups is the max you can add to your group-lock! Please delete some before adding any more.", type="silly")
 
-            if len(groups) >= 3 and not await is_premium(author):
+            profile, _ = await is_premium(guild.owner)
+
+            if len(groups) >= 3 and not profile.features.get("premium"):
                 raise Message("If you would like to add more than **3** groups to your group-lock, then you need Bloxlink Premium.\n"
                               f"Please use ``{prefix}donate`` for instructions on receiving Bloxlink Premium.\n"
                               "Bloxlink Premium members may lock their server with up to **15** groups.", type="silly")

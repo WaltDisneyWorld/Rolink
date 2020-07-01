@@ -48,7 +48,7 @@ class TimedActions(Bloxlink.Module):
                         datetime = dateutil.parser.parse(shout["updated"])
                         shout_text = shout["body"].strip()
 
-                        if shout_data.get("lastShout", "") != shout_text:
+                        if shout_text and shout_data.get("lastShout", "") != shout_text:
                             shout_data["lastShout"] = shout_text
 
                             await self.r.db("canary").table("groupShouts").get(guild_id).update(shout_data).run()
