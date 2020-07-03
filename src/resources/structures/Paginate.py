@@ -6,15 +6,17 @@ from asyncio import TimeoutError
 class Paginate:
     """Smart paginator for Discord embeds"""
 
-    def __init__(self, message, channel, embed, response=None, field_limit=25, pages=None):
+    def __init__(self, message, channel, embed, response=None, original_channel=None, field_limit=25, pages=None, dm=False):
         self.message = message
         self.author = message.author
         self.embed = embed
         self.response = response
+        self.original_channel = original_channel
 
         self.field_limit = field_limit
         self.channel = channel
         self._pages = pages
+        self.dm = dm
 
         self.sent_message = None
 
@@ -126,6 +128,10 @@ class Paginate:
                 raise CancelCommand
 
     async def __call__(self):
+        if self.dm:
+            send_to = self.original_channel or self.channel
+            await send_to.send(self.author.mention + ", **check your DMs!**")
+
         pages = self._pages or Paginate.get_pages(self.embed, self.embed.fields, self.field_limit)
         len_pages = len(pages)
 

@@ -218,7 +218,7 @@ class Response(Bloxlink.Module):
                         else:
                             raise HTTPException
         if paginate:
-            paginator = Paginate(self.message, channel, embed, self, field_limit=paginate_field_limit, pages=pages)
+            paginator = Paginate(self.message, channel, embed, self, field_limit=paginate_field_limit, original_channel=self.channel, pages=pages, dm=dm)
 
             return await paginator()
 
