@@ -5,7 +5,7 @@ from ..structures.Bloxlink import Bloxlink
 from ..exceptions import CancelledPrompt, CancelCommand, Error
 from ..constants import RED_COLOR, INVISIBLE_COLOR
 from config import PROMPT, RELEASE # pylint: disable=no-name-in-module
-from ..constants import IS_DOCKER
+from ..constants import IS_DOCKER, NICKNAME_TEMPLATES
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
 broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
@@ -115,7 +115,7 @@ class Arguments:
 				if not skipped_arg:
 					try:
 						if formatting:
-							prompt["prompt"] = prompt["prompt"].format(**resolved_args, prefix=self.prefix)
+							prompt["prompt"] = prompt["prompt"].format(**resolved_args, prefix=self.prefix, NICKNAME_TEMPLATES=NICKNAME_TEMPLATES)
 
 						await self.say(prompt["prompt"], embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 

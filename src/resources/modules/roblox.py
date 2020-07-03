@@ -46,7 +46,7 @@ GROUP_API = "https://groups.roblox.com"
 
 @Bloxlink.module
 class Roblox(Bloxlink.Module):
-    cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}}
+    cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
 
     def __init__(self):
         pass
@@ -147,7 +147,7 @@ class Roblox(Bloxlink.Module):
             for bind_id, bind_data in binds.items():
                 if bind_data:
                     if bind_category == "groups":
-                        bind_count += len(bind_data.get("binds")) + len(bind_data.get("ranges"))
+                        bind_count += len(bind_data.get("binds", {})) + len(bind_data.get("ranges", {}))
                     else:
                         bind_count += 1
 
@@ -1134,6 +1134,55 @@ class Roblox(Bloxlink.Module):
         except json.decoder.JSONDecodeError:
             return {}
 
+
+    async def get_game(self, game_id):
+        game_id = str(game_id)
+        game = self.cache["games"].get(game_id)
+
+        if game:
+            return game
+
+        text, _ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={game_id}", raise_on_failure=False)
+
+        try:
+            json_data = json.loads(text)
+        except json.decoder.JSONDecodeError:
+            return RobloxAPIError
+        else:
+            if json_data.get("AssetTypeId", 0) == 9:
+                game = Game(game_id, json_data)
+
+                self.cache["games"][game_id] = game
+
+                return game
+
+
+        raise RobloxNotFound
+
+    async def get_catalog_item(self, item_id):
+        item_id = str(item_id)
+        item = self.cache["catalog_items"].get(item_id)
+
+        if item:
+            return item
+
+        text, _ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={item_id}", raise_on_failure=False)
+
+        try:
+            json_data = json.loads(text)
+        except json.decoder.JSONDecodeError:
+            return RobloxAPIError
+        else:
+            if json_data.get("AssetTypeId", 0) != 6:
+                item = RobloxItem(item_id, json_data)
+
+                self.cache["catalog_items"][item_id] = item
+
+                return item
+
+
+        raise RobloxNotFound
+
     async def get_group(self, group_id, with_shout=False, rolesets=False):
         group_id = str(group_id)
         group = self.cache["groups"].get(group_id)
@@ -1518,7 +1567,7 @@ class Roblox(Bloxlink.Module):
 
     async def __setup__(self):
         while True:
-            Roblox.cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}}
+            Roblox.cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
             await asyncio.sleep(60 * 10)
 
 
@@ -1591,6 +1640,38 @@ class Group(Bloxlink.Module):
 
     def __str__(self):
         return f"Group ({self.name or self.group_id})"
+
+    def __repr__(self):
+        return self.__str__()
+
+class RobloxItem:
+    __slots__ = ("item_id", "name", "description", "url", "owner", "created")
+
+    def __init__(self, item_id, item_data):
+        self.item_id = str(item_id)
+        self.name = None
+        self.description = None
+        self.owner = None
+        self.url = None
+        self.created = None
+
+        self.load_json(item_data)
+
+    def load_json(self, item_data):
+        self.name = self.name or item_data.get("Name")
+        self.description = self.description or item_data.get("Description")
+        self.owner = self.owner or item_data.get("Creator")
+        self.created = self.created or item_data.get("Created")
+        self.url = f"https://www.roblox.com/catalog/{self.item_id}/-"
+
+
+class Game(RobloxItem):
+    def __init__(self, game_id, game_data):
+        super().__init__(game_id, game_data)
+        self.url = f"https://www.roblox.com/games/{self.item_id}/-"
+
+    def __str__(self):
+        return f"Game ({self.name or self.item_id})"
 
     def __repr__(self):
         return self.__str__()
