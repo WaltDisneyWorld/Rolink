@@ -143,6 +143,9 @@ class SettingsCommand(Bloxlink.Module):
         elif choice == "groupShoutChannel":
             message.content = f"{prefix}shoutproxy"
             return await parse_message(message)
+        elif choice == "whiteLabel":
+            message.content = f"{prefix}whitelabel"
+            return await parse_message(message)
 
 
         option_find = OPTIONS.get(choice)

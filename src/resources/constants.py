@@ -50,9 +50,9 @@ NICKNAME_TEMPLATES = (
     "{roblox-join-date} \u2192 changes to their Roblox join date\n"
     "{group-rank} \u2192 changes to their group rank\n"
     "{group-rank-ID} \u2192 changes to their group rank in group with ID\n"
-    "{discord-name} \u2192 changes to their Discord display name\n"
-    "{discord-nick} \u2192 changes to their Discord nickname\n"
-    "{server-name} \u2192 changes to the server name\n"
+    "{discord-name} \u2192 changes to their Discord display name; works on unverified users\n"
+    "{discord-nick} \u2192 changes to their Discord nickname; works on unverified users\n"
+    "{server-name} \u2192 changes to the server name; works on unverified users\n"
     "\n"
     "{disable-nicknaming} \u2192 overrides all other options and returns a blank nickname. Note that this ONLY APPLIES TO NICKNAMES."
 )
@@ -62,6 +62,8 @@ UNVERIFIED_TEMPLATES = (
     "{discord-nick} \u2192 changes to their Discord nickname\n"
     "{server-name} \u2192 changes to the server name"
 )
+
+ESCAPED_NICKNAME_TEMPLATES = NICKNAME_TEMPLATES.replace("{", "{{").replace("}", "}}")
 
 OPTIONS = {                # fn,  type, max length or choices, premium only, desc
     "prefix":                (None, "string", 10,    False, "The prefix is used before commands to activate them"),
@@ -76,12 +78,13 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "welcomeMessage":        (None, "string", 1500,  False, "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"),
     "joinDM":                (None, None, None,      False, "Customize the join DM messages of people who join the server."),
     #"persistRoles":          (None, "boolean", None, True, "Update members' roles/nickname as they type."),
-    "allowReVerify":         (None, "boolean", None, True, "If this is enabled: members can change their Roblox account as many times as they want in your server; otherwise, only allow 1 account."),
+    "allowReVerify":         (None, "boolean", None, True, "If this is enabled: members can change their Roblox account as many times as they want in your server; otherwise, only allow 1 account change."),
     "trelloID":              (None,  None, None,     False, "Link a Trello board that can change Bloxlink settings!"),
     "nicknameTemplate":      (None,  "string", 100,  False, "Set the universal nickname template. Note that ``{prefix}bind`` nicknames will override this."),
     "unverifiedRoleName":    (None,  "string", 100,  False, "Set the 'Unverified' role name -- the role that Unverified users get."),
     "ageLimit":              (None,  "number", None, True,  "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked."),
     "groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
+    "whiteLabel":            (lambda g, gd: bool(gd.get("customBot")),  None, None, True,      "Modify the username and profile picture of __most__ Bloxlink responses."),
     "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."),
     "groupRequired":         (None, "boolean", None, False, "Toggle whether ``{prefix}getrole`` should require at least one role bind to work."),
     "trelloBindMode":        (None, "choice", ("merge", "replace"), False, "Choose 'replace' if trello binds should replace the server binds, or 'merge' if trello binds should be merged with the server binds. Default = merge."),
@@ -104,6 +107,7 @@ DEFAULTS = {
     "unverifiedRoleName": "Unverified",
     "ageLimit": None,
     "groupShoutChannel": None,
+    "whiteLabel": False,
     "promptDelete": True,
     "groupRequired": True,
     "trelloBindMode": "merge"

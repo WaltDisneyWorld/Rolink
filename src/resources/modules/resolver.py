@@ -217,6 +217,22 @@ class Resolver(Bloxlink.Module):
 
         return False, "Invalid role"
 
+    async def image_resolver(self, message, arg, content=None):
+        if not content:
+            content = message.content
+
+        if message.attachments:
+            for attachment in message.attachments:
+                if attachment.height and attachment.width:
+                    # is an image
+                    return attachment.proxy_url or attachment.url, None
+
+        if "https://" in content:
+            return content, None
+        else:
+            return False, "This doesn't appear to be a valid https URL."
+
+
     def get_resolver(self, name):
         for method_name in dir(self):
             if method_name.endswith("resolver") and name in method_name:
