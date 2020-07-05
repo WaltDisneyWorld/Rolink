@@ -5,7 +5,7 @@ from discord import Embed
 PREMIUM_PERKS = "\n".join([
     f"- More role bindings allowed (from {LIMITS['BINDS']['FREE']} to {LIMITS['BINDS']['PREMIUM']}).",
      "- Exclusive premium-only settings such as setting an age-limit, group shout channel, member counter, and much more. "
-     "See ``{prefix}settings change/help`` and look at the premium section."
+     "See ``{prefix}settings change/help`` and look at the premium section.",
      "- Reduced cooldown on some commands."
      ""
 ])

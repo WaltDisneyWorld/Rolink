@@ -92,7 +92,7 @@ class ResponseLoading:
 
 class Response(Bloxlink.Module):
     def __init__(self, CommandArgs):
-        self.webhook_only = CommandArgs.guild_data.get("customBot", {}).get("enabled")
+        self.webhook_only = CommandArgs.guild_data.get("customBot", {})
 
         self.message = CommandArgs.message
         self.author = CommandArgs.message.author
@@ -101,6 +101,12 @@ class Response(Bloxlink.Module):
         self.args = CommandArgs
 
         self.delete_message_queue = []
+
+        if self.webhook_only:
+            self.bot_name = self.args.guild_data["customBot"].get("name", "Bloxlink")
+            self.bot_avatar = self.args.guild_data["customBot"].get("avatar", "")
+        else:
+            self.bot_name = self.bot_avatar = None
 
     def loading(self, text="Please wait until the operation completes."):
         return ResponseLoading(self, text)
@@ -119,9 +125,6 @@ class Response(Bloxlink.Module):
 
         verified_webhook = False
         if self.webhook_only:
-            bot_name = self.args.guild_data["customBot"].get("name", "Bloxlink")
-            bot_avatar = self.args.guild_data["customBot"].get("avatar", "")
-
             try:
                 for webhook in await self.channel.webhooks():
                     if (webhook.user and webhook.user.id) == self.client.user.id:
@@ -133,6 +136,7 @@ class Response(Bloxlink.Module):
                 # try to create the webhook
                 try:
                     verified_webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
+                    self.webhook_only = True
                 except Forbidden:
                     self.webhook_only = False
                     verified_webhook = False
@@ -161,15 +165,15 @@ class Response(Bloxlink.Module):
             try:
                 if verified_webhook and not dm:
                     msg = await verified_webhook.send(embed=embed, content=content,
-                                                      wait=True, username=bot_name,
-                                                      avatar_url=bot_avatar)
+                                                      wait=True, username=self.bot_name,
+                                                      avatar_url=self.bot_avatar)
                 else:
                     msg = await channel.send(embed=embed, content=content, files=files)
 
                 if dm and not no_dm_post:
                     if verified_webhook:
                         await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",
-                                                    username=bot_name, avatar_url=bot_avatar
+                                                    username=self.bot_name, avatar_url=self.bot_avatar
                         )
                     else:
                         await self.channel.send(self.author.mention + ", **check your DMs!**")
@@ -182,7 +186,7 @@ class Response(Bloxlink.Module):
                 try:
                     if verified_webhook and not dm:
                         return await verified_webhook.send(content=on_error or content, embed=embed,
-                                                           wait=True, username=bot_name, avatar_url=bot_avatar)
+                                                           wait=True, username=self.bot_name, avatar_url=self.bot_avatar)
 
                     return await channel.send(content=on_error or content, embed=embed, files=files)
 
@@ -192,7 +196,7 @@ class Response(Bloxlink.Module):
                             if verified_webhook and not dm:
                                 await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
                                                              "Please check your privacy settings and try again.",
-                                                             username=bot_name, avatar_url=bot_avatar)
+                                                             username=self.bot_name, avatar_url=self.bot_avatar)
                             else:
                                 await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
                                                          "Please check your privacy settings and try again.")

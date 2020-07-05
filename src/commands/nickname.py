@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import ARROW # pylint: disable=import-error
+from resources.constants import ARROW, ESCAPED_NICKNAME_TEMPLATES # pylint: disable=import-error
 
 
 
@@ -23,12 +23,14 @@ class NicknameCommand(Bloxlink.Module):
                           "available Bind Nicknames. This can be applied from this command and "
                           "``{prefix}settings change`` (look for \"Nickname Template\").",
                 "name": "_",
+                "type": "choice",
+                "choices": ("next",),
                 "footer": "Say **next** to change your Global Nickname."
             },
             {
                 "prompt": "What would you like your Global Nickname to be? Remember, this nickname "
                           "will be used if someone has no available Bind Nickname from the ``{prefix}bind`` "
-                          "command. You may combine templates. Templates: ```{NICKNAME_TEMPLATES}```",
+                          "command. You may combine templates. Templates: ```" + ESCAPED_NICKNAME_TEMPLATES + "```",
                 "footer": "Say **skip** to leave this as the default nickname.",
                 "name": "global_nickname"
             }

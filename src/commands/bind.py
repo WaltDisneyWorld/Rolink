@@ -370,7 +370,7 @@ class BindCommand(Bloxlink.Module):
                                     card_data_ = trello_bind_group.get(x)
 
                                     if card_data_:
-                                        for card in card_data_["trello"]["cards"]:
+                                        for card in card_data_.get("trello", {}).get("cards", []):
                                             trello_card = card["card"]
                                             trello_ranks = card.get("ranks") or []
 

@@ -7,7 +7,7 @@ from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
-from discord import Embed
+from discord import Embed, Object
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response
 from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-error
@@ -425,7 +425,7 @@ class Command:
                 raise PermissionError("This command is reserved for the Bloxlink Developer.")
 
         if (kwargs.get("premium", self.premium) or permissions.premium) and not kwargs.get("free_to_use", self.free_to_use):
-            prem, _ = await is_premium(guild.owner)
+            prem, _ = await is_premium(guild.owner or Object(id=guild.owner_id))
 
             if not prem.features.get("premium"):
                 prem, _ = await is_premium(author)
