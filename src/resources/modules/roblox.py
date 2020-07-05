@@ -1286,7 +1286,7 @@ class Roblox(Bloxlink.Module):
                         roblox_account = discord_profile.primary_account
 
                     if roblox_account:
-                        await roblox_account.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
+                        await roblox_account.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, everything=everything, basic_details=basic_details)
 
                         return roblox_account, discord_profile.accounts
 
@@ -1313,7 +1313,7 @@ class Roblox(Bloxlink.Module):
 
 
                 roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
-                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, everything=everything, basic_details=basic_details)
 
                 if guild:
                     discord_profile.guilds[guild_id] = roblox_user
@@ -1344,7 +1344,7 @@ class Roblox(Bloxlink.Module):
                     roblox_user = RobloxUser(roblox_id=roblox_id)
                     self.cache["roblox_users"][roblox_account] = roblox_user
 
-                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, everything=everything, basic_details=basic_details)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, everything=everything, basic_details=basic_details)
                 return roblox_user, None
 
             raise BadUsage("Unable to resolve a user")
@@ -1708,7 +1708,7 @@ class RobloxUser(Bloxlink.Module):
         self.profile_link = roblox_id and f"https://www.roblox.com/users/{roblox_id}/profile"
 
     @staticmethod
-    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, group_ids=None, embed=None):
+    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, group_ids=None, response=None, embed=None):
         if everything:
             basic_details = True
 
@@ -1772,18 +1772,19 @@ class RobloxUser(Bloxlink.Module):
             return None
 
         if embed:
-            sent_embed = await embed[1].send(embed=embed[0])
+            if response and not response.webhook_only:
+                sent_embed = await embed[1].send(embed=embed[0])
 
-            if not sent_embed:
-                embed = None
-            else:
-                embed.append(sent_embed)
+                if not sent_embed:
+                    embed = None
+                else:
+                    embed.append(sent_embed)
 
-                if basic_details or "username" in args:
-                    embed[0].add_field(name="Username", value=username)
+            if basic_details or "username" in args:
+                embed[0].add_field(name="Username", value=username)
 
-                if basic_details or "id" in args:
-                    embed[0].add_field(name="ID", value=roblox_id)
+            if basic_details or "id" in args:
+                embed[0].add_field(name="ID", value=roblox_id)
 
 
         if roblox_user:
@@ -2013,18 +2014,20 @@ class RobloxUser(Bloxlink.Module):
             await membership_and_badges()
 
         if embed:
-            embed[0].title = None
+            embed[0].title = username
 
             if not args:
                 await Roblox.apply_perks(roblox_user, embed=embed[0])
 
-            await embed[2].edit(embed=embed[0])
-
-
+            if response:
+                if response.webhook_only:
+                    await response.send(embed=embed[0])
+                else:
+                    await embed[2].edit(embed=embed[0])
 
         return roblox_data
 
-    async def sync(self, *args, author=None, basic_details=True, group_ids=None, embed=None, everything=False):
+    async def sync(self, *args, author=None, basic_details=True, group_ids=None, embed=None, response=None, everything=False):
         try:
             await self.get_details(
                 *args,
@@ -2035,7 +2038,8 @@ class RobloxUser(Bloxlink.Module):
                 embed = embed,
                 group_ids = group_ids,
                 roblox_user = self,
-                author = author
+                author = author,
+                response = response,
             )
 
         except RobloxAPIError:

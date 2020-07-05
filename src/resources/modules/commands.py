@@ -251,7 +251,7 @@ class Commands(Bloxlink.Module):
                                 await response.error(e)
                             else:
                                 await response.error(locale("permissions.genericError"))
-                        except Forbidden:
+                        except Forbidden as e:
                             if e.args:
                                 await response.error(e)
                             else:
