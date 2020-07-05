@@ -111,7 +111,7 @@ class ProfileCommand(Bloxlink.Module):
 
         if roblox_user:
             ending = roblox_user.username.endswith("s") and "'" or "'s"
-            embed = Embed(title=f"{roblox_user.username}{ending} Profile")
+            embed = Embed(title=f"{roblox_user.username}{ending} Bloxlink Profile")
             embed.set_author(name=user, icon_url=user.avatar_url, url=roblox_user.profile_link)
         else:
             embed = Embed(title="Bloxlink User Profile")
