@@ -3,7 +3,7 @@ from ast import literal_eval
 from time import time
 from re import search
 
-VERSION = "v3.0 ALPHA"
+VERSION = "v3.0 BETA"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
