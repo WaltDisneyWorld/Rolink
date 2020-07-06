@@ -146,12 +146,13 @@ class UnBindCommand(Bloxlink.Module):
 
 
     async def __main__(self, CommandArgs):
+        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
 
         role_binds = guild_data.get("roleBinds", {"groups": {}, "assets": {}})
-        role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild_data=guild_data, trello_board=trello_board)
+        role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild=guild, trello_board=trello_board)
 
         group_ids = guild_data.get("groupIDs", {})
 

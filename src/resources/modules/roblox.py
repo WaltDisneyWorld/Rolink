@@ -602,8 +602,8 @@ class Roblox(Bloxlink.Module):
 
     async def get_binds(self, guild=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
         guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
-        role_binds = dict(guild_data.get("roleBinds") or {})
-        group_ids = dict(guild_data.get("groupIDs") or {})
+        role_binds = guild_data.get("roleBinds") or {}
+        group_ids = guild_data.get("groupIDs") or {}
 
         role_binds["groups"] = role_binds.get("groups", {})
         role_binds["assets"] = role_binds.get("assets", {})

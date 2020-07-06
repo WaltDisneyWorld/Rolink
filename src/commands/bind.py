@@ -59,7 +59,7 @@ class BindCommand(Bloxlink.Module):
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
 
-        role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild_data=guild_data, trello_board=trello_board)
+        role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild=guild, trello_board=trello_board)
 
         bind_count = count_binds(guild_data, role_binds=role_binds_trello, group_ids=group_ids_trello)
 
@@ -74,6 +74,7 @@ class BindCommand(Bloxlink.Module):
             if bind_count >= PREM_BIND_COUNT:
                 raise Error(f"You've exceeded the premium bind limit of **{PREM_BIND_COUNT}.** Please delete some with "
                             f"``{prefix}delbind`` before adding any more.")
+
 
         parsed_args = await CommandArgs.prompt([
             {
@@ -365,6 +366,7 @@ class BindCommand(Bloxlink.Module):
 
                             if trello_card_binds:
                                 trello_bind_group = trello_card_binds["groups"]["binds"].get(group_id, {}).get("binds")
+                                #print(trello_card_binds, flush=True)
 
                                 if trello_bind_group:
                                     card_data_ = trello_bind_group.get(x)
@@ -374,6 +376,7 @@ class BindCommand(Bloxlink.Module):
                                             trello_card = card["card"]
                                             trello_ranks = card.get("ranks") or []
 
+                                            #print(trello_ranks, x in trello_ranks, len(trello_ranks) == 1, flush=True)
                                             if (x in trello_ranks or x == "all") and len(trello_ranks) == 1:
                                                 trello_bind_roles = card.get("roles", set())
                                                 card_bind_data = [
