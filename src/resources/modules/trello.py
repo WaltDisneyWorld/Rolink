@@ -15,7 +15,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 5000
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 
@@ -27,7 +28,11 @@ OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
 class Trello(Bloxlink.Module):
     def __init__(self):
         self.trello_boards = {}
-        self.trello = TrelloClient(key=TRELLO_CONFIG.get("KEY"), token=TRELLO_CONFIG.get("TOKEN"), cache_mode="none")
+        self.trello = TrelloClient(
+            key=TRELLO_CONFIG.get("KEY"),
+            token=TRELLO_CONFIG.get("TOKEN"),
+            cache_mode="none",
+            session=None) # self.session)
         self.option_regex = compile("(.+):(.+)")
 
     async def get_board(self, guild_data, guild):
@@ -40,7 +45,7 @@ class Trello(Bloxlink.Module):
                 trello_board = self.trello_boards.get(guild.id)
 
                 try:
-                    trello_board = trello_board or await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["GLOBAL_CARD_LIMIT"])
+                    trello_board = trello_board or await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
 
                     if trello_board:
                         if not self.trello_boards.get(guild.id):
@@ -50,7 +55,7 @@ class Trello(Bloxlink.Module):
 
                         if hasattr(trello_board, "expiration"):
                             if t_now > trello_board.expiration:
-                                await trello_board.sync(card_limit=TRELLO_CONFIG["GLOBAL_CARD_LIMIT"])
+                                await trello_board.sync(card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
                                 trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
 
                         else:

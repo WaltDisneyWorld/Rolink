@@ -2,6 +2,7 @@ from os import environ as env
 from ast import literal_eval
 from time import time
 from re import search
+from discord import Game
 
 VERSION = "v3.0 BETA"
 
@@ -76,7 +77,7 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "autoVerification":      (None, "boolean", None, False, "Bloxlink will give the Verified role to people who join the server and are linked to Bloxlink.\nNote that 'autoRoles' being enabled overrides this setting."),
     "dynamicRoles":          (None, "boolean", None, False, "Bloxlink will make missing group roles from your Linked Groups as people need them."),
     "welcomeMessage":        (None, "string", 1500,  False, "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"),
-    "joinDM":                (None, None, None,      False, "Customize the join DM messages of people who join the server."),
+    "joinDM":                (lambda g, gd: bool(gd.get("verifiedDM", True)) or bool(gd.get("unverifiedDM")), None, None, False, "Customize the join DM messages of people who join the server."),
     #"persistRoles":          (None, "boolean", None, True, "Update members' roles/nickname as they type."),
     "allowReVerify":         (None, "boolean", None, True, "If this is enabled: members can change their Roblox account as many times as they want in your server; otherwise, only allow 1 account change."),
     "trelloID":              (None,  None, None,     False, "Link a Trello board that can change Bloxlink settings!"),
@@ -153,3 +154,5 @@ LIMITS = {
         "PREMIUM": 100
     }
 }
+
+PLAYING_STATUS = "{prefix}help"

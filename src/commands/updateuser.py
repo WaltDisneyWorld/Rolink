@@ -1,16 +1,20 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass # pylint: disable=import-error
+from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, CancelCommand, PermissionError # pylint: disable=import-error
 from config import REACTIONS # pylint: disable=no-name-in-module
 from discord import Embed
 
 update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
+parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 
 @Bloxlink.command
 class UpdateUserCommand(Bloxlink.Module):
     """force update user(s) with roles and nicknames"""
 
     def __init__(self):
-        self.permissions = Bloxlink.Permissions().build("BLOXLINK_UPDATER")
+        permissions = Bloxlink.Permissions().build("BLOXLINK_UPDATER")
+        permissions.allow_bypass = True
+
+        self.permissions = permissions
         self.aliases = ["update", "updateroles"]
         self.arguments = [
             {
@@ -18,18 +22,37 @@ class UpdateUserCommand(Bloxlink.Module):
                 "type": "user",
                 "name": "users",
                 "multiple": True,
-                "max": 10
+                "max": 10,
+                "optional": True
             }
         ]
         self.category = "Administration"
         self.cooldown = 2
 
+
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
         users = CommandArgs.parsed_args["users"]
+        prefix = CommandArgs.prefix
 
-        guild = CommandArgs.message.guild
+        message = CommandArgs.message
+        author = message.author
+        guild = message.guild
+
         guild_data = CommandArgs.guild_data
+
+
+        if not users:
+            message.content = f"{prefix}getrole"
+            return await parse_message(message)
+
+        if not CommandArgs.has_permission:
+            if users[0] == author:
+                message.content = f"{prefix}getrole"
+                return await parse_message(message)
+            else:
+                raise PermissionError("You do not have permission to update arbitrary users! ")
+
 
         trello_board = CommandArgs.trello_board
         trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")

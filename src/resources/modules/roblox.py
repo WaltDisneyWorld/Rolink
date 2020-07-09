@@ -23,7 +23,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
         "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-        "GLOBAL_CARD_LIMIT": 500
+        "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 
@@ -195,9 +196,7 @@ class Roblox(Bloxlink.Module):
             conflict="update"
         ).run()
 
-        if author_id in Roblox.cache["discord_profiles"]:
-            del Roblox.cache["discord_profiles"][author_id]
-
+        Roblox.cache["discord_profiles"].pop(author_id, None)
 
     async def unverify_member(self, author, roblox):
         author_id = str(author.id)
@@ -249,6 +248,8 @@ class Roblox(Bloxlink.Module):
         user_data["robloxAccounts"] = roblox_accounts
 
         await self.r.table("users").insert(user_data, conflict="replace").run()
+
+        Roblox.cache["discord_profiles"].pop(author_id, None)
 
         return success
 
@@ -379,7 +380,7 @@ class Roblox(Bloxlink.Module):
                 if hasattr(trello_binds_list, "parsed_bind_data") and trello_binds_list.parsed_bind_data:
                     card_binds = trello_binds_list.parsed_bind_data
                 else:
-                    await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    await trello_binds_list.sync(card_limit=TRELLO["CARD_LIMIT"])
 
                     for card in await trello_binds_list.get_cards():
                         is_bind = False
@@ -783,10 +784,13 @@ class Roblox(Bloxlink.Module):
                                     raise RobloxAPIError
 
                                 if response.status != 200:
-                                    errors = json_data.get("errors", [])
+                                    vg_errors = json_data.get("errors", [])
 
-                                    if errors:
-                                        raise Error(f"Bind error for {category_title} ID {bind_id}: ``{errors[0]['message']}``")
+                                    if vg_errors:
+                                        error_message = vg_errors[0].get("message")
+
+                                        if error_message != "The specified user does not exist!": # sent if someone is banned from Roblox
+                                            raise Error(f"Bind error for {category_title} ID {bind_id}: ``{error_message}``")
                                     else:
                                         raise Error(f"Bind error for {category_title} ID {bind_id}")
 
@@ -1122,7 +1126,7 @@ class Roblox(Bloxlink.Module):
     async def get_group_shout(self, group_id):
         """gets the group shout. not cached."""
 
-        text, response = await fetch(self.session, f"https://groups.roblox.com/v1/groups/{group_id}", raise_on_failure=False)
+        text, response = await fetch(f"https://groups.roblox.com/v1/groups/{group_id}", raise_on_failure=False)
 
         if response.status != 200:
             raise RobloxNotFound
@@ -1263,7 +1267,8 @@ class Roblox(Bloxlink.Module):
         guild = guild or getattr(author, "guild", False)
         guild_id = guild and str(guild.id)
 
-        roblox_account = accounts = discord_profile = None
+        roblox_account = discord_profile = None
+        accounts = []
         embed = None
 
         if send_embed:
@@ -1345,7 +1350,7 @@ class Roblox(Bloxlink.Module):
                     self.cache["roblox_users"][roblox_account] = roblox_user
 
                 await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, everything=everything, basic_details=basic_details)
-                return roblox_user, None
+                return roblox_user, []
 
             raise BadUsage("Unable to resolve a user")
 

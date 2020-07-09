@@ -1,6 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import PermissionError # pylint: disable=import-error
-from resources.constants import DEFAULTS
+from resources.exceptions import PermissionError, Error # pylint: disable=import-error
+from resources.constants import DEFAULTS # pylint: disable=import-error
 from discord.utils import find
 from discord.errors import Forbidden, NotFound
 
@@ -57,6 +57,9 @@ class VerifyChannelCommand(Bloxlink.Module):
         except Forbidden:
             raise PermissionError("Unable to set permissions to the channels. Please ensure I have the "
                                   "``Manage Channels`` and ``Manage Roles`` permission.")
+
+        except NotFound:
+            raise Error("Please do not delete the created channels while I'm setting them up...")
 
         try:
             await verify_info.send("This server uses Bloxlink to manage Roblox verification. In "

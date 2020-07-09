@@ -1,39 +1,23 @@
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+import time
 
 
 @Bloxlink.command
 class PingCommand(Bloxlink.Module):
-	"""test command"""
+    """measure the latency between the bot and Discord"""
 
-	def __init__(self):
-		self.permissions = Bloxlink.Permissions().build(roles=["test"])
-		self.aliases = ["test"]
-		self.arguments = [
-			{
-				"prompt": "say test",
-				"type": "choice",
-				"name": "test1",
-				"choices": ["test"]
-			},
-			{
-				"prompt": "say 'hello how are u'",
-				"type": "choice",
-				"name": "test2",
-				"choices": ["hello how are u"]
-			},
-			{
-				"prompt": "say some text",
-				"type": "string",
-				"name": "test3"
-			},
-		]
+    def __init__(self):
+        pass
 
-	async def __main__(self, CommandArgs):
-		await CommandArgs.response.send(f"Arg 1: {CommandArgs.parsed_args['test1']}")
-		await CommandArgs.response.send(f"Arg 2: {CommandArgs.parsed_args['test2']}")
-		await CommandArgs.response.send(f"Arg 3: {CommandArgs.parsed_args['test3']}")
+    async def __main__(self, CommandArgs):
+        message = CommandArgs.message
+        response = CommandArgs.response
 
-	@staticmethod
-	@Bloxlink.subcommand
-	async def echo(CommandArgs):
-		await CommandArgs.response.send("hello from a subcommand")
+        t_1 = time.perf_counter()
+
+        await message.channel.trigger_typing()
+
+        t_2 = time.perf_counter()
+        time_delta = round((t_2-t_1)*1000)
+
+        await response.send(f"Pong! ``{time_delta}ms``")

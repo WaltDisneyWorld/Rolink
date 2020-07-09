@@ -24,7 +24,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 100
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 
@@ -65,7 +66,7 @@ class SetupCommand(Bloxlink.Module):
             return "disable"
 
         try:
-            board = await trello.get_board(content, card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+            board = await trello.get_board(content, card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
         except (TrelloNotFound, TrelloBadRequest) as e:
             return None, "No Trello board was found with this ID. Please try again."
         except TrelloUnauthorized:
@@ -73,6 +74,31 @@ class SetupCommand(Bloxlink.Module):
                          "this Trello board is set to **PUBLIC**, or add ``@bloxlink`` to your Trello board."
 
         return board
+
+    @staticmethod
+    async def verify_trello_board(trello_board, code):
+        async def validate(message, content):
+            try:
+                await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
+            except TrelloNotFound:
+                raise Error("Something happened to your Trello board! Was it deleted? Set-up cancelled.")
+            except TrelloUnauthorized:
+                raise Error("I've lost permissions to view your Trello board! Please run this command "
+                            "again. Set-up cancelled.")
+
+            for List in await trello_board.get_lists():
+                if List.name == code:
+                    return True
+
+                for card in await List.get_cards():
+                    if code in (card.name, card.desc):
+                        return True
+
+
+            return None, "Failed to find the code on your Trello board. Please try again."
+
+
+        return validate
 
     async def __main__(self, CommandArgs):
         guild = CommandArgs.message.guild
@@ -158,6 +184,7 @@ class SetupCommand(Bloxlink.Module):
                     "name": "merge_replace",
                     "type": "choice",
                     "choices": ["merge", "replace", "skip", "next"],
+                    "footer": "Say either **merge**, **replace**, or **skip**",
                     "embed_title": "Setup Prompt"
 
                 }
@@ -194,22 +221,22 @@ class SetupCommand(Bloxlink.Module):
                     "name": "trello_continue",
                     "type": "choice",
                     "choices": ["next"],
+                    "footer": "Say **next** to continue.",
                     "embed_title": "Trello Verification"
 
                 },
                 {
-                    "prompt": f"Now, please make a card _anywhere_ on your Trello board with this code as the card name:```{trello_code}```"
-                               "Then, say ``next`` after the code is on your Trello board.",
+                    "prompt": f"Now, please make a card _anywhere_ on your Trello board with this code as the card name or description:```{trello_code}```\n"
+                               "Please note that up to **100** cards will be loaded from your Trello board, and up to **10** lists will be "
+                               "loaded. So, if you have more cards or lists, you'll need to archive some or use a different Trello board.",
                     "name": "trello_continue",
                     "type": "choice",
-                    "choices": ["next"],
-                    "embed_title": "Trello Verification"
-
+                    "choices": ["next", "done"],
+                    "footer": "Say **done** after the code is on your Trello board.",
+                    "embed_title": "Trello Verification",
+                    "validation": await self.verify_trello_board(trello_board, trello_code)
                 }
             ], dm=True, no_dm_post=True)
-
-            if True: # TODO: trello verification
-                pass
 
 
         parsed_args_4 = await CommandArgs.prompt([

@@ -13,7 +13,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 100
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
@@ -139,7 +140,8 @@ class SettingsCommand(Bloxlink.Module):
         elif choice == "Linked Groups":
             raise Message(f"You can link your group from ``{prefix}bind``!", type="success")
         elif choice == "joinDM":
-            raise Message(f"You can customize this setting from ``{prefix}joindm``!", type="success")
+            message.content = f"{prefix}joindm"
+            return await parse_message(message)
         elif choice == "groupShoutChannel":
             message.content = f"{prefix}shoutproxy"
             return await parse_message(message)
@@ -274,7 +276,7 @@ class SettingsCommand(Bloxlink.Module):
                     await trello_settings_list.create_card(name=choice, desc=str(parsed_value))
 
                 if trello_binds_list:
-                    await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    await trello_binds_list.sync(card_limit=TRELLO["CARD_LIMIT"])
 
             except TrelloUnauthorized:
                 await response.error("In order for me to edit your Trello settings, please add ``@bloxlink`` to your "
@@ -335,7 +337,7 @@ class SettingsCommand(Bloxlink.Module):
                     trello_binds_list = await trello_board.get_list(lambda l: l.name == "Bloxlink Binds")
 
                     if trello_binds_list:
-                        for card in await trello_binds_list.get_cards(limit=TRELLO["GLOBAL_CARD_LIMIT"]):
+                        for card in await trello_binds_list.get_cards(limit=TRELLO["CARD_LIMIT"]):
                             await card.archive()
 
                         trello_binds_list.parsed_bind_data = None
@@ -346,7 +348,7 @@ class SettingsCommand(Bloxlink.Module):
                 except (TrelloNotFound, TrelloBadRequest):
                     pass
                 else:
-                    await trello_board.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
             raise Message("Your server information was successfully cleared.", type="success")
 
@@ -415,7 +417,7 @@ class SettingsCommand(Bloxlink.Module):
                     trello_binds_list = await trello_board.get_list(lambda l: l.name == "Bloxlink Binds")
 
                     if trello_binds_list:
-                        for card in await trello_binds_list.get_cards(limit=TRELLO["GLOBAL_CARD_LIMIT"]):
+                        for card in await trello_binds_list.get_cards(limit=TRELLO["CARD_LIMIT"]):
                             await card.archive()
 
                         trello_binds_list.parsed_bind_data = None
@@ -426,7 +428,7 @@ class SettingsCommand(Bloxlink.Module):
                 except (TrelloNotFound, TrelloBadRequest):
                     pass
                 else:
-                    await trello_board.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
             raise Message("Successfully cleared all of your bound roles.", type="success")
 

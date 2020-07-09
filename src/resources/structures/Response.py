@@ -193,7 +193,7 @@ class Response(Bloxlink.Module):
                 except Forbidden:
                     try:
                         if dm:
-                            if verified_webhook and not dm:
+                            if verified_webhook:
                                 await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
                                                              "Please check your privacy settings and try again.",
                                                              username=self.bot_name, avatar_url=self.bot_avatar)
@@ -228,34 +228,34 @@ class Response(Bloxlink.Module):
 
         return True
 
-    async def error(self, text, *, embed=None, embed_color=0xE74C3C, dm=False, no_dm_post=False):
+    async def error(self, text, *, embed_color=0xE74C3C, embed=None, dm=False, **kwargs):
         emoji = self.webhook_only and ":cry:" or "<:BloxlinkError:506622933226225676>"
 
         if embed and not dm:
             embed.color = embed_color
 
-        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+        return await self.send(f"{emoji} {text}", **kwargs)
 
-    async def success(self, success, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
+    async def success(self, success, embed=None, embed_color=0x36393E, dm=False, **kwargs):
         emoji = self.webhook_only and ":thumbsup:" or "<:BloxlinkSuccess:506622931791773696>"
 
         if embed and not dm:
             embed.color = embed_color
 
-        return await self.send(f"{emoji} {success}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+        return await self.send(f"{emoji} {success}", embed=embed, dm=dm, **kwargs)
 
-    async def silly(self, text, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
+    async def silly(self, text, embed=None, embed_color=0x36393E, dm=False, **kwargs):
         emoji = self.webhook_only and ":sweat_smile:" or "<:BloxlinkSweaty:506622933502918656>"
 
         if embed and not dm:
             embed.color = embed_color
 
-        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, **kwargs)
 
-    async def info(self, text, embed=None, embed_color=0x36393E, dm=False, no_dm_post=False):
+    async def info(self, text, embed=None, embed_color=0x36393E, dm=False, **kwargs):
         emoji = self.webhook_only and ":mag_right:" or "<:BloxlinkSearch:506622933012054028>"
 
         if embed and not dm:
             embed.color = embed_color
 
-        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, no_dm_post=no_dm_post)
+        return await self.send(f"{emoji} {text}", embed=embed, dm=dm, **kwargs)

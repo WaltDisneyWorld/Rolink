@@ -15,7 +15,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 100
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 

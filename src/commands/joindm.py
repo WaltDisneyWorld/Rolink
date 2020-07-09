@@ -5,7 +5,7 @@ from discord.errors import NotFound, HTTPException, Forbidden
 
 @Bloxlink.command
 class JoinDMCommand(Bloxlink.Module):
-    """greets people who join the server. by default, this is ENABLED."""
+    """greets people who join the server. by default, this is ENABLED for verified members."""
 
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
@@ -16,6 +16,7 @@ class JoinDMCommand(Bloxlink.Module):
             "choices": ("verified", "unverified"),
             "name": "subcommand"
         }]
+        self.hidden = True
 
     async def __main__(self, CommandArgs):
         subcommand = CommandArgs.parsed_args["subcommand"]

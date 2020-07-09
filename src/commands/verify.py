@@ -16,7 +16,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 100
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 @Bloxlink.command
@@ -24,7 +25,7 @@ class VerifyCommand(Bloxlink.Module):
     """link your Roblox accont to your Discord account"""
 
     def __init__(self):
-        self.examples = ["add", "unlink"]
+        self.examples = ["add", "unlink", "view", "blox_link"]
         self.category = "Account"
         self.cooldown = 5
 
@@ -216,7 +217,7 @@ class VerifyCommand(Bloxlink.Module):
 
                         await trello_settings_list.create_card(name="welcomeMessage", desc=welcome_message)
 
-                    await trello_binds_list.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                    await trello_binds_list.sync(card_limit=TRELLO["CARD_LIMIT"])
 
                 except TrelloUnauthorized:
                     await response.error("In order for me to edit your Trello settings, please add ``@bloxlink`` to your "
@@ -238,7 +239,27 @@ class VerifyCommand(Bloxlink.Module):
     async def view(CommandArgs):
         """view your linked account(s)"""
 
-        raise NotImplementedError
+        author = CommandArgs.message.author
+        response = CommandArgs.response
+
+        try:
+            primary_account, accounts = await get_user("username", author=author, everything=False, basic_details=True)
+        except RobloxNotFound:
+            raise Message("You have no accounts linked to Bloxlink!", type="silly")
+        else:
+            accounts = list(accounts)
+
+            if primary_account and primary_account.id in accounts:
+                accounts.remove(primary_account.id)
+
+            parsed_accounts = await parse_accounts(accounts)
+            parsed_accounts_str = ", ".join(parsed_accounts.keys())
+
+            embed = Embed(title="Linked Roblox Accounts")
+            embed.add_field(name="Primary Account", value=primary_account and primary_account.username or "No primary account set")
+            embed.add_field(name="Other accounts", value=parsed_accounts_str or "No other accounts saved")
+
+            await response.send(embed=embed, dm=True, strict_post=True)
 
     @staticmethod
     @Bloxlink.subcommand()

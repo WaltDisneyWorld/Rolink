@@ -59,7 +59,7 @@ class BloxlinkStructure(AutoShardedClient):
 
     def __init__(self, *args, **kwargs): # pylint: disable=W0235
         super().__init__(*args, **kwargs) # this seems useless, but it's very necessary.
-        loop.run_until_complete(self.get_session())
+        #loop.run_until_complete(self.get_session())
         loop.set_exception_handler(self._handle_async_error)
         loop.run_until_complete(self.load_database())
 
@@ -95,11 +95,12 @@ class BloxlinkStructure(AutoShardedClient):
         if title:
             webhook_data["embeds"][0]["title"] = title
 
-        try:
-            await self.session.post(WEBHOOKS["ERRORS"], json=webhook_data)
-        except Exception as e:
-            logger.exception(e)
-            pass
+        async with aiohttp.ClientSession() as session:
+            try:
+                await session.post(WEBHOOKS["ERRORS"], json=webhook_data)
+            except Exception as e:
+                logger.exception(e)
+                pass
 
     def _handle_async_error(self, loop, context):
         exception = context.get("exception")
@@ -324,7 +325,7 @@ Bloxlink = BloxlinkStructure(
 class Module:
     client = Bloxlink
     r = r
-    session = aiohttp.ClientSession(loop=loop)
+    #session = aiohttp.ClientSession(loop=loop)
     loop = loop
     redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
     conn = Bloxlink.conn

@@ -223,6 +223,8 @@ class ProfileCommand(Bloxlink.Module):
 
     @Bloxlink.subcommand()
     async def change(self, CommandArgs):
+        """change your public Bloxlink profile"""
+
         response = CommandArgs.response
 
         author = CommandArgs.message.author

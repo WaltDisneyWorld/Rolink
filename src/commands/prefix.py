@@ -10,7 +10,8 @@ except ImportError:
         "KEY": env.get("TRELLO_KEY"),
         "TOKEN": env.get("TRELLO_TOKEN"),
 	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "GLOBAL_CARD_LIMIT": 100
+	    "CARD_LIMIT": 100,
+        "LIST_LIMIT": 10
     }
 
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
@@ -71,7 +72,7 @@ class PrefixCommand(Bloxlink.Module):
                     except (TrelloNotFound, TrelloBadRequest):
                         pass
                     else:
-                        await trello_board.sync(card_limit=TRELLO["GLOBAL_CARD_LIMIT"])
+                        await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
 
             await response.success("Your prefix was successfully changed!")
