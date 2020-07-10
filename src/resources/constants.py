@@ -156,3 +156,7 @@ LIMITS = {
 }
 
 PLAYING_STATUS = "{prefix}help"
+
+AVATARS = {
+    "PRIDE": "https://cdn.discordapp.com/attachments/480614508633522176/730969660010266644/rainbow_resized.png"
+}

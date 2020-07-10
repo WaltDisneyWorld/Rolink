@@ -1,5 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error # pylint: disable=import-error
+from resources.constants import AVATARS # pylint: disable=import-error
 from discord import Object
 
 is_premium = Bloxlink.get_module("utils", attrs=["is_premium"])
@@ -31,7 +32,6 @@ class WhiteLabelCommand(Bloxlink.Module):
 
             raise Error("This command is reserved for __Bloxlink Premium subscribers!__ You may find out "
                         f"more information with the ``{prefix}donate`` command.")
-
 
 
         if guild_data.get("customBot"):
@@ -66,15 +66,20 @@ class WhiteLabelCommand(Bloxlink.Module):
             {
                 "prompt": "Please either provide a **direct link** to your entity logo, or **drag the image** "
                           "to your chat. If you drag the image to your chat, then the image must not be "
-                          "deleted, or the responses will remain unchanged!",
+                          "deleted, or the responses will remain unchanged!\n\nOptionally, you may say "
+                          "**pride** to change Bloxlink to its pride avatar.",
                 "name": "bot_avatar",
                 "type": "image",
+                "exceptions": ["pride"],
                 "delete_original": False
             }
         ])
 
         bot_name = parsed_args["bot_name"]
         bot_avatar = parsed_args["bot_avatar"]
+
+        if bot_avatar == "pride":
+            bot_avatar = AVATARS["PRIDE"]
 
         guild_data["customBot"] = {
             "name": bot_name,
