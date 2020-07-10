@@ -1,4 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.exceptions import PermissionError # pylint: disable=import-error
+from discord.errors import NotFound, Forbidden
 import time
 
 
@@ -15,9 +17,23 @@ class PingCommand(Bloxlink.Module):
 
         t_1 = time.perf_counter()
 
-        await message.channel.trigger_typing()
+        if response.webhook_only:
+            m = await response.send("Pinging...")
+        else:
+            await message.channel.trigger_typing()
 
         t_2 = time.perf_counter()
         time_delta = round((t_2-t_1)*1000)
 
-        await response.send(f"Pong! ``{time_delta}ms``")
+        if response.webhook_only:
+            try:
+                await m.delete()
+            except NotFound:
+                pass
+            except Forbidden:
+                raise PermissionError("Please make sure I have the ``Manage Messages`` "
+                                      "permission.")
+            else:
+                await response.send(f"Pong! ``{time_delta}ms``")
+        else:
+            await response.send(f"Pong! ``{time_delta}ms``")
