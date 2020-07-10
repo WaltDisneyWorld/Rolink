@@ -257,7 +257,7 @@ class VerifyCommand(Bloxlink.Module):
 
             embed = Embed(title="Linked Roblox Accounts")
             embed.add_field(name="Primary Account", value=primary_account and primary_account.username or "No primary account set")
-            embed.add_field(name="Other accounts", value=parsed_accounts_str or "No other accounts saved")
+            embed.add_field(name="Other Accounts", value=parsed_accounts_str or "No other accounts saved")
 
             await response.send(embed=embed, dm=True, strict_post=True)
 
