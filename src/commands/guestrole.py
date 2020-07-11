@@ -18,12 +18,12 @@ class GuestRoleCommand(Bloxlink.Module):
     def __init__(self):
         self.arguments = [
             {
-                "prompt": "Please specify the Group ID to integrate with. The group ID is the rightmost numbers on your Group URL.",
+                "prompt": "Please specify the **Group ID** to integrate with. The group ID is the rightmost numbers on your Group URL.",
                 "name": "groupID",
                 "type": "number",
             },
             {
-                "prompt": "Please specify the role name to bind non-group members. A role will be created if it doesn't already exist.",
+                "prompt": "Please specify the **role name** to bind non-group members. A role will be created if it doesn't already exist.",
                 "name": "role",
                 "type": "role"
             },
@@ -79,8 +79,10 @@ class GuestRoleCommand(Bloxlink.Module):
         else:
             trello_binds_list = None
             trello_card_binds = {
-                "entire group": {},
-                "binds": {}
+                "groups": {
+                    "entire group": {},
+                    "binds": {}
+                }
             }
 
         role_binds = guild_data.get("roleBinds") or {}
@@ -118,7 +120,7 @@ class GuestRoleCommand(Bloxlink.Module):
             make_binds_card = True
 
             if trello_card_binds:
-                trello_bind_group = trello_card_binds["binds"].get(group_id, {}).get("binds")
+                trello_bind_group = trello_card_binds["groups"]["binds"].get(group_id, {}).get("binds")
 
                 if trello_bind_group:
                     card_data_ = trello_bind_group.get(x)

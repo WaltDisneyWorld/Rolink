@@ -17,6 +17,9 @@ class Resolver(Bloxlink.Module):
         min = arg.get("min", 1)
         max = arg.get("max", 100)
 
+        if message and message.role_mentions:
+            return message.role_mentions[0].name[:max], None
+
         if arg.get("min") or arg.get("max"):
             if min <= len(content) <= max:
                 return str(content), None
@@ -158,7 +161,7 @@ class Resolver(Bloxlink.Module):
 
         guild = message.guild
 
-        if message.channel_mentions:
+        if message and message.channel_mentions:
             return message.channel_mentions[0], None
         else:
             is_int, is_id = None, None
@@ -188,7 +191,7 @@ class Resolver(Bloxlink.Module):
 
         guild = message.guild
 
-        if message.role_mentions:
+        if message and message.role_mentions:
             return message.role_mentions[0], None
         else:
             is_int, is_id = None, None
@@ -221,7 +224,7 @@ class Resolver(Bloxlink.Module):
         if not content:
             content = message.content
 
-        if message.attachments:
+        if message and message.attachments:
             for attachment in message.attachments:
                 if attachment.height and attachment.width:
                     # is an image

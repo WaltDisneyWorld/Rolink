@@ -286,7 +286,7 @@ class Roblox(Bloxlink.Module):
                 brackets_match = bracket_search.search(group_role)
 
                 if brackets_match:
-                    group_role = brackets_match.group(0)
+                    group_role = f"[{brackets_match.group(1)}]"
 
             template = template or DEFAULTS.get("nicknameTemplate") or ""
 
@@ -301,7 +301,7 @@ class Roblox(Bloxlink.Module):
                     brackets_match = bracket_search.search(group_role_from_group)
 
                     if brackets_match:
-                        group_role_from_group = brackets_match.group(0)
+                        group_role_from_group = f"[{brackets_match.group(1)}]"
 
                 template = template.replace("{group-rank-"+group_id+"}", group_role_from_group)
 
@@ -729,7 +729,6 @@ class Roblox(Bloxlink.Module):
                 if verify_role and verified_role and verified_role in author.roles:
                     remove_roles.add(verified_role)
 
-
             if nickname:
                 nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
 
@@ -1075,7 +1074,8 @@ class Roblox(Bloxlink.Module):
                         await self.r.table("users").get(str(author.id)).replace(author_data).run()
 
         if roles:
-            add_roles = add_roles.difference(author.roles).difference(remove_roles)
+            remove_roles = remove_roles.difference(add_roles)
+            add_roles = add_roles.difference(author.roles)
 
             try:
                 if add_roles:
