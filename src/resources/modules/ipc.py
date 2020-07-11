@@ -2,9 +2,10 @@ from os import getpid
 import json
 import uuid
 import asyncio
+from discord import Status, Game, Streaming
 from ..structures.Bloxlink import Bloxlink
-from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER
-from config import PROMPT # pylint: disable=import-error, no-name-in-module
+from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER, PLAYING_STATUS
+from config import PROMPT, PREFIX # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
 from os import environ as env
@@ -31,6 +32,7 @@ class IPC(Bloxlink.Module):
         original_cluster = message["original_cluster"]
         waiting_for = message["waiting_for"]
         cluster_id = message["cluster_id"]
+        extras = message.get("extras", {})
 
         if type == "IDENTIFY":
             # we're syncing this cluster with ourselves, and send back our clusters
@@ -132,6 +134,29 @@ class IPC(Bloxlink.Module):
 
             await self.redis.publish(f"CLUSTER_{original_cluster}", data)
 
+        elif type == "PLAYING_STATUS":
+            presence_type = extras.get("presence_type", "normal")
+            playing_status = extras.get("status", PLAYING_STATUS).format(prefix=PREFIX)
+
+            if presence_type == "normal":
+                await Bloxlink.change_presence(status=Status.online, activity=Game(playing_status))
+            elif presence_type == "streaming":
+                stream_url = extras.get("stream_url", "https://twitch.tv/blox_link")
+
+                await Bloxlink.change_presence(activity=Streaming(name=playing_status, url=stream_url))
+
+            data = json.dumps({
+                "nonce": nonce,
+                "cluster_id": CLUSTER_ID,
+                "data": True,
+                "type": "CLIENT_RESULT",
+                "original_cluster": original_cluster,
+                "waiting_for": waiting_for
+            })
+
+            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+
+
     async def __setup__(self):
         if IS_DOCKER:
             pubsub = self.redis.pubsub()
@@ -155,7 +180,7 @@ class IPC(Bloxlink.Module):
                     self.loop.create_task(self.handle_message(message))
 
 
-    async def broadcast(self, message, type, send_to="GLOBAL", waiting_for=None, timeout=10, response=True):
+    async def broadcast(self, message, type, send_to="GLOBAL", waiting_for=None, timeout=10, response=True, **kwargs):
         nonce = str(uuid.uuid4())
 
         if waiting_for and isinstance(waiting_for, str):
@@ -170,7 +195,8 @@ class IPC(Bloxlink.Module):
             "type": type,
             "original_cluster": CLUSTER_ID,
             "cluster_id": CLUSTER_ID,
-            "waiting_for": waiting_for
+            "waiting_for": waiting_for,
+            "extras": kwargs
         })
 
 
