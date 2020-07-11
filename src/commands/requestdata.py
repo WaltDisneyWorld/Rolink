@@ -12,7 +12,7 @@ class RequestDataCommand(Bloxlink.Module):
     """view all of your data saved under your Discord ID"""
 
     def __init__(self):
-        pass
+        self.aliases = ["rd"]
 
     async def __main__(self, CommandArgs):
         author = CommandArgs.message.author
