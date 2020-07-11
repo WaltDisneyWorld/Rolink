@@ -20,6 +20,7 @@ WELCOME_MESSAGE = "\n\n".join([
                     ":gear: Run ``!setup`` for an all-in-one command to set-up your server with Bloxlink.",
                     ":gear: If you're looking to change specific settings, use the ``!settings`` command.",
                     ":woman_office_worker: if you're looking to link Roblox groups, use the ``!bind`` command.",
+                    "<:BloxlinkSale:506622933184020490> Interested in supercharging your Bloxlink experience? Run the ``!donate`` command and help support Bloxlink development!",
                     f"<:BloxlinkSearch:506622933012054028> **Need support?** Join our community server: {SERVER_INVITE}"])
 
 @Bloxlink.module

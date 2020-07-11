@@ -4,10 +4,11 @@ from discord import Embed
 
 PREMIUM_PERKS = "\n".join([
     f"- More role bindings allowed (from {LIMITS['BINDS']['FREE']} to {LIMITS['BINDS']['PREMIUM']}).",
-     "- Exclusive premium-only settings such as setting an age-limit, group shout channel, member counter, and much more. "
-     "See ``{prefix}settings change/help`` and look at the premium section.",
-     "- Reduced cooldown on some commands."
-     ""
+     "- Exclusive premium-only settings such as setting an age-limit, group shout channel, **changing the username "
+        "and pfp of the bot** (white-labeling), and much more. "
+        "See ``{prefix}settings change/help`` and look at the premium section.",
+     "- Reduced cooldown on some commands.",
+     "- More groups allowed to be added to your Group-Lock (``{prefix}grouplock``)."
 ])
 
 
@@ -24,7 +25,7 @@ class DonateCommand(Bloxlink.Module):
         prefix = CommandArgs.prefix
 
         embed = Embed(title="Bloxlink Premium")
-        embed.description = "We appreciate all donations!\nBy donating a certain amount, you will receive **Bloxlink Premium** " \
+        embed.description = "We appreciate all donations!\nBy donating a certain amount, you will receive **[Bloxlink Premium](https://www.patreon.com/join/bloxlink?)** " \
                             f"on __every server you own__ and receive these perks:\n{PREMIUM_PERKS.format(prefix=prefix)}" \
 
         embed.add_field(name="Frequently Asked Questions", value="1.) Can I transfer premium to someone else?\n"
