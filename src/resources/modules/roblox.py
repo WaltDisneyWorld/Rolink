@@ -282,11 +282,12 @@ class Roblox(Bloxlink.Module):
 
             group_role = group and group.user_rank_name or "Guest"
 
-            if group_role != "Guest":
-                brackets_match = bracket_search.search(group_role)
+            if guild_data.get("shorterNicknames", DEFAULTS.get("shorterNicknames")):
+                if group_role != "Guest":
+                    brackets_match = bracket_search.search(group_role)
 
-                if brackets_match:
-                    group_role = f"[{brackets_match.group(1)}]"
+                    if brackets_match:
+                        group_role = f"[{brackets_match.group(1)}]"
 
             template = template or DEFAULTS.get("nicknameTemplate") or ""
 
@@ -297,11 +298,12 @@ class Roblox(Bloxlink.Module):
                 group = roblox_user.groups.get(group_id)
                 group_role_from_group = group and group.user_rank_name or "Guest"
 
-                if group_role_from_group != "Guest":
-                    brackets_match = bracket_search.search(group_role_from_group)
+                if guild_data.get("shorterNicknames", DEFAULTS.get("shorterNicknames")):
+                    if group_role_from_group != "Guest":
+                        brackets_match = bracket_search.search(group_role_from_group)
 
-                    if brackets_match:
-                        group_role_from_group = f"[{brackets_match.group(1)}]"
+                        if brackets_match:
+                            group_role_from_group = f"[{brackets_match.group(1)}]"
 
                 template = template.replace("{group-rank-"+group_id+"}", group_role_from_group)
 
