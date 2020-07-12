@@ -111,13 +111,14 @@ class Arguments:
 					continue
 
 				formatting = prompt.get("formatting", True)
+				prompt_text = prompt["prompt"]
 
 				if not skipped_arg:
 					try:
 						if formatting:
-							prompt["prompt"] = prompt["prompt"].format(**resolved_args, prefix=self.prefix)
+							prompt_text = prompt_text.format(**resolved_args, prefix=self.prefix)
 
-						await self.say(prompt["prompt"], embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
+						await self.say(prompt_text, embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 
 						if dm:
 							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
