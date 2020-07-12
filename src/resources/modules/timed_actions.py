@@ -3,7 +3,7 @@ from ..exceptions import RobloxNotFound
 import asyncio
 import dateutil
 from discord.errors import Forbidden, NotFound
-from discord import Embed
+from discord import Embed, AllowedMentions
 
 coro_async = Bloxlink.get_module("utils", attrs=["coro_async"])
 get_group, get_user = Bloxlink.get_module("roblox", attrs=["get_group", "get_user"])
@@ -69,7 +69,7 @@ class TimedActions(Bloxlink.Module):
                                 embed.add_field(name="Shout:", value=shout_text)
 
                                 try:
-                                    await channel.send(content=shout_data.get("prependContent"), embed=embed)
+                                    await channel.send(content=shout_data.get("prependContent"), embed=embed, allowed_mentions=AllowedMentions(roles=True, users=True, everyone=True))
                                 except Forbidden:
                                     pass
                                 except NotFound:
@@ -94,9 +94,6 @@ class TimedActions(Bloxlink.Module):
                                 else:
                                     group_rank = "Guest"
 
-                                if shout_data.get("cleanContent"):
-                                    shout_text = shout_text.replace("@", "@\u200b")
-
                                 if shout_text:
                                     shout_text = shout_format.replace(
                                         "{group-name}", group.name
@@ -112,8 +109,13 @@ class TimedActions(Bloxlink.Module):
                                         "{group-rank}", group_rank
                                     )
 
+                                    if shout_data.get("cleanContent"):
+                                        allowed_mentions = AllowedMentions(users=False, everyone=False, roles=False)
+                                    else:
+                                        allowed_mentions = AllowedMentions(users=True, everyone=True, roles=True)
+
                                     try:
-                                        await channel.send(shout_text)
+                                        await channel.send(shout_text, allowed_mentions=allowed_mentions)
                                     except Forbidden:
                                         pass
                                     except NotFound:
@@ -125,4 +127,4 @@ class TimedActions(Bloxlink.Module):
                                         await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
 
 
-            await asyncio.sleep(10 * 60)
+            await asyncio.sleep(5 * 60)

@@ -1,6 +1,6 @@
 from importlib import import_module
 from os import environ as env
-from discord import AutoShardedClient
+from discord import AutoShardedClient, AllowedMentions
 from config import WEBHOOKS # pylint: disable=E0611
 from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE
 from . import Args, Permissions
@@ -319,7 +319,8 @@ class BloxlinkStructure(AutoShardedClient):
 Bloxlink = BloxlinkStructure(
     fetch_offline_members=False,
     shard_count=SHARD_COUNT,
-    shard_ids=SHARD_RANGE
+    shard_ids=SHARD_RANGE,
+    allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False)
 )
 
 class Module:

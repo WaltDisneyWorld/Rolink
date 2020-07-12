@@ -116,7 +116,7 @@ class Response(Bloxlink.Module):
             if message:
                 self.delete_message_queue.append(message)
 
-    async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None):
+    async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None, allowed_mentions=None):
         if dm:
             if not IS_DOCKER:
                 dm = False
@@ -186,9 +186,10 @@ class Response(Bloxlink.Module):
                 try:
                     if verified_webhook and not dm:
                         return await verified_webhook.send(content=on_error or content, embed=embed,
-                                                           wait=True, username=self.bot_name, avatar_url=self.bot_avatar)
+                                                           wait=True, username=self.bot_name, avatar_url=self.bot_avatar,
+                                                           allowed_mentions=allowed_mentions)
 
-                    return await channel.send(content=on_error or content, embed=embed, files=files)
+                    return await channel.send(content=on_error or content, embed=embed, files=files, allowed_mentions=allowed_mentions)
 
                 except Forbidden:
                     try:
@@ -213,7 +214,7 @@ class Response(Bloxlink.Module):
                 if not ignore_http_check:
                     if self.webhook_only:
                         self.webhook_only = False
-                        return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files)
+                        return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files, allowed_mentions=allowed_mentions)
 
                     else:
                         if embed:
