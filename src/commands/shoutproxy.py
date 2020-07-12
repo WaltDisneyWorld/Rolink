@@ -45,8 +45,8 @@ class ShoutProxyCommand(Bloxlink.Module):
         self.arguments = [
             {
                 "prompt": "This command will relay group shouts from a Roblox group to your Discord channel.\n"
-                          "For this to work, the group shouts must be VISIBLE to guests.\n\nWhich channel would "
-                          "you like to use for group shouts? Please either mention the channel or say the channel name.\n"
+                          "For this to work, the group shouts must be VISIBLE to guests.\n\nWhich **channel** would "
+                          "you like to use for group shouts? Please either **mention the channel or say the channel name.**\n"
                           "Optionally, say ``clear`` to remove your proxied channel.",
                 "name": "channel",
                 "type": "channel",
