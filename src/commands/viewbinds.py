@@ -13,6 +13,7 @@ class ViewBindsCommand(Bloxlink.Module):
 
     def __init__(self):
         self.category = "Binds"
+        self.aliases = ["binds"]
 
     async def __main__(self, CommandArgs):
         guild = CommandArgs.message.guild

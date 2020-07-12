@@ -41,6 +41,7 @@ class GuestRoleCommand(Bloxlink.Module):
 
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Binds"
+        self.aliases = ["guestbind"]
 
 
     async def __main__(self, CommandArgs):
