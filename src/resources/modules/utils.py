@@ -3,7 +3,7 @@ from re import compile
 from ..structures import Bloxlink, DonatorProfile
 from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, Message
 from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
-from ..constants import RELEASE
+from ..constants import RELEASE, TRANSFER_COOLDOWN
 from discord.errors import NotFound, Forbidden
 from discord.utils import find
 from discord import Object
@@ -199,7 +199,7 @@ class Utils(Bloxlink.Module):
         return patron_data
 
 
-    async def transfer_premium(self, transfer_from, transfer_to):
+    async def transfer_premium(self, transfer_from, transfer_to, apply_cooldown=True):
         profile, _ = await self.is_premium(transfer_to)
         if profile.features.get("premium"):
             raise Message("This user already has premium!", type="silly")
@@ -216,6 +216,9 @@ class Utils(Bloxlink.Module):
 
         transfer_from_data["premium"]["transferTo"] = str(transfer_to.id)
         transfer_to_data["premium"]["transferFrom"] = str(transfer_from.id)
+
+        if apply_cooldown:
+            transfer_from_data["premium"]["transferCooldown"] = time() + (86400*TRANSFER_COOLDOWN)
 
         await self.r.table("users").insert(transfer_from_data, conflict="update").run()
         await self.r.table("users").insert(transfer_to_data,   conflict="update").run()

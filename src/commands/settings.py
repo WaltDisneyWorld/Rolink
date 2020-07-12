@@ -374,7 +374,7 @@ class SettingsCommand(Bloxlink.Module):
             if role_binds:
                 role_ids = set()
 
-                for group_id, group_data in role_binds["groups"].items():
+                for group_id, group_data in role_binds.get("groups", {}).items():
                     for rank_id, rank_data in group_data.get("binds", {}).items():
                         for role_id in rank_data["roles"]:
                             role_ids.add(int(role_id))

@@ -1,6 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error # pylint: disable=import-error
-from resources.constants import TRANSFER_COOLDOWN # pylint: disable=import-error
 import time
 import math
 from discord import Embed, Object
@@ -54,6 +53,11 @@ class TransferCommand(Bloxlink.Module):
             raise Error("You may not transfer premium that someone else transferred to you. You must first revoke the transfer "
                        f"with ``{prefix}transfer disable``.")
 
+        prem_data, _ = await is_premium(author, user_data, cache=False, rec=False)
+
+        if not prem_data.features.get("premium"):
+            raise Error("You must have premium in order to transfer it!")
+
         recipient_data = await self.r.table("users").get(str(transfer_to.id)).run() or {}
         recipient_data_premium = recipient_data.get("premium", {})
 
@@ -61,10 +65,7 @@ class TransferCommand(Bloxlink.Module):
             raise Error("Another user is already forwarding their premium to this user.")
 
 
-        await transfer_premium(transfer_from=author, transfer_to=transfer_to)
-
-        author_premium_data["transferCooldown"] = time.time() + (86400*TRANSFER_COOLDOWN)
-        user_data["premium"] = author_premium_data
+        await transfer_premium(transfer_from=author, transfer_to=transfer_to, apply_cooldown=True)
 
         await self.r.table("users").insert(user_data, conflict="update").run()
 
