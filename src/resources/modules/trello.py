@@ -23,11 +23,13 @@ except ImportError:
 
 OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
 
+cache_get, cache_set = Bloxlink.get_module("cache", attrs=["get", "set"])
+
 
 @Bloxlink.module
 class Trello(Bloxlink.Module):
     def __init__(self):
-        self.trello_boards = {}
+        #self.trello_boards = {}
         self.trello = TrelloClient(
             key=TRELLO_CONFIG.get("KEY"),
             token=TRELLO_CONFIG.get("TOKEN"),
@@ -42,15 +44,16 @@ class Trello(Bloxlink.Module):
             trello_id = guild_data.get("trelloID")
 
             if trello_id:
-                trello_board = self.trello_boards.get(guild.id)
+                #trello_board = self.trello_boards.get(guild.id)
+                trello_board = cache_get("trello_boards", guild.id)
 
                 try:
-                    trello_board = trello_board or await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
+                    if not trello_board:
+                        print("new trello req", flush=True)
+                        trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
+                        cache_set("trello_boards", guild.id, trello_board)
 
                     if trello_board:
-                        if not self.trello_boards.get(guild.id):
-                            self.trello_boards[guild.id] = trello_board
-
                         t_now = time()
 
                         if hasattr(trello_board, "expiration"):
@@ -61,10 +64,9 @@ class Trello(Bloxlink.Module):
                         else:
                             trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
 
-                except TrelloBadRequest:
-                    pass
                 except TrelloUnauthorized:
                     pass
+
                 except (TrelloNotFound, TrelloBadRequest):
                     guild_data.pop("trelloID")
 
@@ -118,7 +120,9 @@ class Trello(Bloxlink.Module):
 
         return {}, None
 
+    """
     async def __setup__(self):
         while True:
             self.trello_boards = {}
             await asyncio.sleep(60 * 10)
+    """

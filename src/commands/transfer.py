@@ -5,7 +5,8 @@ import math
 from discord import Embed, Object
 
 
-transfer_premium, is_premium, clear_premium_cache_from_user = Bloxlink.get_module("utils", attrs=["transfer_premium", "is_premium", "clear_premium_cache_from_user"])
+transfer_premium, is_premium = Bloxlink.get_module("utils", attrs=["transfer_premium", "is_premium"])
+cache_pop = Bloxlink.get_module("cache", attrs="cache_pop")
 
 
 @Bloxlink.command
@@ -106,7 +107,9 @@ class TransferCommand(Bloxlink.Module):
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(transferee_data, conflict="update").run()
 
-                clear_premium_cache_from_user(author, Object(id=int(transfer_from)))
+                #clear_premium_cache_from_user(author, Object(id=int(transfer_from)))
+                cache_pop("premium_cache", author)
+                cache_pop("premium_cache", Object(id=int(transfer_from)))
 
                 raise Message("Successfully **disabled** the premium transfer!", type="success")
 
@@ -123,7 +126,9 @@ class TransferCommand(Bloxlink.Module):
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(recipient_data, conflict="update").run()
 
-                clear_premium_cache_from_user(author, Object(id=int(transfer_to)))
+                #clear_premium_cache_from_user(author, Object(id=int(transfer_to)))
+                cache_pop("premium_cache", author)
+                cache_pop("premium_cache", Object(id=int(transfer_to)))
 
                 await response.success("Successfully **disabled** your premium transfer!")
 

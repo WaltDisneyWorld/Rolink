@@ -16,6 +16,7 @@ from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-er
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
+cache_get, cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["get", "set", "pop"])
 
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
@@ -25,13 +26,16 @@ commands = {}
 @Bloxlink.module
 class Commands(Bloxlink.Module):
     def __init__(self):
-        self.cooldown_cache = {}
-        self._cooldown_cache = {} # backup
+        #self.cooldown_cache = {}
+        #self._cooldown_cache = {} # backup
+        pass
 
+    """
     async def __setup__(self):
         while True:
             self.cooldown_cache = dict(self._cooldown_cache)
             await asyncio.sleep(10 * 60)
+    """
 
     async def more_args(self, content_modified, CommandArgs, command_args, arguments):
         parsed_args = {}
@@ -128,14 +132,18 @@ class Commands(Bloxlink.Module):
 
 
                         if command.cooldown:
-                            cooldown_from_cache = self.cooldown_cache.get(command.name, {}).get(author.id) or 0
+                            #cooldown_from_cache = self.cooldown_cache.get(command.name, {}).get(author.id) or 0
+                            cooldown_from_cache = cache_get(f"cooldown_cache_{command.name}", author.id) or 0
+                            #print(cooldown_from_cache, flush=True)
+                            #print(cache_get("cooldown_cache", command.name), flush=True)
                             time_now = time.time()
 
                             profile, _ = await is_premium(author)
 
                             if not profile.features.get("premium"):
                                 if cooldown_from_cache < time_now:
-                                    self.cooldown_cache[command.name].pop(author.id, None)
+                                    #self.cooldown_cache[command.name].pop(author.id, None)
+                                    cache_pop(f"cooldown_cache_{command.name}", author.id)
                                 else:
                                     seconds = math.ceil(cooldown_from_cache - time_now)
                                     embed = Embed(title="Slow down!")
@@ -158,7 +166,8 @@ class Commands(Bloxlink.Module):
 
                                     return
 
-                                self.cooldown_cache[command.name][author.id] = time_now + command.cooldown
+                                #self.cooldown_cache[command.name][author.id] = time_now + command.cooldown
+                                cache_set(f"cooldown_cache_{command.name}", author.id, time_now + command.cooldown)
 
 
                         if not (command.dm_allowed or guild):
@@ -368,8 +377,8 @@ class Commands(Bloxlink.Module):
                 command.subcommands[attr_name] = attr
                 #subcommands[attr_name] = attr
 
-        self.cooldown_cache[command.name] = {}
-        self._cooldown_cache[command.name] = {}
+        #self.cooldown_cache[command.name] = {}
+        #self._cooldown_cache[command.name] = {}
         commands[command.name] = command
 
         return command_structure

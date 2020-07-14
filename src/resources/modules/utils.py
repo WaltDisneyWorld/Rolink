@@ -14,18 +14,20 @@ import asyncio
 import aiohttp
 
 is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
+cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
 
 @Bloxlink.module
 class Utils(Bloxlink.Module):
     def __init__(self):
         self.option_regex = compile("(.+):(.+)")
-        self.premium_cache = {}
+        #self.premium_cache = {}
 
-
+    """
     async def __setup__(self):
         while True:
             self.premium_cache = {}
             await asyncio.sleep(10 * 60)
+    """
 
 
     @staticmethod
@@ -167,9 +169,11 @@ class Utils(Bloxlink.Module):
 
         user_data["premium"] = user_data_premium
 
-        self.clear_premium_cache_from_user(user)
+        #self.clear_premium_cache_from_user(user)
 
         await self.r.table("users").insert(user_data, conflict="update").run()
+
+        cache_pop("premium_cache", user.id)
 
 
     async def has_selly_premium(self, author, author_data):
@@ -223,12 +227,15 @@ class Utils(Bloxlink.Module):
         await self.r.table("users").insert(transfer_from_data, conflict="update").run()
         await self.r.table("users").insert(transfer_to_data,   conflict="update").run()
 
-        self.clear_premium_cache_from_user(transfer_to, transfer_from)
+        #self.clear_premium_cache_from_user(transfer_to, transfer_from)
+        cache_pop("premium_cache", transfer_to.id)
+        cache_pop("premium_cache", transfer_from.id)
 
 
     async def is_premium(self, author, author_data=None, cache=True, rec=True):
         if cache:
-            premium_cache = self.premium_cache.get(author.id)
+            #premium_cache = self.premium_cache.get(author.id)
+            premium_cache = cache_get("premium_cache", author.id)
 
             if premium_cache:
                 return premium_cache[0], premium_cache[1]
@@ -242,7 +249,8 @@ class Utils(Bloxlink.Module):
         if rec:
             if premium_data.get("transferTo"):
                 if cache:
-                    self.premium_cache[author.id] = (profile, premium_data["transferTo"])
+                    #self.premium_cache[author.id] = (profile, premium_data["transferTo"])
+                    cache_set("premium_cache", author.id, (profile, premium_data["transferTo"]))
 
                 return profile, premium_data["transferTo"]
 
@@ -253,7 +261,8 @@ class Utils(Bloxlink.Module):
 
                 if transferee_premium:
                     if cache:
-                        self.premium_cache[author.id] = (transferee_premium, _)
+                        #self.premium_cache[author.id] = (transferee_premium, _)
+                        cache_set("premium_cache", author.id, (transferee_premium, _))
 
                     return transferee_premium, _
                 else:
@@ -287,11 +296,7 @@ class Utils(Bloxlink.Module):
                 profile.add_features("pro")
 
         if cache:
-            self.premium_cache[author.id] = (profile, None)
+            #self.premium_cache[author.id] = (profile, None)
+            cache_set("premium_cache", author.id, (profile, None))
 
         return profile, None
-
-
-    def clear_premium_cache_from_user(self, *users):
-        for user in users:
-            self.premium_cache.pop(user.id, None)

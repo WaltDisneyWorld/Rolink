@@ -38,6 +38,7 @@ loop = asyncio.get_event_loop()
 
 fetch = Bloxlink.get_module("utils", attrs="fetch")
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
+cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
 
 API_URL = "https://api.roblox.com"
 BASE_URL = "https://www.roblox.com"
@@ -47,7 +48,7 @@ GROUP_API = "https://groups.roblox.com"
 
 @Bloxlink.module
 class Roblox(Bloxlink.Module):
-    cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
+    #cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
 
     def __init__(self):
         pass
@@ -55,7 +56,8 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_roblox_id(username) -> Tuple[str, str]:
         username_lower = username.lower()
-        roblox_cached_data = Roblox.cache["usernames_to_ids"].get(username_lower)
+        #roblox_cached_data = Roblox.cache["usernames_to_ids"].get(username_lower)
+        roblox_cached_data = cache_get("usernames_to_ids", username_lower)
 
         if roblox_cached_data:
             return roblox_cached_data
@@ -72,13 +74,15 @@ class Roblox(Bloxlink.Module):
         data = (roblox_id, correct_username)
 
         if correct_username:
-            Roblox.cache["usernames_to_ids"][username_lower] = data
+            #Roblox.cache["usernames_to_ids"][username_lower] = data
+            cache_set("usernames_to_ids", username_lower, data)
 
         return data
 
     @staticmethod
     async def get_roblox_username(roblox_id) -> Tuple[str, str]:
-        roblox_user = Roblox.cache["roblox_users"].get(roblox_id)
+        #roblox_user = Roblox.cache["roblox_users"].get(roblox_id)
+        roblox_user = cache_get("roblox_users", roblox_id)
 
         if roblox_user and roblox_user.verified:
             return roblox_user.id, roblox_user.username
@@ -196,7 +200,8 @@ class Roblox(Bloxlink.Module):
             conflict="update"
         ).run()
 
-        Roblox.cache["discord_profiles"].pop(author_id, None)
+        #Roblox.cache["discord_profiles"].pop(author_id, None)
+        cache_pop("discord_profiles", author_id)
 
     async def unverify_member(self, author, roblox):
         author_id = str(author.id)
@@ -249,7 +254,8 @@ class Roblox(Bloxlink.Module):
 
         await self.r.table("users").insert(user_data, conflict="replace").run()
 
-        Roblox.cache["discord_profiles"].pop(author_id, None)
+        #Roblox.cache["discord_profiles"].pop(author_id, None)
+        cache_pop("discord_profiles", author_id)
 
         return success
 
@@ -1143,7 +1149,8 @@ class Roblox(Bloxlink.Module):
 
     async def get_game(self, game_id):
         game_id = str(game_id)
-        game = self.cache["games"].get(game_id)
+        #game = self.cache["games"].get(game_id)
+        game = cache_get("games", game_id)
 
         if game:
             return game
@@ -1158,7 +1165,8 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) == 9:
                 game = Game(game_id, json_data)
 
-                self.cache["games"][game_id] = game
+                #self.cache["games"][game_id] = game
+                cache_set("games", game_id, game)
 
                 return game
 
@@ -1167,7 +1175,8 @@ class Roblox(Bloxlink.Module):
 
     async def get_catalog_item(self, item_id):
         item_id = str(item_id)
-        item = self.cache["catalog_items"].get(item_id)
+        #item = self.cache["catalog_items"].get(item_id)
+        item = cache_get("catalog_items", item_id)
 
         if item:
             return item
@@ -1182,7 +1191,8 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) != 6:
                 item = RobloxItem(item_id, json_data)
 
-                self.cache["catalog_items"][item_id] = item
+                #self.cache["catalog_items"][item_id] = item
+                cache_set("catalog_items", item_id, item)
 
                 return item
 
@@ -1191,7 +1201,8 @@ class Roblox(Bloxlink.Module):
 
     async def get_group(self, group_id, with_shout=False, rolesets=False):
         group_id = str(group_id)
-        group = self.cache["groups"].get(group_id)
+        #group = self.cache["groups"].get(group_id)
+        group = cache_get("groups", group_id)
         shout = None
 
         if group and group.rolesets:
@@ -1228,7 +1239,8 @@ class Roblox(Bloxlink.Module):
                 else:
                     group.load_json(json_data, version="old")
 
-                self.cache["groups"][group_id] = group
+                #self.cache["groups"][group_id] = group
+                cache_set("groups", group_id, group)
 
                 return group
 
@@ -1284,7 +1296,8 @@ class Roblox(Bloxlink.Module):
             author_data = author_data or await self.r.table("users").get(author_id).run() or {}
 
             if cache:
-                discord_profile = self.cache["discord_profiles"].get(author_id)
+                #discord_profile = self.cache["discord_profiles"].get(author_id)
+                discord_profile = cache_get("discord_profiles", author_id)
 
                 if discord_profile:
                     if guild:
@@ -1319,14 +1332,17 @@ class Roblox(Bloxlink.Module):
                     discord_profile.accounts = accounts
 
 
-                roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
+                #roblox_user = self.cache["roblox_users"].get(roblox_account) or RobloxUser(roblox_id=roblox_account)
+                roblox_user = cache_get("roblox_users", roblox_account) or RobloxUser(roblox_id=roblox_account)
                 await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, everything=everything, basic_details=basic_details)
 
                 if guild:
                     discord_profile.guilds[guild_id] = roblox_user
 
-                self.cache["discord_profiles"][author_id] = discord_profile
-                self.cache["roblox_users"][roblox_account] = roblox_user
+                #self.cache["discord_profiles"][author_id] = discord_profile
+                #self.cache["roblox_users"][roblox_account] = roblox_user
+                cache_set("discord_profiles", author_id, discord_profile)
+                cache_set("roblox_users", roblox_account, roblox_user)
 
                 return roblox_user, accounts
 
@@ -1346,10 +1362,13 @@ class Roblox(Bloxlink.Module):
                 roblox_id, username = await self.get_roblox_id(username)
 
             if roblox_id:
-                roblox_user = self.cache["roblox_users"].get(roblox_id)
+                #roblox_user = self.cache["roblox_users"].get(roblox_id)
+                roblox_user = cache_get("roblox_users", roblox_id)
+
                 if not roblox_user:
                     roblox_user = RobloxUser(roblox_id=roblox_id)
-                    self.cache["roblox_users"][roblox_account] = roblox_user
+                    #self.cache["roblox_users"][roblox_account] = roblox_user
+                    cache_set("roblox_users", roblox_account, roblox_user)
 
                 await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, everything=everything, basic_details=basic_details)
                 return roblox_user, []
@@ -1571,11 +1590,12 @@ class Roblox(Bloxlink.Module):
             if user_tags:
                 embed.add_field(name="User Tags", value="\n".join(user_tags))
 
-
+    """
     async def __setup__(self):
         while True:
             Roblox.cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
             await asyncio.sleep(60 * 10)
+    """
 
 
 
@@ -1743,13 +1763,15 @@ class RobloxUser(Bloxlink.Module):
         roblox_user_from_cache = None
 
         if username:
-            cache_find = Roblox.cache["usernames_to_ids"].get(username)
+            #cache_find = Roblox.cache["usernames_to_ids"].get(username)
+            cache_find = cache_get("usernames_to_ids", username)
 
             if cache_find:
                 roblox_id, username = cache_find
 
             if roblox_id:
-                roblox_user_from_cache = Roblox.cache["roblox_users"].get(roblox_id)
+                #roblox_user_from_cache = Roblox.cache["roblox_users"].get(roblox_id)
+                roblox_user_from_cache = cache_get("roblox_users", roblox_id)
 
         if roblox_user_from_cache and roblox_user_from_cache.verified:
             roblox_data["id"] = roblox_id or roblox_user_from_cache.id
