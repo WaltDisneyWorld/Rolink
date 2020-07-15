@@ -20,14 +20,6 @@ cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "ge
 class Utils(Bloxlink.Module):
     def __init__(self):
         self.option_regex = compile("(.+):(.+)")
-        #self.premium_cache = {}
-
-    """
-    async def __setup__(self):
-        while True:
-            self.premium_cache = {}
-            await asyncio.sleep(10 * 60)
-    """
 
 
     @staticmethod
@@ -169,8 +161,6 @@ class Utils(Bloxlink.Module):
 
         user_data["premium"] = user_data_premium
 
-        #self.clear_premium_cache_from_user(user)
-
         await self.r.table("users").insert(user_data, conflict="update").run()
 
         cache_pop("premium_cache", user.id)
@@ -227,14 +217,12 @@ class Utils(Bloxlink.Module):
         await self.r.table("users").insert(transfer_from_data, conflict="update").run()
         await self.r.table("users").insert(transfer_to_data,   conflict="update").run()
 
-        #self.clear_premium_cache_from_user(transfer_to, transfer_from)
         cache_pop("premium_cache", transfer_to.id)
         cache_pop("premium_cache", transfer_from.id)
 
 
     async def is_premium(self, author, author_data=None, cache=True, rec=True):
         if cache:
-            #premium_cache = self.premium_cache.get(author.id)
             premium_cache = cache_get("premium_cache", author.id)
 
             if premium_cache:
@@ -249,7 +237,6 @@ class Utils(Bloxlink.Module):
         if rec:
             if premium_data.get("transferTo"):
                 if cache:
-                    #self.premium_cache[author.id] = (profile, premium_data["transferTo"])
                     cache_set("premium_cache", author.id, (profile, premium_data["transferTo"]))
 
                 return profile, premium_data["transferTo"]
@@ -261,7 +248,6 @@ class Utils(Bloxlink.Module):
 
                 if transferee_premium:
                     if cache:
-                        #self.premium_cache[author.id] = (transferee_premium, _)
                         cache_set("premium_cache", author.id, (transferee_premium, _))
 
                     return transferee_premium, _
@@ -296,7 +282,6 @@ class Utils(Bloxlink.Module):
                 profile.add_features("pro")
 
         if cache:
-            #self.premium_cache[author.id] = (profile, None)
             cache_set("premium_cache", author.id, (profile, None))
 
         return profile, None

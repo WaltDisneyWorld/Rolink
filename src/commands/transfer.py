@@ -107,7 +107,6 @@ class TransferCommand(Bloxlink.Module):
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(transferee_data, conflict="update").run()
 
-                #clear_premium_cache_from_user(author, Object(id=int(transfer_from)))
                 cache_pop("premium_cache", author)
                 cache_pop("premium_cache", Object(id=int(transfer_from)))
 
@@ -126,7 +125,6 @@ class TransferCommand(Bloxlink.Module):
                 await self.r.table("users").insert(author_data, conflict="update").run()
                 await self.r.table("users").insert(recipient_data, conflict="update").run()
 
-                #clear_premium_cache_from_user(author, Object(id=int(transfer_to)))
                 cache_pop("premium_cache", author)
                 cache_pop("premium_cache", Object(id=int(transfer_to)))
 

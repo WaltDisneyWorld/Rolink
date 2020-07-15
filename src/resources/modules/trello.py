@@ -44,12 +44,10 @@ class Trello(Bloxlink.Module):
             trello_id = guild_data.get("trelloID")
 
             if trello_id:
-                #trello_board = self.trello_boards.get(guild.id)
                 trello_board = cache_get("trello_boards", guild.id)
 
                 try:
                     if not trello_board:
-                        print("new trello req", flush=True)
                         trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
                         cache_set("trello_boards", guild.id, trello_board)
 

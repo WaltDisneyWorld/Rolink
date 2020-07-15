@@ -26,16 +26,7 @@ commands = {}
 @Bloxlink.module
 class Commands(Bloxlink.Module):
     def __init__(self):
-        #self.cooldown_cache = {}
-        #self._cooldown_cache = {} # backup
         pass
-
-    """
-    async def __setup__(self):
-        while True:
-            self.cooldown_cache = dict(self._cooldown_cache)
-            await asyncio.sleep(10 * 60)
-    """
 
     async def more_args(self, content_modified, CommandArgs, command_args, arguments):
         parsed_args = {}
@@ -132,17 +123,13 @@ class Commands(Bloxlink.Module):
 
 
                         if command.cooldown:
-                            #cooldown_from_cache = self.cooldown_cache.get(command.name, {}).get(author.id) or 0
                             cooldown_from_cache = cache_get(f"cooldown_cache_{command.name}", author.id) or 0
-                            #print(cooldown_from_cache, flush=True)
-                            #print(cache_get("cooldown_cache", command.name), flush=True)
                             time_now = time.time()
 
                             profile, _ = await is_premium(author)
 
                             if not profile.features.get("premium"):
                                 if cooldown_from_cache < time_now:
-                                    #self.cooldown_cache[command.name].pop(author.id, None)
                                     cache_pop(f"cooldown_cache_{command.name}", author.id)
                                 else:
                                     seconds = math.ceil(cooldown_from_cache - time_now)
@@ -166,7 +153,6 @@ class Commands(Bloxlink.Module):
 
                                     return
 
-                                #self.cooldown_cache[command.name][author.id] = time_now + command.cooldown
                                 cache_set(f"cooldown_cache_{command.name}", author.id, time_now + command.cooldown)
 
 
