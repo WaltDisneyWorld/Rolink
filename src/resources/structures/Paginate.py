@@ -160,6 +160,7 @@ class Paginate:
                 except TimeoutError:
                     try:
                         await self.sent_message.clear_reactions()
+                        raise CancelCommand
                     except Forbidden:
                         raise Error("I'm missing the ``Manage Messages`` permission.")
                     except NotFound:
