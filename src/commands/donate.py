@@ -4,10 +4,14 @@ from discord import Embed
 
 PREMIUM_PERKS = "\n".join([
     f"- More role bindings allowed (from {LIMITS['BINDS']['FREE']} to {LIMITS['BINDS']['PREMIUM']}).",
-     "- Exclusive premium-only settings such as setting an age-limit, group shout channel, **changing the username "
+    f"- ``persistRoles:`` update users as they type once every 2 hours",
+    f"- Access to the ``Pro`` version of Bloxlink - a bot in less servers, so downtime is very minimal.",
+     "- Exclusive premium-only settings such as setting an age-limit, **changing the username "
         "and pfp of the bot** (white-labeling), and much more. "
         "See ``{prefix}settings change/help`` and look at the premium section.",
-     "- Reduced cooldown on some commands.",
+     "- No cooldown on some commands.",
+     "- Instant role/nickname updates: No more waiting 10 minutes for role updates; the internal cache "
+        "is bypassed for premium servers allowing for instant role updates.",
      "- More groups allowed to be added to your Group-Lock (``{prefix}grouplock``)."
 ])
 

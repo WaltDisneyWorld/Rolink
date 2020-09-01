@@ -1,6 +1,8 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import ARROW, ESCAPED_NICKNAME_TEMPLATES # pylint: disable=import-error
+from resources.constants import ARROW, ESCAPED_NICKNAME_TEMPLATES, BROWN_COLOR # pylint: disable=import-error
 
+
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 
 @Bloxlink.command
@@ -39,13 +41,17 @@ class NicknameCommand(Bloxlink.Module):
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
         guild_data = CommandArgs.guild_data
+        author = CommandArgs.message.author
+        guild = CommandArgs.message.guild
 
         global_nickname = CommandArgs.parsed_args["global_nickname"]
 
         if global_nickname.lower() != "skip":
             guild_data["nicknameTemplate"] = global_nickname
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+            await self.r.table("guilds").insert(guild_data, conflict="update").run()
+
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``nicknameTemplate`` option.", BROWN_COLOR)
 
             await response.success("Successfully saved your new **Global Nickname!**")
         else:

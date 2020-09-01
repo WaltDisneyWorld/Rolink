@@ -1,9 +1,9 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error # pylint: disable=import-error
-from resources.constants import AVATARS # pylint: disable=import-error
+from resources.constants import AVATARS, BROWN_COLOR # pylint: disable=import-error
 from discord import Object
 
-is_premium = Bloxlink.get_module("utils", attrs=["is_premium"])
+is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
 
 
 @Bloxlink.command
@@ -13,7 +13,7 @@ class WhiteLabelCommand(Bloxlink.Module):
     def __init__(self):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Premium"
-        self.hidden = True
+        self.hidden = False
         self.aliases = ["custombot", "customizebot"]
         self.free_to_use = True
 
@@ -22,9 +22,11 @@ class WhiteLabelCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         prefix = CommandArgs.prefix
 
+        author = CommandArgs.message.author
+
         guild = CommandArgs.message.guild
 
-        premium_status, _ = await is_premium(guild.owner or Object(id=guild.owner_id))
+        premium_status, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
 
         if not premium_status.features.get("premium"):
             if guild_data.get("customBot"):
@@ -85,7 +87,9 @@ class WhiteLabelCommand(Bloxlink.Module):
             "name": bot_name,
             "avatar": bot_avatar
         }
-        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+        await self.r.table("guilds").insert(guild_data, conflict="update").run()
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** the ``white-label`` configuration.", BROWN_COLOR)
 
         await response.success("Successfully saved your new **white-label** configuration!")
 
@@ -95,12 +99,18 @@ class WhiteLabelCommand(Bloxlink.Module):
         """disable the white-label responses"""
 
         response = CommandArgs.response
+
+        author = CommandArgs.message.author
+
+        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
         if not guild_data.get("customBot"):
             raise Message("You have no white-label configuration saved!", type="silly")
 
         guild_data.pop("customBot", None)
-        await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+        await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** the ``white-label`` configuration.", BROWN_COLOR)
 
         await response.success("Successfully disabled your **white-label** configuration!")

@@ -1,4 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from discord import Object
 
 
 add_features = Bloxlink.get_module("utils", attrs=["add_features"])
@@ -31,6 +32,7 @@ class AddFeaturesCommand(Bloxlink.Module):
         message = CommandArgs.message
         response = CommandArgs.response
 
+        user = CommandArgs.parsed_args["recipient"]
         features = CommandArgs.parsed_args["features"].replace(" ", "").split(",")
 
         try:
@@ -50,6 +52,9 @@ class AddFeaturesCommand(Bloxlink.Module):
             for member in role.members:
                 if not member.bot:
                     users.append(member)
+
+        if not users:
+            users.append(Object(id=int(user)))
 
 
         for user in users:

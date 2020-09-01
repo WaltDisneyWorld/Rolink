@@ -9,14 +9,15 @@ from io import StringIO
 
 @Bloxlink.command
 class RequestDataCommand(Bloxlink.Module):
-    """view all of your data saved under your Discord ID"""
+    """view all of your Data saved under your Discord ID"""
 
     def __init__(self):
         self.aliases = ["rd"]
+        self.category = "Data Management"
 
     async def __main__(self, CommandArgs):
         author = CommandArgs.message.author
-        author_data = await self.r.table("users").get(str(author.id)).run() or {}
+        author_data = await self.r.db("bloxlink").table("users").get(str(author.id)).run() or {}
 
         response = CommandArgs.response
 
@@ -42,7 +43,7 @@ class RequestDataCommand(Bloxlink.Module):
 
             last_requested = time() + (86400*30)
 
-            await self.r.table("users").insert({
+            await self.r.db("bloxlink").table("users").insert({
                 "id": str(author.id),
                 "lastRequestedData": last_requested
             }, conflict="update").run()

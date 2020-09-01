@@ -1,13 +1,13 @@
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
-from resources.exceptions import Error, Message, UserNotVerified, BloxlinkBypass  # pylint: disable=import-error
-from resources.constants import DEFAULTS  # pylint: disable=import-error
+from resources.exceptions import Error, Message, UserNotVerified, BloxlinkBypass, Blacklisted  # pylint: disable=import-error
+from resources.constants import DEFAULTS, GREEN_COLOR  # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 
 
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
 get_user, verify_as, parse_accounts, update_member, get_nickname, verify_member, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["get_user", "verify_as", "parse_accounts", "update_member", "get_nickname", "verify_member", "count_binds", "get_binds"])
-
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 
 @Bloxlink.command
@@ -43,7 +43,7 @@ class SwitchUserCommand(Bloxlink.Module):
         response = CommandArgs.response
         prefix = CommandArgs.prefix
 
-        author_data = await self.r.table("users").get(str(author.id)).run() or {"id": str(author.id)}
+        author_data = await self.r.db("bloxlink").table("users").get(str(author.id)).run() or {"id": str(author.id)}
 
         try:
             primary_account, accounts = await get_user("username", author=author, everything=False, basic_details=True)
@@ -90,7 +90,7 @@ class SwitchUserCommand(Bloxlink.Module):
                 username = parsed_args["account"]
                 roblox_id = (parsed_accounts.get(username)).id
 
-                guild_data = await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
+                guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
 
                 trello_board = await get_board(guild_data=guild_data, guild=guild)
 
@@ -146,21 +146,30 @@ class SwitchUserCommand(Bloxlink.Module):
                     try:
                         added, removed, nickname, errors, roblox_user = await update_member(
                             member,
-                            guild      = guild,
-                            roles      = True,
-                            nickname   = True,
-                            author_data  = await self.r.table("users").get(str(author.id)).run())
+                            guild        = guild,
+                            roles        = True,
+                            nickname     = True,
+                            author_data  = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
+                            response     = response)
 
                     except BloxlinkBypass:
                         await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, your account was still changed.")
 
                         return
 
-                    welcome_message = guild_data.get("welcomeMessage") or DEFAULTS.get("welcomeMessage")
+                    except Blacklisted as b:
+                        if str(b):
+                            raise Error(f"{author.mention} is **blacklisted** for: ``{b}``.")
+                        else:
+                            raise Error(f"{author.mention} is **blacklisted** from Bloxlink.")
+                    else:
+                        welcome_message = guild_data.get("welcomeMessage") or DEFAULTS.get("welcomeMessage")
 
-                    welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+                        welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-                    await CommandArgs.response.send(welcome_message)
+                        await post_event(guild, guild_data, "verification", f"{author.mention} has **switched their user** to ``{username}``.", GREEN_COLOR)
+
+                        await CommandArgs.response.send(welcome_message)
 
             else:
                 raise Message(f"You only have one account linked! Please use ``{prefix}verify add`` to add another.", type="silly")

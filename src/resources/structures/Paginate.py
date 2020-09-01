@@ -28,7 +28,7 @@ class Paginate:
         len_fields = len(fields)
 
         while True:
-            remaining = 5500
+            remaining = 5000
             field = fields[i]
             current_page = []
 
@@ -113,6 +113,7 @@ class Paginate:
     async def turn_page(self, i, pages):
         self.embed.clear_fields()
 
+        total = 0
         for field in pages[i]:
             self.embed.add_field(name=field["name"], value=field["value"], inline=False)
 

@@ -47,9 +47,6 @@ class EvalM(Bloxlink.Module):
 		except Exception as e:
 			description = codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}"
 
-			if not description:
-				return
-
 			embed = Embed(
 				title="Evaluation Error",
 				description=description,
@@ -68,9 +65,6 @@ class EvalM(Bloxlink.Module):
 			value = stdout.getvalue()
 			description = codeblock and f"```js\n{e.__class__.__name__}: {e}```" or f"{e.__class__.__name__}: {e}"
 
-			if not description:
-				return
-
 			embed = Embed(
 				title="Evaluation Error",
 				description=description,
@@ -86,9 +80,6 @@ class EvalM(Bloxlink.Module):
 				if value:
 					description = codeblock and f"```py\n{value[0:2000]}```" or value[0:2000]
 
-					if not description:
-						return
-
 					embed = Embed(
 						title="Evaluation Result",
 						description=description,
@@ -99,9 +90,6 @@ class EvalM(Bloxlink.Module):
 			else:
 				self._last_result = ret
 				description = codeblock and f"```py\n{value}{str(ret)[0:2000]}```" or f"{value}{str(ret)[0:2000]}"
-
-				if not description:
-					return
 
 				embed = Embed(
 					title="Evaluation Result",

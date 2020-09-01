@@ -1,10 +1,11 @@
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
 from resources.exceptions import PermissionError, Error, RobloxNotFound, Message  # pylint: disable=import-error
-from discord import Embed
+from resources.constants import BROWN_COLOR # pylint: disable=import-error
+from discord import Embed, Object
 import re
 
 
-is_premium = Bloxlink.get_module("utils", attrs=["is_premium"])
+is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
 get_group = Bloxlink.get_module("roblox", attrs=["get_group"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
@@ -25,7 +26,7 @@ class GroupLockCommand(Bloxlink.Module):
             group_id = content
 
         try:
-            group = await get_group(group_id, rolesets=True)
+            group = await get_group(group_id)
         except RobloxNotFound:
             return None, "No group was found with this ID. Please try again."
 
@@ -49,7 +50,7 @@ class GroupLockCommand(Bloxlink.Module):
     async def __main__(self, CommandArgs):
         choice = CommandArgs.parsed_args["choice"]
         guild_data = CommandArgs.guild_data
-        groups = CommandArgs.guild_data.get("groupLocked", {})
+        groups = CommandArgs.guild_data.get("groupLock", {})
         guild = CommandArgs.message.guild
         author = CommandArgs.message.author
         prefix = CommandArgs.prefix
@@ -78,7 +79,7 @@ class GroupLockCommand(Bloxlink.Module):
             if len(groups) >= 15:
                 raise Message("15 groups is the max you can add to your group-lock! Please delete some before adding any more.", type="silly")
 
-            profile, _ = await is_premium(guild.owner)
+            profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
 
             if len(groups) >= 3 and not profile.features.get("premium"):
                 raise Message("If you would like to add more than **3** groups to your group-lock, then you need Bloxlink Premium.\n"
@@ -97,10 +98,12 @@ class GroupLockCommand(Bloxlink.Module):
 
             groups[group.group_id] = {"groupName": group.name, "dmMessage": dm_message}
 
-            await self.r.db("canary").table("guilds").insert({
+            await self.r.table("guilds").insert({
                 "id": str(guild.id),
-                "groupLocked": groups
+                "groupLock": groups
             }, conflict="update").run()
+
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **added** a group to the ``server-lock``.", BROWN_COLOR)
 
             await response.success(f"Successfully added group **{group.name}** to your Server-Lock!")
 
@@ -108,25 +111,27 @@ class GroupLockCommand(Bloxlink.Module):
         elif choice == "delete":
             group = (await CommandArgs.prompt([
                 {
-                    "prompt": "Please specify either the Group URL or Group ID to delete.",
+                    "prompt": "Please specify either the **Group URL** or **Group ID** to delete.",
                     "name": "group",
                     "validation": self.validate_group
                 }
             ]))["group"]
 
             if not groups.get(group.group_id):
-                raise Message("This group isn't added to your server-lock!")
+                raise Message("This group isn't in your server-lock!")
 
             del groups[group.group_id]
-            guild_data["groupLocked"] = groups
+            guild_data["groupLock"] = groups
 
             if groups:
-                await self.r.db("canary").table("guilds").replace(guild_data).run()
+                await self.r.table("guilds").replace(guild_data).run()
 
             else:
-                guild_data.pop("groupLocked")
+                guild_data.pop("groupLock")
 
-                await self.r.db("canary").table("guilds").replace(guild_data).run()
+                await self.r.table("guilds").replace(guild_data).run()
+
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **deleted** a group from the ``server-lock``.", BROWN_COLOR)
 
             await response.success("Successfully **deleted** your group from the Server-Lock!")
 

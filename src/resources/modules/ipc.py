@@ -85,7 +85,6 @@ class IPC(Bloxlink.Module):
             if 0 in SHARD_RANGE:
                 try:
                     message_ = await Bloxlink.wait_for("message", check=lambda m: m.author.id == data and not m.guild, timeout=PROMPT["PROMPT_TIMEOUT"])
-
                 except asyncio.TimeoutError:
                     message_ = "cancel (timeout)"
 
@@ -173,9 +172,9 @@ class IPC(Bloxlink.Module):
 
             await self.redis.publish("GLOBAL", data)
 
-
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True)
+
                 if message:
                     self.loop.create_task(self.handle_message(message))
 

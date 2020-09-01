@@ -43,3 +43,6 @@ class UserNotVerified(BloxlinkException):
 
 class BloxlinkBypass(BloxlinkException):
     pass
+
+class Blacklisted(BloxlinkException):
+    pass

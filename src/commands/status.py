@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import GOLD_COLOR
+from resources.constants import GOLD_COLOR # pylint: disable=import-error
 from discord import Embed
 
 
@@ -23,12 +23,14 @@ class StatusCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         user = CommandArgs.parsed_args.get("user") or CommandArgs.message.author
+        guild = CommandArgs.message.guild
         response = CommandArgs.response
 
         embed = Embed()
         embed.set_author(name=user, icon_url=user.avatar_url)
 
-        profile, transfer_to = await is_premium(user)
+        partner_check = user.id == guild.owner_id
+        profile, transfer_to = await is_premium(user, guild=guild, partner_check=partner_check)
 
         attributes, features = profile.attributes, profile.features
         has_premium = features.get("premium")
@@ -55,9 +57,8 @@ class StatusCommand(Bloxlink.Module):
         if profile.features:
             embed.add_field(name="Features", value=", ".join(profile.features.keys()))
 
-        if attributes.get("PREMIUM_ANYWHERE"):
-            embed.add_field(name="Attributes", value="This user can use premium in _any_ server.")
-
+        if profile.notes:
+            embed.add_field(name="Notes", value="\n".join(profile.notes), inline=False)
 
         if transfer_to:
             embed.add_field(name="Transferring To ID", value=transfer_to)

@@ -40,7 +40,7 @@ class GetinfoCommand(Bloxlink.Module):
 		if target.bot:
 			raise Message("Bots can't have Roblox accounts!", type="silly")
 
-		valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "blurb", "age", "banned"]
+		valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "age", "banned"]
 
 		if not all(f in valid_flags for f in flags.keys()):
 			raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")

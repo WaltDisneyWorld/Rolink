@@ -1,6 +1,6 @@
-from resources.structures.Bloxlink import Bloxlink
-from resources.constants import ARROW, ORANGE_COLOR, NICKNAME_TEMPLATES, RELEASE
-from resources.exceptions import Error, RobloxNotFound
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.constants import ARROW, BROWN_COLOR, NICKNAME_TEMPLATES, RELEASE # pylint: disable=import-error
+from resources.exceptions import Error, RobloxNotFound, CancelCommand # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 from discord.errors import Forbidden, HTTPException
 from discord import Embed
@@ -14,6 +14,7 @@ VERIFIED_DEFAULT = "Verified"
 
 get_group, generate_code = Bloxlink.get_module("roblox", attrs=["get_group", "generate_code"])
 trello = Bloxlink.get_module("trello", attrs=["trello"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
@@ -67,7 +68,7 @@ class SetupCommand(Bloxlink.Module):
 
         try:
             board = await trello.get_board(content, card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
-        except (TrelloNotFound, TrelloBadRequest) as e:
+        except (TrelloNotFound, TrelloBadRequest):
             return None, "No Trello board was found with this ID. Please try again."
         except TrelloUnauthorized:
             return None, "I don't have permission to view this Trello board; please make sure " \
@@ -102,7 +103,9 @@ class SetupCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         guild = CommandArgs.message.guild
+        author = CommandArgs.message.author
         response = CommandArgs.response
+        prefix = CommandArgs.prefix
 
         guild_data = CommandArgs.guild_data
         group_ids = guild_data.get("groupIDs", {})
@@ -238,7 +241,6 @@ class SetupCommand(Bloxlink.Module):
                 }
             ], dm=True, no_dm_post=True)
 
-
         parsed_args_4 = await CommandArgs.prompt([
             {
                 "prompt": "You have reached the end of the setup. Here are your current settings:\n"
@@ -248,7 +250,7 @@ class SetupCommand(Bloxlink.Module):
                 "footer": "Please say **done** to complete the setup.",
                 "choices": ["done"],
                 "embed_title": "Setup Prompt Confirmation",
-                "embed_color": ORANGE_COLOR,
+                "embed_color": BROWN_COLOR,
                 "formatting": False
             }
         ], dm=True, no_dm_post=True)
@@ -259,19 +261,22 @@ class SetupCommand(Bloxlink.Module):
             if merge_replace not in ("skip", "next"):
                 if merge_replace == "replace":
                     for role in list(guild.roles):
-                        if not (role in guild.me.roles or role.is_default()):
-                            try:
-                                await role.delete()
-                            except Forbidden:
-                                pass
-                            except HTTPException:
-                                pass
+                        try:
+                            if not (role in guild.me.roles or role.is_default()):
+                                try:
+                                    await role.delete(reason=f"{author} chose to replace roles through {prefix}setup")
+                                except Forbidden:
+                                    pass
+                                except HTTPException:
+                                    pass
+                        except AttributeError: # guild.me is None -- bot kicked out
+                            raise CancelCommand
 
-                sorted_rolesets = sorted(group.rolesets, key=lambda r: r.get("Rank") or r.get("rank"), reverse=True)
+                sorted_rolesets = sorted(group.rolesets, key=lambda r: r.get("rank"), reverse=True)
 
                 for roleset in sorted_rolesets:
-                    roleset_name = roleset.get("Name") or roleset.get("name")
-                    roleset_rank = roleset.get("Rank") or roleset.get("rank")
+                    roleset_name = roleset.get("name")
+                    roleset_rank = roleset.get("rank")
 
                     if not find(lambda r: r.name == roleset_name, guild.roles):
                         try:
@@ -305,6 +310,18 @@ class SetupCommand(Bloxlink.Module):
             guild_data["groupIDs"] = group_ids
 
 
-        await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+        await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **set-up** the server.", BROWN_COLOR)
 
         await response.success("Your server is now **configured** with Bloxlink!", dm=True, no_dm_post=True)
+
+        if trello_board and update_trello:
+            trello_info_embed = Embed(title="Trello Information")
+            trello_info_embed.description = "Now that you've linked your Trello board, you may now modify Bloxlink settings and Role Binds from " \
+                                            "the board. **No cards will be created right away;** cards are created **as you use commands**. For " \
+                                            f"example, if you use ``{prefix}settings`` or ``{prefix}bind``, then cards will be created/edited.\n\n" \
+                                            "Any pre-existing settings or binds will be simply be **merged** with any Trello settings/binds **unless " \
+                                            f"you switch \"``trelloBindMode``\" to ``replace`` through the ``{prefix}settings`` command.**"
+
+            await response.send(embed=trello_info_embed, dm=True, no_dm_post=True)

@@ -5,12 +5,14 @@ from ..structures.Bloxlink import Bloxlink
 from ..exceptions import CancelledPrompt, CancelCommand, Error
 from ..constants import RED_COLOR, INVISIBLE_COLOR
 from config import PROMPT, RELEASE # pylint: disable=no-name-in-module
-from ..constants import IS_DOCKER
+from ..constants import IS_DOCKER, TIP_CHANCES, SERVER_INVITE
+import random
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
 broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
 
 prompts = {}
+
 
 
 class Arguments:
@@ -26,10 +28,14 @@ class Arguments:
 		self.messages = []
 		self.dm_post = None
 		self.cancelled = False
+		self.dm_false_override = False
 
 
 	async def say(self, text, type=None, footer=None, embed_title=None, is_prompt=True, embed_color=INVISIBLE_COLOR, embed=True, dm=False):
 		embed_color = embed_color or INVISIBLE_COLOR
+
+		if self.dm_false_override:
+			dm = False
 
 		if footer:
 			footer = f"{footer}\n"
@@ -42,14 +48,22 @@ class Arguments:
 
 			return await self.response.send(text, dm=dm, no_dm_post=True)
 
+		description = f"{text}\n\n{footer}{self.locale('prompt.toCancel')}"
+
 		if type == "error":
 			new_embed = Embed(title=embed_title or self.locale("prompt.errors.title"))
 			new_embed.colour = RED_COLOR
+
+			show_help_tip = random.randint(1, 100)
+
+			if show_help_tip <= TIP_CHANCES["PROMPT_ERROR"]:
+				description = f"{description}\n\nExperiencing issues? Our [Support Server]({SERVER_INVITE}) has a team of Helpers ready to help you if you're having trouble!"
 		else:
 			new_embed = Embed(title=embed_title or self.locale("prompt.title"))
 			new_embed.colour = embed_color
 
-		new_embed.description = f"{text}\n\n{footer}{self.locale('prompt.toCancel')}"
+		new_embed.description = description
+
 		new_embed.set_footer(text=self.locale("prompt.timeoutWarning", timeout=PROMPT["PROMPT_TIMEOUT"]))
 
 		msg = await self.response.send(embed=new_embed, dm=dm, no_dm_post=True)
@@ -87,7 +101,11 @@ class Arguments:
 				except Forbidden:
 					dm = False
 				else:
-					await m.delete()
+					try:
+						await m.delete()
+					except NotFound:
+						pass
+
 					if not no_dm_post:
 						self.dm_post = await self.response.send(f"{self.author.mention}, **please check your DMs to continue.**")
 			else:
@@ -124,6 +142,18 @@ class Arguments:
 							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
 							my_arg = message_content[0]
 
+							if not my_arg:
+								await self.say("Cluster which handles DMs is temporarily unavailable. Please say your message in the server instead of DMs.", type="error", embed=embed, dm=dm)
+								self.dm_false_override = True
+								dm = False
+
+								message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
+
+								my_arg = message.content
+
+								if prompt.get("delete_original", True):
+									self.messages.append(message)
+
 							if my_arg == "cluster timeout":
 								my_arg = "cancel (timeout)"
 
@@ -153,7 +183,7 @@ class Arguments:
 					continue
 
 				resolver = get_resolver(prompt.get("type", "string"))
-				resolved, error_message = await resolver(not dm and message, prompt, my_arg)
+				resolved, error_message = await resolver(message, prompt, my_arg)
 
 				if resolved:
 					if prompt.get("validation"):
@@ -192,7 +222,7 @@ class Arguments:
 			return resolved_args
 
 		finally:
-			del prompts[self.author.id]
+			prompts.pop(self.author.id, None)
 
 
 	def _check_prompt(self):

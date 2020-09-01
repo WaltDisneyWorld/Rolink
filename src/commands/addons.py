@@ -89,7 +89,7 @@ class AddonsCommand(Bloxlink.Module):
         addons[addon_choice] = enable
         guild_data["addons"] = addons
 
-        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+        await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         await response.success(f"Successfully **{parsed_args['enable']}d** the add-on **{addon_choice}!**")
 

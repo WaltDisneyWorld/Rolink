@@ -1,7 +1,9 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Error, RobloxNotFound, UserNotVerified, CancelCommand # pylint: disable=import-error
-from resources.constants import ARROW # pylint: disable=import-error
-from discord import Embed
+from resources.constants import ARROW, ORANGE_COLOR, PURPLE_COLOR # pylint: disable=import-error
+from discord import Embed, Object
+from discord.utils import find
+from discord.errors import Forbidden, NotFound
 from datetime import datetime
 import re
 
@@ -10,7 +12,7 @@ FIELDS = [
     "trades",
     "favorite games",
     "favorite items",
-    "activity notice",
+    "inactivity notice",
     "description"
 ]
 
@@ -21,6 +23,9 @@ catalog_id_regex = re.compile(r"https://www.roblox.com/catalog/(\d+)/?")
 
 parse_message = Bloxlink.get_module("commands", attrs="parse_message")
 get_game, get_catalog_item, get_user = Bloxlink.get_module("roblox", attrs=["get_game", "get_catalog_item", "get_user"])
+get_inactive_role, handle_inactive_role, get_profile = Bloxlink.get_module("roblox", name_override="RobloxProfile", attrs=["get_inactive_role", "handle_inactive_role", "get_profile"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+
 
 @Bloxlink.command
 class ProfileCommand(Bloxlink.Module):
@@ -36,6 +41,7 @@ class ProfileCommand(Bloxlink.Module):
             }
         ]
         self.category = "Account"
+
 
     @staticmethod
     async def validate_date_of_return(message, content):
@@ -105,94 +111,6 @@ class ProfileCommand(Bloxlink.Module):
 
         return favorite_items
 
-    async def get_profile(self, prefix, author, user, roblox_user=None):
-        user_data = await self.r.table("users").get(str(user.id)).run() or {"id": str(user.id)}
-        profile_data = user_data.get("profileData") or {}
-
-        if roblox_user:
-            ending = roblox_user.username.endswith("s") and "'" or "'s"
-            embed = Embed(title=f"{roblox_user.username}{ending} Bloxlink Profile")
-            embed.set_author(name=user, icon_url=user.avatar_url, url=roblox_user.profile_link)
-        else:
-            embed = Embed(title="Bloxlink User Profile")
-            embed.set_author(name=user, icon_url=user.avatar_url)
-
-        if not profile_data:
-            if author == user:
-                embed.description = f"You have no profile available! Use ``{prefix}profile change`` to make your profile."
-            else:
-                embed.description = f"**{user}** has no profile available."
-
-            return embed
-
-        description       = profile_data.get("description")
-        activity_notice   = profile_data.get("activityNotice")
-        favorite_games    = profile_data.get("favoriteGames")
-        favorite_items    = profile_data.get("favoriteCatalogItems")
-        accepting_trades  = profile_data.get("acceptingTrades")
-
-        set_embed_desc = False
-
-        if activity_notice:
-            date = datetime.fromtimestamp(activity_notice)
-            time_now = datetime.now()
-
-            if time_now > date:
-                # user is back
-                profile_data.pop("activityNotice")
-                user_data["profileData"] = profile_data
-                await self.r.table("users").insert(user_data, conflict="replace").run()
-            else:
-                date_str = date.strftime("%b. %d, %Y (%A)")
-                date_formatted = f"This user is currently **away** until **{date_str}.**"
-                embed.description = date_formatted
-                set_embed_desc = True
-
-                # TODO: change embed color
-
-        if accepting_trades:
-            if set_embed_desc:
-                embed.description = f"{embed.description}\nThis user is **accepting trades.**"
-            else:
-                embed.description = "This user is **accepting trades.**"
-
-        if favorite_games:
-            desc = []
-
-            for game_id in favorite_games:
-                try:
-                    game = await get_game(game_id)
-                except RobloxNotFound:
-                    desc.append(f"**INVALID GAME:** {game_id}")
-                else:
-                    desc.append(f"[{game.name}]({game.url})")
-
-            if desc:
-                embed.add_field(name="Favorite Games", value="\n".join(desc))
-
-        if favorite_items:
-            desc = []
-
-            for item_id in favorite_items:
-                try:
-                    catalog_item = await get_catalog_item(item_id)
-                except RobloxNotFound:
-                    desc.append(f"**INVALID ITEM:** {item_id}")
-                else:
-                    desc.append(f"[{catalog_item.name}]({catalog_item.url})")
-
-            if desc:
-                embed.add_field(name="Favorite Catalog Items", value="\n".join(desc))
-
-        if description:
-            embed.add_field(name="Personal Description", value=description, inline=False)
-
-
-        if author == user:
-            embed.set_footer(text=f"Use \"{prefix}profile change\" to alter your profile.")
-
-        return embed
-
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
@@ -202,6 +120,11 @@ class ProfileCommand(Bloxlink.Module):
         prefix = CommandArgs.prefix
         user = CommandArgs.parsed_args["user"] or author
 
+        trello_board = CommandArgs.trello_board
+        guild_data = CommandArgs.guild_data
+
+        inactive_role = await get_inactive_role(guild, guild_data, trello_board)
+
         async with response.loading():
             try:
                 roblox_user, _ = await get_user(author=user, guild=guild)
@@ -210,13 +133,11 @@ class ProfileCommand(Bloxlink.Module):
                     message = CommandArgs.message
                     message.content = f"{CommandArgs.prefix}verify"
 
-                    await parse_message(message)
-
-                    raise CancelCommand
+                    return await parse_message(message)
                 else:
                     raise Error(f"**{user}** is not linked to Bloxlink.")
             else:
-                embed = await self.get_profile(prefix, author, user, roblox_user)
+                embed = await get_profile(author=author, user=user, roblox_user=roblox_user, prefix=prefix, inactive_role=inactive_role, guild=guild, guild_data=guild_data)
 
                 await response.send(embed=embed)
 
@@ -226,10 +147,14 @@ class ProfileCommand(Bloxlink.Module):
         """change your public Bloxlink profile"""
 
         response = CommandArgs.response
+        trello_board = CommandArgs.trello_board
+
+        guild = CommandArgs.message.guild
+        guild_data = CommandArgs.guild_data
 
         author = CommandArgs.message.author
         author_id = str(author.id)
-        author_data = await self.r.table("users").get(author_id).run() or {"id": author_id}
+        author_data = await self.r.db("bloxlink").table("users").get(author_id).run() or {"id": author_id}
 
         profile_data = author_data.get("profileData") or {}
 
@@ -259,7 +184,7 @@ class ProfileCommand(Bloxlink.Module):
             else:
                 profile_data["description"] = profile_value
 
-        elif change_what == "activity notice":
+        elif change_what == "inactivity notice":
             date_of_return = (await CommandArgs.prompt([
                 {
                     "prompt": "Are you currently away? Please specify your **date of return** in this "
@@ -271,10 +196,35 @@ class ProfileCommand(Bloxlink.Module):
                 }
             ]))["date_of_return"]
 
+            inactive_role = await get_inactive_role(guild, guild_data, trello_board)
+
             if isinstance(date_of_return, str) and date_of_return.lower() == "clear":
                 profile_data.pop("activityNotice", None)
+
+                await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **back** from their leave of absence.", PURPLE_COLOR)
+
+                await handle_inactive_role(inactive_role, author, False)
             else:
-                profile_data["activityNotice"] = date_of_return.timestamp()
+                reason = (await CommandArgs.prompt([
+                    {
+                        "prompt": "What's the **reason** for your inactivity?",
+                        "name": "reason",
+                        "footer": "Say **skip** to skip this option.",
+                    }
+                ]))["reason"]
+
+                profile_data["activityNotice"] = {
+                    "returnTimestamp": date_of_return.timestamp(),
+                    "reason": reason.lower() != "skip" and reason
+                }
+
+                if reason.lower() != "skip":
+                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **away** for: ``{reason}``.", PURPLE_COLOR)
+                else:
+                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **away**.", PURPLE_COLOR)
+
+                await handle_inactive_role(inactive_role, author, True)
+
 
         elif change_what == "favorite games":
             favorite_games = (await CommandArgs.prompt([
@@ -354,6 +304,6 @@ class ProfileCommand(Bloxlink.Module):
 
         author_data["profileData"] = profile_data
 
-        await self.r.table("users").insert(author_data, conflict="replace").run()
+        await self.r.db("bloxlink").table("users").insert(author_data, conflict="replace").run()
 
         await response.success(f"Successfully saved your new **{change_what}** field.")

@@ -8,7 +8,9 @@ from discord import Embed, AllowedMentions
 
 coro_async = Bloxlink.get_module("utils", attrs=["coro_async"])
 get_group, get_user = Bloxlink.get_module("roblox", attrs=["get_group", "get_user"])
-cache_clear = Bloxlink.get_module("cache", attrs=["clear"])
+cache_clear, cache_get = Bloxlink.get_module("cache", attrs=["clear", "get"])
+load_partners = Bloxlink.get_module("partners", attrs=["load_data"])
+load_blacklist = Bloxlink.get_module("blacklist", attrs=["load_blacklist"])
 
 
 @Bloxlink.module
@@ -25,14 +27,19 @@ class TimedActions(Bloxlink.Module):
 
     async def timed_actions(self):
         while True:
-            await cache_clear()
-            await self.group_shouts()
+            await cache_clear("partners")
+
+            try:
+                await load_partners()
+                await load_blacklist()
+            except Exception as e:
+                Bloxlink.error(e)
 
             await asyncio.sleep(CACHE_CLEAR * 60)
 
     async def group_shouts(self):
         conn = await Bloxlink.load_database()
-        group_shouts = await self.r.db("canary").table("groupShouts").run(conn)
+        group_shouts = await self.r.table("groupShouts").run(conn)
 
         async for shout_data in group_shouts:
             guild_id = shout_data["id"]
@@ -60,7 +67,7 @@ class TimedActions(Bloxlink.Module):
                     if shout_text and shout_data.get("lastShout", "") != shout_text:
                         shout_data["lastShout"] = shout_text
 
-                        await self.r.db("canary").table("groupShouts").get(guild_id).update(shout_data).run()
+                        await self.r.table("groupShouts").get(guild_id).update(shout_data).run()
 
                         if shout_data.get("default"):
                             embed = Embed(
@@ -82,12 +89,12 @@ class TimedActions(Bloxlink.Module):
                             except Forbidden:
                                 pass
                             except NotFound:
-                                await self.r.db("canary").table("groupShouts").get(guild_id).delete().run()
+                                await self.r.table("groupShouts").get(guild_id).delete().run()
 
-                                guild_data = await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id}
+                                guild_data = await self.r.table("guilds").get(guild_id).run() or {"id": guild_id}
                                 guild_data.pop("groupShoutChannel", None)
 
-                                await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+                                await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
                         else:
                             shout_format = shout_data.get("format", "")
@@ -128,9 +135,9 @@ class TimedActions(Bloxlink.Module):
                                 except Forbidden:
                                     pass
                                 except NotFound:
-                                    await self.r.db("canary").table("groupShouts").get(guild_id).delete().run()
+                                    await self.r.table("groupShouts").get(guild_id).delete().run()
 
-                                    guild_data = await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id}
+                                    guild_data = await self.r.table("guilds").get(guild_id).run() or {"id": guild_id}
                                     guild_data.pop("groupShoutChannel", None)
 
-                                    await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+                                    await self.r.table("guilds").insert(guild_data, conflict="replace").run()

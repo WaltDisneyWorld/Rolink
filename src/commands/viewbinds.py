@@ -28,7 +28,6 @@ class ViewBindsCommand(Bloxlink.Module):
             raise Message(f"You have no bounded roles! Please use ``{CommandArgs.prefix}bind`` "
                            "to make a new role bind.", type="silly")
 
-
         embed = Embed(title="Bloxlink Role Binds")
 
         text = []
@@ -125,10 +124,16 @@ class ViewBindsCommand(Bloxlink.Module):
                             else:
                                 embed.add_field(name=f"{group_name} ({group_id})", value=text, inline=False)
 
-                elif category in ("assets", "badges"):
+                elif category in ("assets", "badges", "gamePasses"):
                     text = []
-                    category_non_plural = category[:-1]
-                    category_non_plural_title = category_non_plural.title()
+                    if category == "gamePasses":
+                        category_non_plural = "gamePass"
+                        category_non_plural_title = "GamePass"
+                        category_title = "GamePasses"
+                    else:
+                        category_non_plural = category[:-1]
+                        category_non_plural_title = category_non_plural.title()
+                        category_title = category.title()
 
                     for bind_id, bind_vg_data in bind_data.items():
                         display_name = bind_vg_data.get("displayName") or "(No Name)"
@@ -167,7 +172,7 @@ class ViewBindsCommand(Bloxlink.Module):
 
                     if text:
                         text = "\n".join(text)
-                        embed.add_field(name=category.title(), value=text, inline=False)
+                        embed.add_field(name=category_title, value=text, inline=False)
 
 
 

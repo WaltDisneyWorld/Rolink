@@ -1,14 +1,17 @@
 from ..structures.Bloxlink import Bloxlink
 from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error,
-                          CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass)
+                          CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass,
+                          RobloxDown, Blacklisted)
 from typing import Tuple
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
-from discord import Embed, Member
+from discord import Embed, Member, Object
 from datetime import datetime
-from config import WORDS # pylint: disable=no-name-in-module
+from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from os import environ as env
-from ..constants import RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, VIP_MEMBER_COLOR, ARROW
+from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR,
+                         VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW, TIP_CHANCES,
+                         SERVER_INVITE, PURPLE_COLOR, GREEN_COLOR)
 import json
 import random
 import re
@@ -36,13 +39,16 @@ bracket_search = re.compile(r"\[(.*)\]")
 
 loop = asyncio.get_event_loop()
 
-fetch = Bloxlink.get_module("utils", attrs="fetch")
+fetch, is_premium, post_event = Bloxlink.get_module("utils", attrs=["fetch", "is_premium", "post_event"])
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
 cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
+
 
 API_URL = "https://api.roblox.com"
 BASE_URL = "https://www.roblox.com"
 GROUP_API = "https://groups.roblox.com"
+
+BIND_ROLE_BUG = "https://cdn.discordapp.com/attachments/385984496723427328/386636215404855297/bloxrolebug.gif"
 
 
 
@@ -54,7 +60,7 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_roblox_id(username) -> Tuple[str, str]:
         username_lower = username.lower()
-        roblox_cached_data = cache_get("usernames_to_ids", username_lower)
+        roblox_cached_data = await cache_get("usernames_to_ids", username_lower)
 
         if roblox_cached_data:
             return roblox_cached_data
@@ -71,13 +77,13 @@ class Roblox(Bloxlink.Module):
         data = (roblox_id, correct_username)
 
         if correct_username:
-            cache_set("usernames_to_ids", username_lower, data)
+            await cache_set("usernames_to_ids", username_lower, data)
 
         return data
 
     @staticmethod
     async def get_roblox_username(roblox_id) -> Tuple[str, str]:
-        roblox_user = cache_get("roblox_users", roblox_id)
+        roblox_user = await cache_get("roblox_users", roblox_id)
 
         if roblox_user and roblox_user.verified:
             return roblox_user.id, roblox_user.username
@@ -121,15 +127,30 @@ class Roblox(Bloxlink.Module):
 
         return code in html_text
 
-    @staticmethod
-    async def parse_accounts(accounts):
+
+    async def parse_accounts(self, accounts, reverse_search=False):
         parsed_accounts = {}
 
         for account in accounts:
             roblox_user = RobloxUser(roblox_id=account)
             await roblox_user.sync()
 
-            parsed_accounts[roblox_user.username] = roblox_user
+            if reverse_search:
+                discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(account).run() or {}).get("discordIDs") or []
+                discord_accounts = []
+
+                for discord_id in discord_ids:
+                    try:
+                        user = await Bloxlink.fetch_user(int(discord_id))
+                    except NotFound:
+                        pass
+                    else:
+                        discord_accounts.append(user)
+
+                parsed_accounts[roblox_user.username] = (roblox_user, discord_accounts)
+
+            else:
+                parsed_accounts[roblox_user.username] = roblox_user
 
         return parsed_accounts
 
@@ -167,7 +188,7 @@ class Roblox(Bloxlink.Module):
         else:
             roblox_id = str(roblox)
 
-        author_data = author_data or await self.r.table("users").get(author_id).run() or {}
+        author_data = author_data or await self.r.db("bloxlink").table("users").get(author_id).run() or {}
         roblox_accounts = author_data.get("robloxAccounts", {})
         roblox_list = roblox_accounts.get("accounts", [])
 
@@ -186,7 +207,18 @@ class Roblox(Bloxlink.Module):
             roblox_list.append(roblox_id)
             roblox_accounts["accounts"] = roblox_list
 
-        await self.r.table("users").insert(
+
+        roblox_discord_data = await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {"id": roblox_id}
+        discord_ids = roblox_discord_data.get("discordIDs") or []
+
+        if author_id not in discord_ids:
+            discord_ids.append(author_id)
+            roblox_discord_data["discordIDs"] = discord_ids
+
+            await self.r.db("bloxlink").table("robloxAccounts").insert(roblox_discord_data, conflict="update").run()
+
+
+        await self.r.db("bloxlink").table("users").insert(
             {
                 "id": author_id,
                 "robloxID": primary_account and roblox_id or author_data.get("robloxID"),
@@ -195,7 +227,7 @@ class Roblox(Bloxlink.Module):
             conflict="update"
         ).run()
 
-        cache_pop("discord_profiles", author_id)
+        await cache_pop("discord_profiles", author_id)
 
     async def unverify_member(self, author, roblox):
         author_id = str(author.id)
@@ -206,7 +238,18 @@ class Roblox(Bloxlink.Module):
         else:
             roblox_id = str(roblox)
 
-        user_data = await self.r.table("users").get(author_id).run()
+        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+
+        if blacklisted_discord is not None:
+            raise Blacklisted(blacklisted_discord)
+
+        blacklisted_roblox = await cache_get("blacklist:roblox_ids", roblox_id, primitives=True)
+
+        if blacklisted_roblox is not None:
+            raise Blacklisted(blacklisted_roblox)
+
+
+        user_data = await self.r.db("bloxlink").table("users").get(author_id).run()
         roblox_accounts = user_data.get("robloxAccounts", {})
         roblox_list = roblox_accounts.get("accounts", [])
         guilds = roblox_accounts.get("guilds", {})
@@ -240,20 +283,96 @@ class Roblox(Bloxlink.Module):
                 success = True
 
 
-        if user_data["robloxID"] == roblox_id:
+        if user_data.get("robloxID") == roblox_id:
             user_data["robloxID"] = None
 
         roblox_accounts["guilds"] = guilds
         user_data["robloxAccounts"] = roblox_accounts
 
-        await self.r.table("users").insert(user_data, conflict="replace").run()
+        roblox_discord_data = await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {"id": roblox_id}
+        discord_ids = roblox_discord_data.get("discordIDs") or []
 
-        cache_pop("discord_profiles", author_id)
+        if author_id in discord_ids:
+            discord_ids.remove(author_id)
+
+            if not discord_ids:
+                await self.r.table("robloxAccounts").get(roblox_id).delete().run()
+            else:
+                roblox_discord_data["discordIDs"] = discord_ids
+
+                await self.r.table("robloxAccounts").insert(roblox_discord_data, conflict="replace").run()
+
+
+        await self.r.db("bloxlink").table("users").insert(user_data, conflict="replace").run()
+
+        await cache_pop("discord_profiles", author_id)
 
         return success
 
 
-    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, is_nickname=True, guild_data=None, roblox_user=None):
+    async def get_clan_tag(self, author, guild, response, user_data=None):
+        user_data = user_data or await self.r.db("bloxlink").table("users").get(str(author.id)).run() or {"id": str(author.id)}
+        clan_tags = user_data.get("clanTags", {})
+
+        def get_from_db():
+            return clan_tags.get(str(guild.id))
+
+        if not response:
+            return get_from_db()
+
+        clan_tag = (await response.prompt([{
+            "prompt": "Please provide text for your Clan Tag. This will be inserted into "
+                      "your nickname.\n**Please keep your clan tag under 10 characters**, "
+                      "or it may not properly show.\nIf you want to skip this, then say ``skip``.",
+            "name": "clan_tag",
+            "max": 32
+        }]))["clan_tag"]
+
+        if clan_tag.lower() == "skip":
+            return get_from_db()
+
+        clan_tags[str(guild.id)] = clan_tag
+        user_data["clanTags"] = clan_tags
+        await self.r.db("bloxlink").table("users").insert(user_data, conflict="update").run()
+
+        return clan_tag
+
+    async def format_update_embed(self, roblox_user, prefix, added, removed, errors, author, guild_data, premium=False):
+        welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
+        welcome_message = await self.get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False, prefix=prefix)
+
+        embed = None
+
+        if added or removed or errors:
+            embed = Embed(title=f"Discord Profile for {roblox_user.username}")
+            embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
+
+            if added:
+                embed.add_field(name="Added Roles", value=", ".join(added))
+            if removed:
+                embed.add_field(name="Removed Roles", value=", ".join(removed))
+            if errors:
+                embed.add_field(name="Errors", value=", ".join(errors))
+
+        if not premium:
+            show_donate_tip = random.randint(1, 100)
+
+            if show_donate_tip <= TIP_CHANCES["GETROLE_DONATE"]:
+                embed = embed or Embed()
+                embed.description = f"Did you know? **[Bloxlink Premium](https://www.patreon.com/join/bloxlink?)** subscribers are able to " \
+                                    "instantly _bypass_ the cache."
+
+                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
+            else:
+                if embed:
+                    embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
+                else:
+                    welcome_message = f"{welcome_message}\nPlease note that it may take up to **10 minutes** for Bloxlink to recognize a recent rank change " \
+                                      "due to caching."
+
+        return welcome_message, embed
+
+    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, response=None, is_nickname=True, guild_data=None, user_data=None, roblox_user=None, prefix=None):
         template = template or ""
 
         if template == "{disable-nicknaming}":
@@ -265,7 +384,7 @@ class Roblox(Bloxlink.Module):
         if isinstance(roblox_user, tuple):
             roblox_user = roblox_user[0]
 
-        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
 
         if roblox_user:
             if not roblox_user.complete:
@@ -277,7 +396,6 @@ class Roblox(Bloxlink.Module):
 
                 if group_id:
                     group = roblox_user.groups.get(group_id)
-
 
             group_role = group and group.user_rank_name or "Guest"
 
@@ -316,8 +434,6 @@ class Roblox(Bloxlink.Module):
                 "roblox-join-date", roblox_user.join_date
             ).replace(
                 "group-rank", group_role
-            ).replace(
-                "clan-tag", "" # TODO
             )
 
         else:
@@ -333,6 +449,8 @@ class Roblox(Bloxlink.Module):
             "discord-nick", author.display_name
         ).replace(
             "server-name", guild.name
+        ).replace(
+            "prefix", prefix or PREFIX
         )
 
         for outer_nick in nickname_template_regex.findall(template):
@@ -358,9 +476,20 @@ class Roblox(Bloxlink.Module):
 
             template = template.replace("{{{0}}}".format(outer_nick), nick_value)
 
+        # clan tags are done at the end bc we may need to shorten them, and brackets are removed at the end
+        clan_tag = "clan-tag" in template and (await self.get_clan_tag(author, guild, response, user_data) or "N/A")
+
         if is_nickname:
-            return template[0:31]
+            if clan_tag:
+                characters_left = 32 - len(template) + 8
+                clan_tag = clan_tag[:characters_left]
+                template = template.replace("clan-tag", clan_tag)
+
+            return template[:32]
         else:
+            if clan_tag:
+                template = template.replace("clan-tag", clan_tag)
+
             return template
 
 
@@ -371,7 +500,8 @@ class Roblox(Bloxlink.Module):
                 "entire group": {}
             },
             "assets": {},
-            "badges": {}
+            "badges": {},
+            "gamePasses": {}
         }
 
         if trello_board or trello_binds_list:
@@ -400,16 +530,32 @@ class Roblox(Bloxlink.Module):
                                     card_attr = card_attr.lower()
 
                                     if card_attr in ("group", "groupid", "group id"):
+                                        if not card_value.isdigit():
+                                            raise Error(f"Mess up on Trello bind Group configuration: ``{card_value}`` is not an integer.")
+
                                         new_bind["group"] = card_value
                                         new_bind["trello_str"]["group"] = card_value
                                         bind_category = "group"
 
                                     elif card_attr in ("asset", "assetid", "asset id"):
+                                        if not card_value.isdigit():
+                                            raise Error(f"Mess up on Trello bind Asset configuration: ``{card_value}`` is not an integer.")
+
                                         bind_category = "asset"
                                         new_bind["bind_id"] = card_value
 
                                     elif card_attr in ("badge", "badgeid", "badge id"):
+                                        if not card_value.isdigit():
+                                            raise Error(f"Mess up on Trello bind Badge configuration: ``{card_value}`` is not an integer.")
+
                                         bind_category = "badge"
+                                        new_bind["bind_id"] = card_value
+
+                                    elif card_attr in ("gamepass", "gamepassid", "gamepass id"):
+                                        if not card_value.isdigit():
+                                            raise Error(f"Mess up on Trello bind GamePass configuration: ``{card_value}`` is not an integer.")
+
+                                        bind_category = "gamepass"
                                         new_bind["bind_id"] = card_value
 
                                     elif card_attr == "nickname":
@@ -422,7 +568,15 @@ class Roblox(Bloxlink.Module):
 
                                     elif card_attr == "ranks":
                                         is_bind = True
-                                        new_bind["ranks"] = [x.replace(" ", "") for x in card_value.split(",")]
+                                        new_bind["ranks"] = []
+
+                                        for rank in card_value.split(","):
+                                            rank = rank.replace(" ", "")
+
+                                            if not rank.isdigit() and rank != "guest" and "-" not in rank:
+                                                raise Error(f"Mess up on Trello bind rank configuration: ``{rank}`` is not an integer.")
+
+                                            new_bind["ranks"].append(rank)
 
                                         new_bind["trello_str"]["ranks"] = card_value
 
@@ -468,9 +622,9 @@ class Roblox(Bloxlink.Module):
 
                                             if len(range_data) == 2:
                                                 if not range_data[0].isdigit() and range_data[0] != "0":
-                                                    raise Error(f"Mess up on Trello configuration for range: ``{range_data[0]}`` is not an integer.")
+                                                    raise Error(f"Mess up on Trello bind configuration for range: ``{range_data[0]}`` is not an integer.")
                                                 elif not range_data[1].isdigit() and range_data[1] != "0":
-                                                    raise Error(f"Mess up on Trello configuration for range: ``{range_data[1]}`` is not an integer.")
+                                                    raise Error(f"Mess up on Trello bind configuration for range: ``{range_data[1]}`` is not an integer.")
 
                                                 is_range = True
                                                 new_range = {
@@ -575,8 +729,12 @@ class Roblox(Bloxlink.Module):
 
                                 card_binds["groups"]["entire group"][new_bind["group"]] = new_rank
 
-                        elif bind_category in ("asset", "badge"):
-                            bind_category_plural = f"{bind_category}s"
+                        elif bind_category in ("asset", "badge", "gamepass"):
+                            if bind_category == "gamepass":
+                                bind_category_plural = "gamePasses"
+                            else:
+                                bind_category_plural = f"{bind_category}s"
+
                             new_rank = {
                                 "nickname": bind_nickname,
                                 "displayName": new_bind.get("displayName"),
@@ -603,13 +761,14 @@ class Roblox(Bloxlink.Module):
 
 
     async def get_binds(self, guild=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
-        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
         role_binds = guild_data.get("roleBinds") or {}
-        group_ids = guild_data.get("groupIDs") or {}
+        group_ids  = guild_data.get("groupIDs") or {}
 
-        role_binds["groups"] = role_binds.get("groups", {})
-        role_binds["assets"] = role_binds.get("assets", {})
-        role_binds["badges"] = role_binds.get("badges", {})
+        role_binds["groups"]     = role_binds.get("groups", {})
+        role_binds["assets"]     = role_binds.get("assets", {})
+        role_binds["badges"]     = role_binds.get("badges", {})
+        role_binds["gamePasses"] = role_binds.get("gamePasses", {})
 
         if trello_board:
             card_binds, trello_binds_list = await self.parse_trello_binds(trello_board=trello_board, trello_binds_list=trello_binds_list)
@@ -619,16 +778,18 @@ class Roblox(Bloxlink.Module):
                 trello_options, _ = await get_options(trello_board)
                 mode = trello_options.get("trelloBindMode", mode)
 
-            group_binds = card_binds["groups"].get("binds")
-            asset_binds = card_binds["assets"]
-            badge_binds = card_binds["badges"]
-            entire_group = card_binds["groups"]["entire group"]
+            group_binds    = card_binds["groups"].get("binds")
+            asset_binds    = card_binds["assets"]
+            badge_binds    = card_binds["badges"]
+            gamepass_binds = card_binds["gamePasses"]
+            entire_group   = card_binds["groups"]["entire group"]
 
             if mode == "replace":
                 role_binds = {
                     "groups": group_binds,
                     "assets": asset_binds,
-                    "badges": badge_binds
+                    "badges": badge_binds,
+                    "gamePasses": gamepass_binds
                 }
                 group_ids = entire_group
 
@@ -648,17 +809,177 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False):
+    async def guild_obligations(self, member, guild, guild_data=None, cache=True, dm=False, event=False):
+        roblox_user = None
+
+        if RELEASE == "PRO":
+            PREFIX = "!"
+        else:
+            PREFIX = "!!"
+
+        try:
+            roblox_user, _ = await self.get_user(author=member, cache=cache)
+        except (UserNotVerified, RobloxAPIError):
+            pass
+
+        guild_data = guild_data or await cache_get("guild_data", guild.id)
+
+        if not guild_data:
+            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
+
+            trello_board = await get_board(guild=guild, guild_data=guild_data)
+            trello_options = {}
+
+            if trello_board:
+                trello_options, _ = await get_options(trello_board)
+                guild_data.update(trello_options)
+
+            await cache_set("guild_data", guild.id, guild_data)
+
+        group_roles = guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
+        verify_enabled = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
+        auto_verification = guild_data.get("autoVerification", verify_enabled)
+
+        verified_dm = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
+        unverified_dm = guild_data.get("unverifiedDM")
+        age_limit = guild_data.get("ageLimit")
+
+        if auto_verification or group_roles:
+            try:
+                added, removed, nickname, errors, roblox_user = await self.update_member(
+                    member,
+                    guild                   = guild,
+                    guild_data              = guild_data,
+                    group_roles             = group_roles,
+                    roles                   = True,
+                    nickname                = True,
+                    roblox_user             = roblox_user,
+                    given_trello_options    = True,
+                    cache                   = cache)
+
+            except (NotFound, RobloxAPIError, Error, CancelCommand, RobloxDown, Blacklisted):
+                return
+
+            except (PermissionError, NotFound, RobloxAPIError, UserNotVerified, BloxlinkBypass, HTTPException):
+                pass
+
+
+        required_groups = guild_data.get("groupLock") # TODO: integrate with Trello
+
+        if roblox_user:
+            if event:
+                await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+
+            if age_limit:
+                if int(age_limit) > roblox_user.age:
+                    if dm:
+                        try:
+                            await member.send(f"_Bloxlink Age-Limit_\nYou were kicked from **{guild.name}** for not being at least "
+                                              f"``{age_limit}`` days old on your Roblox account ``{roblox_user.username}`` (days={roblox_user.age}). If this is a mistake, "
+                                              f"then please join {SERVER_INVITE} and link a different account with ``{PREFIX}verify add``. "
+                                              f"Finally, use the ``{PREFIX}switchuser`` command and provide this ID to the command: ``{guild.id}``")
+                        except Forbidden:
+                            pass
+
+                    try:
+                        await member.kick(reason=f"AGE-LIMIT: user age {roblox_user.age} < {age_limit}")
+                    except Forbidden:
+                        pass
+
+                    return
+
+            if required_groups:
+                for group_id, group_data in required_groups.items():
+                    if not roblox_user.groups.get(group_id):
+                        if dm:
+                            dm_message = group_data.get("dmMessage")
+                            group_url = f"https://www.roblox.com/groups/{group_id}/-"
+
+                            if dm_message:
+                                try:
+                                    await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being in the "
+                                                      f"required group <{group_url}>. If this is a mistake, then please join {SERVER_INVITE} "
+                                                      f"and link a different account with ``{PREFIX}verify add``. Finally, use the ``{PREFIX}switchuser`` command and "
+                                                      f"provide this ID to the command: ``{guild.id}``.\n\nThese instructions were set by the Server "
+                                                      f"Admins:\n\n{dm_message}")
+                                except Forbidden:
+                                    pass
+                        try:
+                            await member.kick(reason=f"SERVER-LOCK: not in group {group_id}")
+                        except Forbidden:
+                            pass
+
+                        return
+
+            if dm and verified_dm:
+                verified_dm = await self.get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+
+                try:
+                    await member.send(verified_dm)
+                except (Forbidden, HTTPException):
+                    pass
+
+        else:
+            if age_limit:
+                if dm:
+                    try:
+                        await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
+                                          f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}verify add`` command, then "
+                                          "check your DMs. If you're already linked, then likely "
+                                          f"you don't have a primary account set; in that case, use the ``{PREFIX}switchuser`` command and provide "
+                                          f"this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account.")
+                    except Forbidden:
+                        pass
+
+                try:
+                    await member.kick(reason=f"AGE-LIMIT: user not linked to Bloxlink")
+                except Forbidden:
+                    pass
+
+                return
+
+            if required_groups:
+                if dm:
+                    try:
+                        await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
+                                          f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}verify add`` command, then "
+                                          "check your DMs. If you're already linked, then likely "
+                                          f"you don't have a primary account set; in that case, use the ``{PREFIX}switchuser`` command and provide "
+                                          f"this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account.")
+                    except Forbidden:
+                        pass
+
+                    try:
+                        await member.kick(reason="SERVER-LOCK: not linked to Bloxlink")
+                    except Forbidden:
+                        pass
+
+                return
+
+            if dm and unverified_dm:
+                unverified_dm = await self.get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, is_nickname=False)
+
+                try:
+                    await member.send(unverified_dm)
+                except (Forbidden, HTTPException):
+                    pass
+
+    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False, response=None, cache=True):
+        blacklisted = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+
+        if blacklisted is not None:
+            raise Blacklisted(blacklisted)
+
         me = getattr(guild, "me", None)
         my_permissions = me and me.guild_permissions
 
         if my_permissions:
             if roles and not my_permissions.manage_roles:
-                raise PermissionError("Sorry, I do not have the proper permissions."
+                raise PermissionError("Sorry, I do not have the proper permissions. "
                                       "Please ensure I have the ``Manage Roles`` permission.")
 
             if nickname and not my_permissions.manage_nicknames:
-                raise PermissionError("Sorry, I do not have the proper permissions."
+                raise PermissionError("Sorry, I do not have the proper permissions. "
                                       "Please ensure I have the ``Manage Nicknames`` permission.")
 
         add_roles, remove_roles = set(), set()
@@ -675,7 +996,7 @@ class Roblox(Bloxlink.Module):
                 raise CancelCommand
 
         if not guild:
-            guild = guild or getattr(author, "guild", None)
+            guild = getattr(author, "guild", None)
 
             if not guild:
                 raise Error("Unable to resolve a guild from author.")
@@ -684,14 +1005,15 @@ class Roblox(Bloxlink.Module):
             raise BloxlinkBypass
 
 
-        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
+
 
         if not trello_board:
-            trello_board = trello_board = await get_board(guild=guild, guild_data=guild_data)
+            trello_board = await get_board(guild=guild, guild_data=guild_data)
 
-            if trello_board and not given_trello_options:
-                trello_options, _ = await get_options(trello_board)
-                guild_data.update(trello_options)
+        if trello_board and not given_trello_options:
+            trello_options, _ = await get_options(trello_board)
+            guild_data.update(trello_options)
 
 
         verify_role = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
@@ -708,9 +1030,11 @@ class Roblox(Bloxlink.Module):
         if verify_role:
             verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
 
+        inactive_role = await RobloxProfile.get_inactive_role(guild, guild_data, trello_board)
+
         try:
             if not roblox_user:
-                roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data, everything=True)
+                roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data, everything=True, cache=cache)
 
                 if not roblox_user:
                     raise UserNotVerified
@@ -724,18 +1048,28 @@ class Roblox(Bloxlink.Module):
                         except Forbidden:
                             raise PermissionError("I was unable to create the Unverified Role. Please "
                                                   "ensure I have the ``Manage Roles`` permission.")
+                        except HTTPException:
+                            raise Error("Unable to create role: this server has reached the max amount of roles!")
 
                     add_roles.add(unverified_role)
 
                 if verify_role and verified_role and verified_role in author.roles:
                     remove_roles.add(verified_role)
 
+                if inactive_role and inactive_role in author.roles:
+                    remove_roles.add(inactive_role)
+
             if nickname:
-                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data)
+                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data, user_data=author_data, response=response)
 
             unverified = True
 
         else:
+            blacklisted = await cache_get("blacklist:roblox_ids", roblox_user.id, primitives=True)
+
+            if blacklisted is not None:
+                raise Blacklisted(blacklisted)
+
             if roles:
                 if unverify_role:
                     if unverified_role and unverified_role in author.roles:
@@ -753,9 +1087,22 @@ class Roblox(Bloxlink.Module):
                         except Forbidden:
                             raise PermissionError("Sorry, I wasn't able to create the Verified role. "
                                                   "Please ensure I have the ``Manage Roles`` permission.")
+                        except HTTPException:
+                            raise Error("Unable to create role: this server has reached the max amount of roles!")
 
-                    if not verified_role in author.roles:
-                        add_roles.add(verified_role)
+
+                    add_roles.add(verified_role)
+
+
+                if inactive_role:
+                    inactive = await RobloxProfile.is_inactive(author, inactive_role)
+
+                    if inactive:
+                        if inactive_role not in author.roles:
+                            add_roles.add(inactive_role)
+                    else:
+                        if inactive_role in author.roles:
+                            remove_roles.add(inactive_role)
 
         if not unverified:
             if group_roles and roblox_user:
@@ -769,21 +1116,24 @@ class Roblox(Bloxlink.Module):
                         role_binds = role_binds[0]
 
                     for category, all_binds in role_binds.items():
-                        if category in ("assets", "badges"):
-                            category_title = (category[:-1]).title()
+                        if category in ("assets", "badges", "gamePasses"):
+                            if category == "gamePasses":
+                                category_title = "GamePass"
+                            else:
+                                category_title = (category[:-1]).title()
 
                             for bind_id, bind_data in all_binds.items():
                                 bind_nickname = bind_data.get("nickname")
                                 bound_roles = bind_data.get("roles")
 
-                                text, response = await fetch(f"https://inventory.roblox.com/v1/users/{roblox_user.id}/items/{category_title}/{bind_id}", raise_on_failure=False)
+                                text, response_ = await fetch(f"https://inventory.roblox.com/v1/users/{roblox_user.id}/items/{category_title}/{bind_id}", raise_on_failure=False)
 
                                 try:
                                     json_data = json.loads(text)
                                 except json.decoder.JSONDecodeError:
                                     raise RobloxAPIError
 
-                                if response.status != 200:
+                                if response_.status != 200:
                                     vg_errors = json_data.get("errors", [])
 
                                     if vg_errors:
@@ -808,6 +1158,9 @@ class Roblox(Bloxlink.Module):
                                                 except Forbidden:
                                                     raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
                                                                            "Please ensure I have the ``Manage Roles`` permission.")
+                                                except HTTPException:
+                                                    raise Error("Unable to create role: this server has reached the max amount of roles!")
+
                                                 else:
                                                     add_roles.add(role)
 
@@ -816,9 +1169,9 @@ class Roblox(Bloxlink.Module):
 
                                         if role and nickname and bind_nickname and bind_nickname != "skip":
                                             if author.top_role == role:
-                                                top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+                                                top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
-                                            resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user)
+                                            resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                             if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                 possible_nicknames.append([role, resolved_nickname])
@@ -870,7 +1223,10 @@ class Roblox(Bloxlink.Module):
                                                             role = await guild.create_role(name=role_id)
                                                         except Forbidden:
                                                             raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                                "Please ensure I have the ``Manage Roles`` permission.")
+                                                                                   "Please ensure I have the ``Manage Roles`` permission.")
+                                                        except HTTPException:
+                                                            raise Error("Unable to create role: this server has reached the max amount of roles!")
+
                                                         else:
                                                             add_roles.add(role)
 
@@ -879,9 +1235,9 @@ class Roblox(Bloxlink.Module):
 
                                                 if role and nickname and bind_nickname and bind_nickname != "skip":
                                                     if author.top_role == role:
-                                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
-                                                    resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                    resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                                     if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                         possible_nicknames.append([role, resolved_nickname])
@@ -906,7 +1262,11 @@ class Roblox(Bloxlink.Module):
                                                                 role = await guild.create_role(name=role_id)
                                                             except Forbidden:
                                                                 raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                                    "Please ensure I have the ``Manage Roles`` permission.")
+                                                                                       "Please ensure I have the ``Manage Roles`` permission.")
+
+                                                            except HTTPException:
+                                                                raise Error("Unable to create role: this server has reached the max amount of roles!")
+
                                                             else:
                                                                 add_roles.add(role)
 
@@ -915,9 +1275,9 @@ class Roblox(Bloxlink.Module):
 
                                                     if role and nickname and bind_nickname and bind_nickname != "skip":
                                                         if author.top_role == role:
-                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
-                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                             possible_nicknames.append([role, resolved_nickname])
@@ -950,17 +1310,18 @@ class Roblox(Bloxlink.Module):
                                                             role = await guild.create_role(name=role_id)
                                                         except Forbidden:
                                                             raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                                "Please ensure I have the ``Manage Roles`` permission.")
-
+                                                                                   "Please ensure I have the ``Manage Roles`` permission.")
+                                                        except HTTPException:
+                                                            raise Error("Unable to create role: this server has reached the max amount of roles!")
                                                 if role:
                                                     if roles:
                                                         add_roles.add(role)
 
                                                         if nickname and author.top_role == role and bind_nickname:
-                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                                     if nickname and bind_nickname and bind_nickname != "skip":
-                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user)
+                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                             possible_nicknames.append([role, resolved_nickname])
@@ -973,14 +1334,15 @@ class Roblox(Bloxlink.Module):
                                                     remove_roles.add(role)
 
                 if group_roles and group_ids:
-                    author_groups = author_data and author_data.get("groups", {})
-                    updated_info = False
+                    #author_groups = author_data and author_data.get("groups", {})
+                    #updated_info = False
 
                     for group_id, group_data in group_ids.items():
                         if group_id != "0":
                             group = roblox_user.groups.get(str(group_id))
 
                             if group:
+                                await group.apply_rolesets()
                                 group_role = find(lambda r: r.name == group.user_rank_name, guild.roles)
 
                                 if not group_role:
@@ -991,15 +1353,19 @@ class Roblox(Bloxlink.Module):
                                             raise PermissionError(f"Sorry, I wasn't able to create the role {group.user_rank_name}."
                                                                    "Please ensure I have the ``Manage Roles`` permission.")
 
-                                """
+                                        except HTTPException:
+                                            raise Error("Unable to create role: this server has reached the max amount of roles!")
+
+
                                 for roleset in group.rolesets:
-                                    has_role = find(lambda r: r.name == roleset["name"], author.roles)
+                                    roleset_name = roleset["name"]
+                                    has_role = find(lambda r: r.name == roleset_name, author.roles)
 
                                     if has_role:
-                                        if group.user_role != roleset["name"]:
+                                        if not allow_old_roles and group.user_rank_name != roleset_name:
                                             remove_roles.add(has_role)
-                                """
 
+                                """
                                 if author_data:
                                     if author_groups:
                                         author_groups[roblox_user.id] = author_groups.get(roblox_user.id) or {}
@@ -1033,6 +1399,7 @@ class Roblox(Bloxlink.Module):
                                         author_groups = author_data["groups"]
                                         author_data["groups"] = author_groups
                                         updated_info = True
+                                """
 
                                 if group_role:
                                     add_roles.add(group_role)
@@ -1041,15 +1408,16 @@ class Roblox(Bloxlink.Module):
 
                                 if nickname and group_nickname and group_role:
                                     if author.top_role == group_role and group_nickname:
-                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user)
+                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                     if group_nickname and group_nickname != "skip":
-                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user)
+                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
 
                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                             possible_nicknames.append([group_role, resolved_nickname])
                             else:
                                 # remove old group role
+                                """
                                 if author_data and author_groups:
                                     author_groups[roblox_user.id] = author_groups.get(roblox_user.id) or {}
                                     roblox_user_groups = author_groups[roblox_user.id]
@@ -1069,10 +1437,21 @@ class Roblox(Bloxlink.Module):
                                         author_groups[roblox_user.id][group_id] = matching_group
                                         author_data["groups"] = author_groups
                                         updated_info = True
+                                """
 
+                                try:
+                                    group = await self.get_group(group_id, rolesets=True)
+                                except RobloxNotFound:
+                                    raise Error(f"Error for linked group bind: group ``{group_id}`` not found")
 
-                    if updated_info:
-                        await self.r.table("users").get(str(author.id)).replace(author_data).run()
+                                for roleset in group.rolesets:
+                                    group_role = find(lambda r: r.name == roleset["name"], author.roles)
+
+                                    if not allow_old_roles and group_role:
+                                        remove_roles.add(group_role)
+
+                    #if updated_info:
+                    #    await self.r.db("bloxlink").table("users").get(str(author.id)).replace(author_data).run()
 
         if roles:
             remove_roles = remove_roles.difference(add_roles)
@@ -1087,7 +1466,11 @@ class Roblox(Bloxlink.Module):
 
             except Forbidden:
                 raise PermissionError("I was unable to sufficiently add roles to the user. Please ensure that "
-                                      "I have the ``Manage Roles`` permission.")
+                                      "I have the ``Manage Roles`` permission, and drag my role above the other roles. "
+                                      f"{BIND_ROLE_BUG}")
+
+            except NotFound:
+                raise CancelCommand
 
         if nickname:
             if not unverified:
@@ -1102,10 +1485,10 @@ class Roblox(Bloxlink.Module):
                             nickname = highest_role[0][1]
 
                 else:
-                    nickname = top_role_nickname or await self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), author=author, roblox_user=roblox_user)
+                    nickname = top_role_nickname or await self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), author=author, user_data=author_data, roblox_user=roblox_user, response=response)
 
                 if isinstance(nickname, bool):
-                    nickname = self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), roblox_user=roblox_user, author=author)
+                    nickname = self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), roblox_user=roblox_user, author=author, user_data=author_data, response=response)
 
             if nickname and nickname != author.display_name:
                 try:
@@ -1114,7 +1497,9 @@ class Roblox(Bloxlink.Module):
                     if guild.owner == author:
                         errors.append("Since you're the Server Owner, I cannot edit your nickname. You may ignore this message; verification will work for normal users.")
                     else:
-                        errors.append("I was unable to edit your nickname. Please ensure I have the ``Manage Roles`` permission, and drag my roles above the other roles.")
+                        errors.append(f"I was unable to edit your nickname. Please ensure I have the ``Manage Roles`` permission, and drag my role above the other roles. See: {BIND_ROLE_BUG}")
+                except NotFound:
+                    raise CancelCommand
 
         if unverified:
             raise UserNotVerified
@@ -1139,10 +1524,10 @@ class Roblox(Bloxlink.Module):
         except json.decoder.JSONDecodeError:
             return {}
 
-
-    async def get_game(self, game_id):
+    @staticmethod
+    async def get_game(game_id):
         game_id = str(game_id)
-        game = cache_get("games", game_id)
+        game = await cache_get("games", game_id)
 
         if game:
             return game
@@ -1157,16 +1542,17 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) == 9:
                 game = Game(game_id, json_data)
 
-                cache_set("games", game_id, game)
+                await cache_set("games", game_id, game)
 
                 return game
 
 
         raise RobloxNotFound
 
-    async def get_catalog_item(self, item_id):
+    @staticmethod
+    async def get_catalog_item(item_id):
         item_id = str(item_id)
-        item = cache_get("catalog_items", item_id)
+        item = await cache_get("catalog_items", item_id)
 
         if item:
             return item
@@ -1181,16 +1567,17 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) != 6:
                 item = RobloxItem(item_id, json_data)
 
-                cache_set("catalog_items", item_id, item)
+                await cache_set("catalog_items", item_id, item)
 
                 return item
 
 
         raise RobloxNotFound
 
-    async def get_group(self, group_id, with_shout=False, rolesets=False):
+    @staticmethod
+    async def get_group(group_id, with_shout=False, rolesets=False):
         group_id = str(group_id)
-        group = cache_get("groups", group_id)
+        group = await cache_get("groups", group_id)
         shout = None
 
         if group and group.rolesets:
@@ -1221,13 +1608,14 @@ class Roblox(Bloxlink.Module):
             if json_data.get("Id"):
                 rolesets = json_data.get("Roles")
                 json_data["shout"] = shout
+                json_data["Roles"] = rolesets
 
                 if not group:
-                    group = Group(group_id=group_id, group_data=json_data, version="old", rolesets=rolesets)
+                    group = Group(group_id=group_id, group_data=json_data)
                 else:
-                    group.load_json(json_data, version="old")
+                    group.load_json(json_data)
 
-                cache_set("groups", group_id, group)
+                await cache_set("groups", group_id, group)
 
                 return group
 
@@ -1280,10 +1668,10 @@ class Roblox(Bloxlink.Module):
 
         if author:
             author_id = str(author.id)
-            author_data = author_data or await self.r.table("users").get(author_id).run() or {}
+            author_data = author_data or await self.r.db("bloxlink").table("users").get(author_id).run() or {}
 
             if cache:
-                discord_profile = cache_get("discord_profiles", author_id)
+                discord_profile = await cache_get("discord_profiles", author_id)
 
                 if discord_profile:
                     if guild:
@@ -1292,7 +1680,7 @@ class Roblox(Bloxlink.Module):
                         roblox_account = discord_profile.primary_account
 
                     if roblox_account:
-                        await roblox_account.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, everything=everything, basic_details=basic_details)
+                        await roblox_account.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, guild=guild, everything=everything, basic_details=basic_details)
 
                         return roblox_account, discord_profile.accounts
 
@@ -1317,14 +1705,20 @@ class Roblox(Bloxlink.Module):
 
                     discord_profile.accounts = accounts
 
-                roblox_user = cache_get("roblox_users", roblox_account) or RobloxUser(roblox_id=roblox_account)
-                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, everything=everything, basic_details=basic_details)
+                roblox_user = None
+
+                if cache:
+                    roblox_user = await cache_get("roblox_users", roblox_account)
+
+                roblox_user = roblox_user or RobloxUser(roblox_id=roblox_account)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, guild=guild, everything=everything, basic_details=basic_details)
 
                 if guild:
                     discord_profile.guilds[guild_id] = roblox_user
 
-                cache_set("discord_profiles", author_id, discord_profile)
-                cache_set("roblox_users", roblox_account, roblox_user)
+                if cache:
+                    await cache_set("discord_profiles", author_id, discord_profile)
+                    await cache_set("roblox_users", roblox_account, roblox_user)
 
                 return roblox_user, accounts
 
@@ -1344,14 +1738,15 @@ class Roblox(Bloxlink.Module):
                 roblox_id, username = await self.get_roblox_id(username)
 
             if roblox_id:
-                roblox_user = cache_get("roblox_users", roblox_id)
+                roblox_user = await cache_get("roblox_users", roblox_id)
 
                 if not roblox_user:
                     roblox_user = RobloxUser(roblox_id=roblox_id)
 
-                    cache_set("roblox_users", roblox_account, roblox_user)
+                    if cache:
+                        await cache_set("roblox_users", roblox_account, roblox_user)
 
-                await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, everything=everything, basic_details=basic_details)
+                await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, guild=guild, everything=everything, basic_details=basic_details)
                 return roblox_user, []
 
             raise BadUsage("Unable to resolve a user")
@@ -1360,197 +1755,213 @@ class Roblox(Bloxlink.Module):
         raise UserNotVerified
 
 
-    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None) -> bool:
-        if not (username or roblox_id):
-            raise BadUsage("Must supply either a username or roblox_id to verify_as.")
+    async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None, dm=True, cache=True) -> bool:
+        try:
+            if not (username or roblox_id):
+                raise BadUsage("Must supply either a username or roblox_id to verify_as.")
 
-        guild = guild or author.guild
+            guild = guild or author.guild
 
-        author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {}
-        guild_data = guild_data or (guild and await self.r.table("guilds").get(str(guild.id)).run()) or {}
+            author_id = str(author.id)
+            author_data = author_data or await self.r.db("bloxlink").table("users").get(author_id).run() or {}
+            guild_data = guild_data or (guild and await self.r.table("guilds").get(str(guild.id)).run()) or {}
 
-        allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
+            allow_reverify = guild_data.get("allowReVerify", DEFAULTS.get("allowReVerify"))
 
-        trello_options = trello_options or {}
+            trello_options = trello_options or {}
 
-        if not trello_options and trello_board:
-            trello_options, _ = await get_options(trello_board)
-            guild_data.update(trello_options)
+            if not trello_options and trello_board:
+                trello_options, _ = await get_options(trello_board)
+                guild_data.update(trello_options)
 
-        invalid_roblox_names = 0
+            invalid_roblox_names = 0
 
-        while not roblox_id:
-            try:
-                roblox_id, username = await self.get_roblox_id(username)
-            except RobloxNotFound:
-                if response:
-                    message = await response.error("There was no Roblox account found with your query.\n"
-                                                   "Please try again.")
-
-                    username = (await response.prompt([{
-                        "prompt": "Please specify your Roblox username.",
-                        "name": "username"
-                    }], dm=True, no_dm_post=True))["username"]
-
-                    response.delete(message)
-
-                invalid_roblox_names += 1
-
-            if invalid_roblox_names == 5:
-                raise Error("Too many invalid attempts. Please try again later.")
-
-        if not username:
-            roblox_id, username = await self.get_roblox_username(roblox_id)
-
-        roblox_accounts = author_data.get("robloxAccounts", {})
-
-        if guild and not allow_reverify:
-            guild_accounts = roblox_accounts.get("guilds", {})
-            chosen_account = guild_accounts.get(str(guild.id))
-
-            if chosen_account and chosen_account != roblox_id:
-                raise Error("You already selected your account for this server. ``allowReVerify`` must be "
-                            "enabled for you to change it.")
-
-        if roblox_id in roblox_accounts.get("accounts", []) or author_data.get("robloxID") == roblox_id:
-            # TODO: clear cache
-            await self.verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=primary)
-
-            if update_user:
+            while not roblox_id:
                 try:
-                    await self.update_member(
-                        author,
-                        guild       = guild,
-                        roles       = True,
-                        nickname    = True,
-                        author_data = author_data)
+                    roblox_id, username = await self.get_roblox_id(username)
+                except RobloxNotFound:
+                    if response:
+                        message = await response.error("There was no Roblox account found with your query.\n"
+                                                    "Please try again.", dm=dm, no_dm_post=True)
 
-                except BloxlinkBypass:
-                    pass
+                        username = (await response.prompt([{
+                            "prompt": "Please specify your Roblox username.",
+                            "name": "username"
+                        }], dm=dm, no_dm_post=True))["username"]
 
-            return username
+                        response.delete(message)
 
-        else:
-            # prompts
-            failures = 0
-            failed = False
-            if response:
-                args = await response.prompt([
-                    {
-                        "prompt": f"Welcome, **{username}!** Please select a method of verification:\n"
-                                "``game`` " + ARROW + " verify by joining a Roblox game\n"
-                                "``code`` " + ARROW + " verify by putting a code on your Roblox status or description",
-                        "type": "choice",
-                        "choices": ["game", "code"],
-                        "name": "verification_choice"
-                    }
-                ], dm=True, no_dm_post=True)
+                    invalid_roblox_names += 1
 
-                if args["verification_choice"] == "code":
-                    code = self.generate_code()
+                if invalid_roblox_names == 5:
+                    raise Error("Too many invalid attempts. Please try again later.")
 
-                    msg1 = await response.send(f"To confirm that you own this Roblox account, please put this code in your description or status:", dm=True, no_dm_post=True)
-                    msg2 = await response.send(f"```{code}```", dm=True, no_dm_post=True)
+            if not username:
+                roblox_id, username = await self.get_roblox_username(roblox_id)
 
-                    response.delete(msg1, msg2)
+            roblox_accounts = author_data.get("robloxAccounts", {})
 
-                    _ = await response.prompt([{
-                        "prompt": "Then, say ``done`` to continue.",
-                        "name": "verification_next",
-                        "type": "choice",
-                        "choices": ["done"]
-                    }], embed=False, dm=True, no_dm_post=True)
+            if guild and not allow_reverify:
+                guild_accounts = roblox_accounts.get("guilds", {})
+                chosen_account = guild_accounts.get(str(guild.id))
 
-                    if await self.validate_code(roblox_id, code):
-                        # user is now validated; add their roles
-                        await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, guild=guild, author_data=author_data, primary_account=primary)
+                if chosen_account and chosen_account != roblox_id:
+                    raise Error("You already selected your account for this server. ``allowReVerify`` must be "
+                                "enabled for you to change it.")
 
-                        return username
+            if roblox_id in roblox_accounts.get("accounts", []) or author_data.get("robloxID") == roblox_id:
+                # TODO: clear cache
+                await self.verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=primary)
 
-                    while not await self.validate_code(roblox_id, code):
-                        if failures == 5:
-                            failed = True
-                            break
+                if update_user:
+                    try:
+                        await self.update_member(
+                            author,
+                            guild       = guild,
+                            roles       = True,
+                            nickname    = True,
+                            author_data = author_data,
+                            cache       = cache,
+                            response    = response)
 
-                        failures += 1
+                    except BloxlinkBypass:
+                        pass
 
-                        _ = await response.prompt([
-                            {
-                                "prompt": "Unable to find the code on your profile. Please say ``done`` to search again or ``cancel`` to cancel.",
-                                "type": "choice",
-                                "choices": ["done"],
-                                "name": "retry"
-                            }
-                        ], error=True, dm=True, no_dm_post=True)
+                    except Blacklisted:
+                        pass
 
-                        attempt = await self.validate_code(roblox_id, code)
+                return username
 
-                        if attempt:
-                            await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, author_data=author_data, guild=guild, primary_account=primary)
+            else:
+                # prompts
+                failures = 0
+                failed = False
+
+                if response:
+                    args = await response.prompt([
+                        {
+                            "prompt": f"Welcome, **{username}!** Please select a method of verification:\n"
+                                    "``game`` " + ARROW + " verify by joining a Roblox game\n"
+                                    "``code`` " + ARROW + " verify by putting a code on your Roblox status or description",
+                            "type": "choice",
+                            "choices": ["game", "code"],
+                            "name": "verification_choice"
+                        }
+                    ], dm=dm, no_dm_post=True)
+
+                    if args["verification_choice"] == "code":
+                        code = self.generate_code()
+
+                        msg1 = await response.send("To confirm that you own this Roblox account, please put this code in your description or status:", dm=dm, no_dm_post=True)
+                        msg2 = await response.send(f"```{code}```", dm=dm, no_dm_post=True)
+
+                        response.delete(msg1, msg2)
+
+                        _ = await response.prompt([{
+                            "prompt": "Then, say ``done`` to continue.",
+                            "name": "verification_next",
+                            "type": "choice",
+                            "choices": ["done"]
+                        }], embed=False, dm=dm, no_dm_post=True)
+
+                        if await self.validate_code(roblox_id, code):
+                            # user is now validated; add their roles
+                            await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, guild=guild, author_data=author_data, primary_account=primary)
+
                             return username
 
-                    if failed:
-                        raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
-
-                elif args["verification_choice"] == "game":
-                    await self.r.table("gameVerification").insert({
-                        "id": roblox_id,
-                        "discordTag": str(author),
-                        "discordID": str(author.id),
-                        "primary": primary,
-                        "guild": guild and str(guild.id),
-                        "prefix": "!" #FIXME
-                    }, conflict="replace").run()
-
-                    _ = await response.prompt([{
-                        "prompt": "Please go to this game https://www.roblox.com/games/1271943503/- to complete the verification process. Then, say ``done`` to "
-                                  "get your roles.",
-                        "name": "verification_next",
-                        "type": "choice",
-                        "choices": ["done"]
-                    }], dm=True, no_dm_post=True)
-
-                    while True:
-                        if failures == 5:
-                            failed = True
-                            break
-
-                        try:
-                            _, accounts = await self.get_user(author=author, cache=False)
-
-                            if not roblox_id in accounts:
-                                raise UserNotVerified
-
-                        except UserNotVerified:
-                            _ = await response.prompt([{
-                                "prompt": "It appears that you didn't pass verification via the Roblox game. Please go to "
-                                          "https://www.roblox.com/games/1271943503/- and try again. Then, say ``done``.",
-                                "name": "verification_next",
-                                "type": "choice",
-                                "choices": ["done"]
-                            }], error=True, dm=True, no_dm_post=True)
+                        while not await self.validate_code(roblox_id, code):
+                            if failures == 5:
+                                failed = True
+                                break
 
                             failures += 1
 
-                        else:
-                            # await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, author_data=author_data, guild=guild, primary_account=primary)
-                            return username
+                            _ = await response.prompt([
+                                {
+                                    "prompt": "Unable to find the code on your profile. Please say ``done`` to search again or ``cancel`` to cancel.",
+                                    "type": "choice",
+                                    "choices": ["done"],
+                                    "name": "retry"
+                                }
+                            ], error=True, dm=dm, no_dm_post=True)
+
+                            attempt = await self.validate_code(roblox_id, code)
+
+                            if attempt:
+                                await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, author_data=author_data, guild=guild, primary_account=primary)
+
+                                return username
+
+                        if failed:
+                            raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
+
+                    elif args["verification_choice"] == "game":
+                        await self.r.db("bloxlink").table("gameVerification").insert({
+                            "id": roblox_id,
+                            "discordTag": str(author),
+                            "discordID": str(author.id),
+                            "primary": primary,
+                            "guild": guild and str(guild.id),
+                            "prefix": "!" #FIXME
+                        }, conflict="replace").run()
+
+                        _ = await response.prompt([{
+                            "prompt": "Please go to this game https://www.roblox.com/games/1271943503/- to complete the verification process. Then, say ``done`` to "
+                                    "get your roles.",
+                            "name": "verification_next",
+                            "type": "choice",
+                            "choices": ["done"]
+                        }], dm=dm, no_dm_post=True)
+
+                        while True:
+                            if failures == 5:
+                                failed = True
+                                break
+
+                            try:
+                                _, accounts = await self.get_user(author=author, cache=False)
+
+                                if not roblox_id in accounts:
+                                    raise UserNotVerified
+
+                            except UserNotVerified:
+                                _ = await response.prompt([{
+                                    "prompt": "It appears that you didn't pass verification via the Roblox game. Please go to "
+                                            "https://www.roblox.com/games/1271943503/- and try again. Then, say ``done``.",
+                                    "name": "verification_next",
+                                    "type": "choice",
+                                    "choices": ["done"]
+                                }], error=True, dm=dm, no_dm_post=True)
+
+                                failures += 1
+
+                            else:
+                                # await self.verify_member(author, roblox_id, allow_reverify=allow_reverify, author_data=author_data, guild=guild, primary_account=primary)
+                                return username
 
 
-                    if failed:
-                        raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
+                        if failed:
+                            raise Error(f"{author.mention}, too many failed attempts. Please run this command again and retry.")
+        finally:
+            await cache_pop("discord_profiles", author_id)
 
 
     @staticmethod
-    async def apply_perks(roblox_user, embed):
+    async def apply_perks(roblox_user, embed, guild=None, groups=False, tags=False):
+        if not embed:
+            return
+
+        user_tags = []
+        notable_groups = []
+
         if roblox_user:
             bloxlink_group = roblox_user.groups.get("3587262")
-            user_tags = []
 
-            if bloxlink_group:
+            if bloxlink_group and tags:
                 bloxlink_user_rank = bloxlink_group.user_rank_name
 
-                if bloxlink_user_rank in ("Developer", "Bloxlink"):
+                if bloxlink_user_rank in ("Bot Developer", "Bloxlink", "Web Developer"):
                     user_tags.append("Bloxlink Developer")
                     user_tags.append("Bloxlink Staff")
                     embed.colour = DEV_COLOR
@@ -1568,16 +1979,231 @@ class Roblox(Bloxlink.Module):
                     user_tags.append("Bloxlink VIP Member")
                     embed.colour = VIP_MEMBER_COLOR
 
-            if user_tags:
-                embed.add_field(name="User Tags", value="\n".join(user_tags))
+            if groups:
+                partners = await cache_get("partners")
+                notable_groups = set()
 
-    """
-    async def __setup__(self):
-        while True:
-            Roblox.cache = {"usernames_to_ids": {}, "roblox_users": {}, "discord_profiles": {}, "groups": {}, "games": {}, "catalog_items": {}}
-            await asyncio.sleep(60 * 10)
-    """
+                for partner_server_id, partner_group in partners.items():
+                    if partner_group[0] == "notable_group":
+                        partner = roblox_user.groups.get(partner_group[1])
 
+                        if partner:
+                            notable_groups.add(f"[{partner.name}]({partner.url}) {ARROW} {partner.user_rank_name}")
+
+        if guild and embed:
+            cache_partner = await cache_get("partners", guild.id)
+            verified_reaction = guild.default_role.permissions.external_emojis and REACTIONS["VERIFIED"] or ":white_check_mark:"
+
+            if cache_partner:
+                embed.description = f"{verified_reaction} This is an **official server** of [{cache_partner[2]}](https://www.roblox.com/groups/{cache_partner[1]}/-)"
+                embed.colour = PARTNERED_SERVER
+
+
+
+        return user_tags, notable_groups
+
+@Bloxlink.module
+class RobloxProfile(Bloxlink.Module):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    async def get_inactive_role(guild, guild_data, trello_board):
+        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        is_prem = donator_profile.features.get("premium")
+        inactive_role = None
+
+        if is_prem:
+            if trello_board:
+                options_trello_data, _ = await get_options(trello_board)
+                inactive_role_trello = options_trello_data.get("inactiveRole")
+
+                if inactive_role_trello:
+                    inactive_role_id = inactive_role_trello.isdigit() and int(inactive_role_trello)
+                    inactive_role = find(lambda r: (inactive_role_id and r.id == inactive_role_id) or (r.name == inactive_role_trello), guild.roles)
+            else:
+                inactive_role_id = guild_data.get("inactiveRole")
+
+                if inactive_role_id:
+                    inactive_role_id = int(inactive_role_id)
+                    inactive_role = find(lambda r: r.id == inactive_role_id, guild.roles)
+
+        return inactive_role
+
+    @staticmethod
+    async def handle_inactive_role(inactive_role, user, inactive):
+        if not inactive_role:
+            return
+
+        if inactive:
+            if inactive_role not in user.roles:
+                try:
+                    await user.add_roles(inactive_role, reason="Adding inactive role")
+                except Forbidden:
+                    raise Error("I was unable to add the inactivity role! Please ensure I have the "
+                                f"``Manage Roles`` permission, and drag my roles above the other roles. {BIND_ROLE_BUG}")
+                except NotFound:
+                    pass
+        else:
+            if inactive_role in user.roles:
+                try:
+                    await user.remove_roles(inactive_role, reason="Removing inactive role")
+                except Forbidden:
+                    raise Error("I was unable to remove the inactivity role! Please ensure I have the "
+                                f"``Manage Roles`` permission, and drag my roles above the other roles. {BIND_ROLE_BUG}")
+                except NotFound:
+                    pass
+
+    async def get_profile(self, author, user, roblox_user=None, prefix=None, guild=None, guild_data=None, inactive_role=None):
+        user_data = await self.r.db("bloxlink").table("users").get(str(user.id)).run() or {"id": str(user.id)}
+        profile_data = user_data.get("profileData") or {}
+        prefix = prefix or PREFIX
+        guild = guild or getattr(author, "guild", None)
+
+        if guild:
+            guild_data = guild_data or (await self.r.table("guilds").get(str(guild.id)).run()) or {}
+
+        if roblox_user:
+            ending = roblox_user.username.endswith("s") and "'" or "'s"
+            embed = Embed(title=f"{roblox_user.username}{ending} Bloxlink Profile")
+            embed.set_author(name=user, icon_url=user.avatar_url, url=roblox_user.profile_link)
+        else:
+            embed = Embed(title="Bloxlink User Profile")
+            embed.set_author(name=user, icon_url=user.avatar_url)
+
+        if not profile_data:
+            await self.handle_inactive_role(inactive_role, user, False)
+
+            if author == user:
+                embed.description = f"You have no profile available! Use ``{prefix}profile change`` to make your profile."
+            else:
+                embed.description = f"**{user}** has no profile available."
+
+            return embed
+
+        description       = profile_data.get("description")
+        activity_notice   = profile_data.get("activityNotice")
+        favorite_games    = profile_data.get("favoriteGames")
+        favorite_items    = profile_data.get("favoriteCatalogItems")
+        accepting_trades  = profile_data.get("acceptingTrades")
+
+        set_embed_desc = False
+
+        if activity_notice:
+            if isinstance(activity_notice, dict): # TODO: delete this after all notices are converted
+                return_timestamp  = activity_notice["returnTimestamp"]
+                inactivity_reason = activity_notice["reason"]
+            else:
+                return_timestamp = activity_notice
+                inactivity_reason = None
+
+            date = datetime.fromtimestamp(return_timestamp)
+            time_now = datetime.now()
+
+            if time_now > date:
+                # user is back
+
+                if guild:
+                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **back** from their leave of absence.", PURPLE_COLOR)
+
+                await self.handle_inactive_role(inactive_role, user, False)
+
+                profile_data.pop("activityNotice")
+                user_data["profileData"] = profile_data
+
+                await self.r.db("bloxlink").table("users").insert(user_data, conflict="replace").run()
+            else:
+                await self.handle_inactive_role(inactive_role, user, True)
+
+                date_str = date.strftime("%b. %d, %Y (%A)")
+
+                if inactivity_reason:
+                    date_formatted = f"This user is currently **away** until **{date_str}** for: ``{inactivity_reason}``"
+                else:
+                    date_formatted = f"This user is currently **away** until **{date_str}.**"
+
+                embed.description = date_formatted
+                embed.colour = ORANGE_COLOR
+
+                set_embed_desc = True
+        else:
+            await self.handle_inactive_role(inactive_role, user, False)
+
+        if accepting_trades:
+            if set_embed_desc:
+                embed.description = f"{embed.description}\nThis user is **accepting trades.**"
+            else:
+                embed.description = "This user is **accepting trades.**"
+
+        if favorite_games:
+            desc = []
+
+            for game_id in favorite_games:
+                try:
+                    game = await Roblox.get_game(game_id)
+                except RobloxNotFound:
+                    desc.append(f"**INVALID GAME:** {game_id}")
+                else:
+                    desc.append(f"[{game.name}]({game.url})")
+
+            if desc:
+                embed.add_field(name="Favorite Games", value="\n".join(desc))
+
+        if favorite_items:
+            desc = []
+
+            for item_id in favorite_items:
+                try:
+                    catalog_item = await Roblox.get_catalog_item(item_id)
+                except RobloxNotFound:
+                    desc.append(f"**INVALID ITEM:** {item_id}")
+                else:
+                    desc.append(f"[{catalog_item.name}]({catalog_item.url})")
+
+            if desc:
+                embed.add_field(name="Favorite Catalog Items", value="\n".join(desc))
+
+        if description:
+            embed.add_field(name="Personal Description", value=description, inline=False)
+
+
+        if author == user:
+            embed.set_footer(text=f"Use \"{prefix}profile change\" to alter your profile.")
+
+        return embed
+
+    @staticmethod # needs to be static
+    async def is_inactive(user, inactive_role, user_data=None):
+        if not inactive_role:
+            return
+
+        user_data = user_data or await RobloxProfile.r.db("bloxlink").table("users").get(str(user.id)).run() or {"id": str(user.id)}
+        profile_data = user_data.get("profileData") or {}
+        activity_notice = profile_data.get("activityNotice")
+
+        if activity_notice:
+            if isinstance(activity_notice, dict): # TODO: delete this after all notices are converted
+                return_timestamp  = activity_notice["returnTimestamp"]
+            else:
+                return_timestamp = activity_notice
+
+            date = datetime.fromtimestamp(return_timestamp)
+            time_now = datetime.now()
+
+            if time_now > date:
+                # user is back
+
+                profile_data.pop("activityNotice")
+                user_data["profileData"] = profile_data
+
+                await RobloxProfile.r.db("bloxlink").table("users").insert(user_data, conflict="replace").run()
+
+                return False
+
+            else:
+                return True
+        else:
+            return False
 
 
 class DiscordProfile:
@@ -1597,7 +2223,7 @@ class Group(Bloxlink.Module):
     __slots__ = ("name", "group_id", "description", "rolesets", "owner", "member_count",
                  "embed_url", "url", "user_rank_name", "user_rank_id")
 
-    def __init__(self, group_id, group_data, version=1, my_roles=None, rolesets=None):
+    def __init__(self, group_id, group_data, my_roles=None):
         self.group_id = str(group_id)
 
         self.name = None
@@ -1606,44 +2232,54 @@ class Group(Bloxlink.Module):
         self.member_count = None
         self.emblem_url = None
         self.rolesets = []
-        self.version = version
-        self.url = f"https://www.roblox.com/My/Groups.aspx?gid={self.group_id}"
+        self.url = f"https://www.roblox.com/groups/{self.group_id}"
         self.shout = None
 
         self.user_rank_name = None
         self.user_rank_id = None
 
-        self.load_json(group_data, version=version, my_roles=my_roles, rolesets=rolesets)
+        self.load_json(group_data, my_roles=my_roles)
 
-    def load_json(self, group_data, version, my_roles=None, rolesets=None):
+    async def apply_rolesets(self):
+        if self.rolesets:
+            return
+
+        text, _ = await fetch(f"https://api.roblox.com/groups/{self.group_id}")
+
+        try:
+            group_data = json.loads(text)
+        except json.JSONDecodeError:
+            pass
+        else:
+            self.load_json(group_data)
+
+
+    def load_json(self, group_data, my_roles=None):
         self.shout = group_data.get("shout") or self.shout
         self.emblem_url = self.emblem_url or group_data.get("EmblemUrl")
 
-        if version == 1 or version == 2:
-            self.name = self.name or group_data.get("name", "N/A")
-            self.member_count = self.member_count or group_data.get("memberCount", 0)
-            self.description = self.description or group_data.get("description", "")
+        self.name = self.name or group_data.get("name") or group_data.get("Name", "")
+        self.member_count = self.member_count or group_data.get("memberCount", 0)
+        self.description = self.description or group_data.get("description") or group_data.get("Description", "")
 
-            self.user_rank_name = self.user_rank_name or (my_roles and my_roles.get("name", "").strip())
-            self.user_rank_id = self.user_rank_id or (my_roles and my_roles.get("rank"))
+        self.user_rank_name = self.user_rank_name or (my_roles and my_roles.get("name", "").strip())
+        self.user_rank_id = self.user_rank_id or (my_roles and my_roles.get("rank"))
 
-            self.version = version
+        self.owner = self.owner or group_data.get("Owner")
 
-            self.rolesets = self.rolesets or rolesets or []
-        elif version == "old":
-            self.name = self.name = group_data.get("Name", "N/A")
-            self.owner = self.owner or group_data.get("Owner")
-            self.description = self.description or group_data.get("Description", "")
-            self.rolesets = self.rolesets or group_data.get("Roles", [])
+        if not self.rolesets and (group_data.get("roles") or group_data.get("Roles")):
+            self.rolesets = group_data.get("roles") or group_data.get("Roles")
 
-            self.version = "old"
+            for roleset in self.rolesets:
+                if roleset.get("name"):
+                    roleset["name"] = roleset["name"].strip()
 
-        for roleset in self.rolesets:
-            if roleset.get("name"):
-                roleset["name"] = roleset["name"].strip()
+                elif roleset.get("Name"):
+                    roleset["name"] = roleset["Name"].strip()
+                    roleset["rank"] = roleset["Rank"]
 
-            elif roleset.get("Name"):
-                roleset["Name"] = roleset["Name"].strip()
+                    roleset.pop("Name", None)
+                    roleset.pop("Rank", None)
 
 
     def __str__(self):
@@ -1716,7 +2352,7 @@ class RobloxUser(Bloxlink.Module):
         self.profile_link = roblox_id and f"https://www.roblox.com/users/{roblox_id}/profile"
 
     @staticmethod
-    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, group_ids=None, response=None, embed=None):
+    async def get_details(*args, author=None, username=None, roblox_id=None, everything=False, basic_details=False, roblox_user=None, group_ids=None, response=None, guild=None, embed=None):
         if everything:
             basic_details = True
 
@@ -1744,13 +2380,13 @@ class RobloxUser(Bloxlink.Module):
         roblox_user_from_cache = None
 
         if username:
-            cache_find = cache_get("usernames_to_ids", username)
+            cache_find = await cache_get("usernames_to_ids", username)
 
             if cache_find:
                 roblox_id, username = cache_find
 
             if roblox_id:
-                roblox_user_from_cache = cache_get("roblox_users", roblox_id)
+                roblox_user_from_cache = await cache_get("roblox_users", roblox_id)
 
         if roblox_user_from_cache and roblox_user_from_cache.verified:
             roblox_data["id"] = roblox_id or roblox_user_from_cache.id
@@ -1788,11 +2424,11 @@ class RobloxUser(Bloxlink.Module):
                 else:
                     embed.append(sent_embed)
 
-            if basic_details or "username" in args:
-                embed[0].add_field(name="Username", value=username)
+                    if basic_details or "username" in args:
+                        embed[0].add_field(name="Username", value=username)
 
-            if basic_details or "id" in args:
-                embed[0].add_field(name="ID", value=roblox_id)
+                    if basic_details or "id" in args:
+                        embed[0].add_field(name="ID", value=roblox_id)
 
 
         if roblox_user:
@@ -1910,22 +2546,29 @@ class RobloxUser(Bloxlink.Module):
                     for group_data in group_json.get("data", []):
                         group_data, my_roles = group_data.get("group"), group_data.get("role")
                         group_id = str(group_data["id"])
-                        groups[group_id] = Group(group_id, group_data=group_data, my_roles=my_roles, version=2)
+                        groups[group_id] = Group(group_id, group_data=group_data, my_roles=my_roles)
 
                     if roblox_user:
                         roblox_user.groups = groups
 
-            if embed and group_ids and groups and (everything or "groups" in args):
-                group_ranks = []
+            if embed and (everything or "groups" in args):
+                group_ranks = set()
 
-                for group_id in group_ids:
-                    group = groups.get(group_id)
+                if group_ids and groups:
+                    for group_id in group_ids:
+                        group = groups.get(group_id)
 
-                    if group:
-                        group_ranks.append(f"[{group.name}]({group.url}) {ARROW} {group.user_rank_name}")
+                        if group:
+                            group_ranks.add(f"[{group.name}]({group.url}) {ARROW} {group.user_rank_name}")
 
-                if group_ranks:
-                    embed[0].add_field(name="Group Ranks", value=("\n".join(group_ranks)[:1000]), inline=False)
+                    if group_ranks:
+                        embed[0].add_field(name="Group Ranks", value=("\n".join(group_ranks)[:1000]), inline=False)
+
+                _, notable_groups = await Roblox.apply_perks(roblox_user, groups=True, embed=embed and embed[0])
+                notable_groups = notable_groups.difference(group_ranks)
+
+                if notable_groups:
+                    embed[0].add_field(name="Notable Groups", value="\n".join(notable_groups), inline=False)
 
 
         async def profile():
@@ -1984,7 +2627,10 @@ class RobloxUser(Bloxlink.Module):
                     embed[0].add_field(name="Account Age", value=f"{text} ({join_date})")
 
                 if (everything or "banned" in args) and banned:
-                    embed[0].description = "<:ban:476838302092230672> This user is _banned._"
+                    if guild and guild.default_role.permissions.external_emojis:
+                        embed[0].description = f"{REACTIONS['BANNED']} This user is _banned._"
+                    else:
+                        embed[0].description = ":skull: This user is _banned._"
 
                     for i, field in enumerate(embed[0].fields):
                         if field.name == "Username":
@@ -2005,7 +2651,7 @@ class RobloxUser(Bloxlink.Module):
                 roblox_user.created = created
                 roblox_user.banned = banned
 
-        # fast operations
+
         if basic_details or "avatar" in args:
             await avatar()
 
@@ -2025,7 +2671,11 @@ class RobloxUser(Bloxlink.Module):
             embed[0].title = username
 
             if not args:
-                await Roblox.apply_perks(roblox_user, embed=embed[0])
+                user_tags, _ = await Roblox.apply_perks(roblox_user, tags=True, guild=guild, embed=embed and embed[0])
+
+                if user_tags:
+                    embed[0].add_field(name="User Tags", value="\n".join(user_tags))
+
 
             if response:
                 if response.webhook_only:
@@ -2035,7 +2685,7 @@ class RobloxUser(Bloxlink.Module):
 
         return roblox_data
 
-    async def sync(self, *args, author=None, basic_details=True, group_ids=None, embed=None, response=None, everything=False):
+    async def sync(self, *args, author=None, basic_details=True, group_ids=None, embed=None, response=None, guild=None, everything=False):
         try:
             await self.get_details(
                 *args,
@@ -2048,6 +2698,7 @@ class RobloxUser(Bloxlink.Module):
                 roblox_user = self,
                 author = author,
                 response = response,
+                guild = guild
             )
 
         except RobloxAPIError:

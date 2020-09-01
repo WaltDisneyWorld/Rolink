@@ -16,9 +16,7 @@ class Patreon(Bloxlink.Module):
 
 
     async def is_patron(self, author):
-        #print(await self.redis.get("patrons"), flush=True)
-        #return (await self.redis.get("patrons") or {}).get(author.id)
-        return self.patrons.get(str(author.id))
+        return self.patrons.get(author.id)
 
     async def load_patrons(self):
         feed = await self.r.db("patreon").table("patrons").run()
@@ -28,6 +26,8 @@ class Patreon(Bloxlink.Module):
         while await feed.fetch_next():
             patron = await feed.next()
 
-            pledges[patron["id"]] = patron["payment"]
+            if patron["discord_id"] and patron["active"]:
+                pledges[int(patron["discord_id"])] = patron
 
-        self.patrons = pledges
+        if pledges:
+            self.patrons = pledges

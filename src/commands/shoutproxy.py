@@ -34,7 +34,7 @@ class ShoutProxyCommand(Bloxlink.Module):
             group_id = content
 
         try:
-            group = await get_group(group_id, rolesets=True)
+            group = await get_group(group_id)
         except RobloxNotFound:
             return None, "No group was found with this ID. Please try again."
 
@@ -128,12 +128,12 @@ class ShoutProxyCommand(Bloxlink.Module):
                 "default": False,
             }
 
-        await self.r.db("canary").table("guilds").insert({
+        await self.r.table("guilds").insert({
             "id": str(guild.id),
             "groupShoutChannel": str(arg.id)
         }, conflict="update").run()
 
-        await self.r.db("canary").table("groupShouts").insert({
+        await self.r.table("groupShouts").insert({
             "id": str(guild.id),
             **group_shout_data
         }, conflict="update").run()
@@ -151,11 +151,11 @@ class ShoutProxyCommand(Bloxlink.Module):
         shout_channel = guild_data.get("groupShoutChannel")
 
         if shout_channel:
-            await self.r.db("canary").table("groupShouts").get(guild_id).delete().run()
+            await self.r.table("groupShouts").get(guild_id).delete().run()
 
             guild_data.pop("groupShoutChannel")
 
-            await self.r.db("canary").table("guilds").get(guild_id).replace(guild_data).run()
+            await self.r.table("guilds").get(guild_id).replace(guild_data).run()
 
             await response.success("Successfully cleared your Shout Channel!")
         else:

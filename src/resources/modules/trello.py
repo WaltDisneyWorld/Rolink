@@ -44,12 +44,12 @@ class Trello(Bloxlink.Module):
             trello_id = guild_data.get("trelloID")
 
             if trello_id:
-                trello_board = cache_get("trello_boards", guild.id)
+                trello_board = await cache_get("trello_boards", guild.id)
 
                 try:
                     if not trello_board:
                         trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
-                        cache_set("trello_boards", guild.id, trello_board)
+                        await cache_set("trello_boards", guild.id, trello_board)
 
                     if trello_board:
                         t_now = time()
@@ -62,13 +62,16 @@ class Trello(Bloxlink.Module):
                         else:
                             trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
 
-                except TrelloUnauthorized:
+                except (TrelloUnauthorized, ConnectionResetError):
                     pass
 
                 except (TrelloNotFound, TrelloBadRequest):
                     guild_data.pop("trelloID")
 
-                    await self.r.db("canary").table("guilds").get(str(guild.id)).update(guild_data).run()
+                    await self.r.table("guilds").get(str(guild.id)).update(guild_data).run()
+
+                except asyncio.TimeoutError:
+                    pass
 
 
         return trello_board
@@ -92,6 +95,8 @@ class Trello(Bloxlink.Module):
                         match_value = True
                     elif match_value_lower in ("false", "disabled"):
                         match_value = False
+                    elif match_value_lower == "none":
+                        match_value = None
 
                     if return_cards:
                         options[OPTION_NAMES_MAP.get(card_name_lower, card_name_lower)] = (match_value, card)
@@ -105,6 +110,8 @@ class Trello(Bloxlink.Module):
                         match_value = True
                     elif match_value_lower in ("false", "disabled"):
                         match_value = False
+                    elif match_value_lower == "none":
+                        match_value = None
 
                     card_name_lower = card.name.lower()
 

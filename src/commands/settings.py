@@ -1,7 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error, CancelledPrompt, PermissionError # pylint: disable=import-error
-from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
-from discord import Embed
+from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES, ORANGE_COLOR, GOLD_COLOR, BROWN_COLOR # pylint: disable=import-error
+from discord import Embed, Object
 from os import environ as env
 from discord.errors import Forbidden
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
@@ -17,9 +17,10 @@ except ImportError:
         "LIST_LIMIT": 10
     }
 
-get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
+get_prefix, is_premium, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium", "post_event"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
+cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["set", "pop"])
 
 
 
@@ -87,6 +88,12 @@ class SettingsCommand(Bloxlink.Module):
         text_buffer = []
         options_trello_data = {}
 
+        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+
+        if donator_profile.features.get("premium"):
+            text_buffer.append("**This is a [Premium Server](https://www.patreon.com/join/bloxlink?)**\n")
+            embed.colour = GOLD_COLOR
+
         if trello_board:
             options_trello_data, _ = await get_options(trello_board)
             guild_data.update(options_trello_data)
@@ -98,7 +105,7 @@ class SettingsCommand(Bloxlink.Module):
                 value = option_data[0](guild, guild_data) # pylint: disable=not-callable
             else:
                 try:
-                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False"))).format(prefix=prefix)
+                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False"))).replace("{prefix}", prefix)
                 except KeyError:
                     value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False")))
 
@@ -119,9 +126,13 @@ class SettingsCommand(Bloxlink.Module):
             raise PermissionError("You do not have the required permissions to change server settings.")
 
         prefix = CommandArgs.prefix
-        guild = CommandArgs.message.guild
         response = CommandArgs.response
+
         message = CommandArgs.message
+        author = CommandArgs.message.author
+
+        guild = CommandArgs.message.guild
+        guild_data = CommandArgs.guild_data
 
         parsed_args = await CommandArgs.prompt([{
             "prompt": "What value would you like to change? Note that some settings you can't change "
@@ -130,6 +141,7 @@ class SettingsCommand(Bloxlink.Module):
             "name": "choice",
             "type": "choice",
             "formatting": False,
+            "footer": f"Use ``{prefix}settings help`` to view a description of all choices.",
             "choices": options_combined
         }])
 
@@ -154,10 +166,11 @@ class SettingsCommand(Bloxlink.Module):
 
         if option_find:
             if option_find[3]:
-                profile, _ = await is_premium(guild.owner)
+                profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
 
                 if not profile.features.get("premium"):
-                    raise Error("This option is premium-only! The server owner must have premium for it to be changed.")
+                    raise Error("This option is premium-only! The server owner must have premium for it to be changed.\n"
+                                f"Use ``{prefix}donate`` for more instructions on getting premium.")
 
             option_type = option_find[1]
             trello_board = CommandArgs.trello_board
@@ -188,7 +201,7 @@ class SettingsCommand(Bloxlink.Module):
                 else:
                     parsed_value = parsed_bool_choice == "enable"
 
-                await self.r.db("canary").table("guilds").insert({
+                await self.r.table("guilds").insert({
                     "id": str(guild.id),
                     choice: parsed_value
                 }, conflict="update").run()
@@ -208,7 +221,29 @@ class SettingsCommand(Bloxlink.Module):
                 if parsed_value == "clear":
                     parsed_value = DEFAULTS.get(choice)
 
-                await self.r.db("canary").table("guilds").insert({
+                await self.r.table("guilds").insert({
+                    "id": str(guild.id),
+                    choice: parsed_value
+                }, conflict="update").run()
+
+                success_text = f"Successfully saved your new ``{choice}``!"
+
+            elif option_type == "role":
+                parsed_value = (await CommandArgs.prompt([{
+                    "prompt": f"Please specify a role for ``{choice}``.",
+                    "name": "role",
+                    "type": "role",
+                    "exceptions": ("clear",),
+                    "footer": "Say **clear** to set as the default value.",
+                    "formatting": False
+                }]))["role"]
+
+                if parsed_value == "clear":
+                    parsed_value = DEFAULTS.get(choice)
+                else:
+                    parsed_value = str(parsed_value.id)
+
+                await self.r.table("guilds").insert({
                     "id": str(guild.id),
                     choice: parsed_value
                 }, conflict="update").run()
@@ -222,14 +257,14 @@ class SettingsCommand(Bloxlink.Module):
                     "type": "number",
                     "footer": "Say **clear** to set as the default value.",
                     "formatting": False,
-                    "exceptions": ["clear"],
+                    "exceptions": ("clear",),
                     "max": option_find[2]
                 }]))["choice"]
 
                 if parsed_value == "clear":
                     parsed_value = DEFAULTS.get(choice)
 
-                await self.r.db("canary").table("guilds").insert({
+                await self.r.table("guilds").insert({
                     "id": str(guild.id),
                     choice: int(parsed_value)
                 }, conflict="update").run()
@@ -251,7 +286,7 @@ class SettingsCommand(Bloxlink.Module):
                 if parsed_value == "clear":
                     parsed_value = DEFAULTS.get(choice)
 
-                await self.r.db("canary").table("guilds").insert({
+                await self.r.table("guilds").insert({
                     "id": str(guild.id),
                     choice: parsed_value
                 }, conflict="update").run()
@@ -285,6 +320,11 @@ class SettingsCommand(Bloxlink.Module):
             except (TrelloNotFound, TrelloBadRequest):
                 pass
 
+        await cache_set(choice, guild.id, parsed_value)
+
+        await cache_pop("guild_data", guild.id)
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``{choice}`` option.", BROWN_COLOR)
 
         raise Message(success_text, type="success")
 
@@ -297,9 +337,14 @@ class SettingsCommand(Bloxlink.Module):
             raise PermissionError("You do not have the required permissions to change server settings.")
 
         prefix = CommandArgs.prefix
-        guild = CommandArgs.message.guild
-        trello_board = CommandArgs.trello_board
         response = CommandArgs.response
+        trello_board = CommandArgs.trello_board
+
+        author = CommandArgs.message.author
+
+        guild = CommandArgs.message.guild
+        guild_data = CommandArgs.guild_data
+
 
         parsed_arg = (await CommandArgs.prompt([{
             "prompt": f"Which setting would you like to clear? Valid choices: ``{RESET_CHOICES}``",
@@ -310,21 +355,22 @@ class SettingsCommand(Bloxlink.Module):
         }]))["choice"]
 
         if parsed_arg == "everything":
-            # warn that this will delete everything
-            # including all trello cards in Bloxlink Settings
             cont = (await CommandArgs.prompt([{
-                "prompt": "Warning! This will clear **all of your settings** including binds, "
+                "prompt": "**Warning!** This will clear **all of your settings** including binds, "
                           f"saved group information, etc. You'll need to run ``{prefix}setup`` "
-                           "and set-up the bot again. Continue? ``y/n``",
+                           "and set-up the bot again. Continue? ``Y/N``",
                 "name": "continue",
                 "choices": ("yes", "no"),
-                "type": "choice"
+                "embed_title": "Warning!",
+                "embed_color": ORANGE_COLOR,
+                "type": "choice",
+                "footer": "Say **yes** to clear all of your settings, or **no** to cancel."
             }]))["continue"]
 
             if cont == "no":
                 raise CancelledPrompt
 
-            await self.r.db("canary").table("guilds").get(str(guild.id)).delete().run()
+            await self.r.table("guilds").get(str(guild.id)).delete().run()
 
             if trello_board:
                 trello_options, _ = await get_options(trello_board, return_cards=True)
@@ -350,6 +396,9 @@ class SettingsCommand(Bloxlink.Module):
                 else:
                     await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
+
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **deleted** all server information.", BROWN_COLOR)
+
             raise Message("Your server information was successfully cleared.", type="success")
 
 
@@ -357,12 +406,15 @@ class SettingsCommand(Bloxlink.Module):
             # delete all binds from db and trello
 
             cont = (await CommandArgs.prompt([{
-                "prompt": "Warning! This will clear **all of your binds**. You'll need to "
-                         f"run ``{prefix}bind`` to set up your binds again. Continue? ``y/n``",
+                "prompt": "**Warning!** This will clear **all of your binds**. You'll need to "
+                         f"run ``{prefix}bind`` to set up your binds again. Continue? ``Y/N``",
                 "name": "continue",
                 "choices": ("yes", "no"),
                 "type": "choice",
-                "formatting": False
+                "embed_title": "Warning!",
+                "embed_color": ORANGE_COLOR,
+                "formatting": False,
+                "footer": "Say **yes** to clear all of your binds, or **no** to cancel."
             }]))["continue"]
 
             if cont == "no":
@@ -387,12 +439,15 @@ class SettingsCommand(Bloxlink.Module):
 
                 if role_ids:
                     delete_roles = (await CommandArgs.prompt([{
-                        "prompt": "Would you like me to delete these roles from your server as well? If yes, "
-                                  f"then this will delete **{len(role_ids)}** role(s). ``y/n``",
+                        "prompt": "Would you like me to **delete these roles from your server as well?** If yes, "
+                                  f"then this will delete **{len(role_ids)}** role(s). ``Y/N``",
                         "name": "delete_roles",
                         "choices": ("yes", "no"),
                         "type": "choice",
-                        "formatting": False
+                        "embed_title": "Warning!",
+                        "embed_color": ORANGE_COLOR,
+                        "formatting": False,
+                        "footer": "Say **yes** to delete these roles, or **no** to cancel."
                     }]))["delete_roles"]
 
                     if delete_roles == "yes":
@@ -401,7 +456,7 @@ class SettingsCommand(Bloxlink.Module):
 
                             if role:
                                 try:
-                                    await role.delete()
+                                    await role.delete(reason=f"{author} chose to delete bound roles through {prefix}settings")
                                 except Forbidden:
                                     pass
 
@@ -410,7 +465,7 @@ class SettingsCommand(Bloxlink.Module):
             guild_data.pop("roleBinds", None)
             guild_data.pop("groupIDs", None)
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
             if trello_board:
                 try:
@@ -430,7 +485,10 @@ class SettingsCommand(Bloxlink.Module):
                 else:
                     await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
-            raise Message("Successfully cleared all of your bound roles.", type="success")
+
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **deleted** all binds.", BROWN_COLOR)
+
+            raise Message("Successfully **cleared** all of your bound roles.", type="success")
 
     @Bloxlink.subcommand()
     async def help(self, CommandArgs):

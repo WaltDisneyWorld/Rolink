@@ -73,7 +73,7 @@ class BloxlinkStructure(AutoShardedClient):
 
     def error(self, text, title=None):
         logger.exception(text)
-        loop.create_task(self._error(text, title=title))
+        loop.create_task(self._error(str(text), title=title))
 
     async def _error (self, text, title=None):
         if not text:
@@ -95,12 +95,16 @@ class BloxlinkStructure(AutoShardedClient):
         if title:
             webhook_data["embeds"][0]["title"] = title
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                await session.post(WEBHOOKS["ERRORS"], json=webhook_data)
-            except Exception as e:
-                logger.exception(e)
-                pass
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as session:
+                try:
+                    await session.post(WEBHOOKS["ERRORS"], json=webhook_data)
+                except Exception as e:
+                    logger.exception(e)
+                    pass
+
+        except asyncio.TimeoutError:
+            pass
 
     def _handle_async_error(self, loop, context):
         exception = context.get("exception")
@@ -315,7 +319,6 @@ class BloxlinkStructure(AutoShardedClient):
     def __repr__(self):
         return "< Bloxlink Client >"
 
-
 Bloxlink = BloxlinkStructure(
     fetch_offline_members=False,
     shard_count=SHARD_COUNT,
@@ -323,12 +326,16 @@ Bloxlink = BloxlinkStructure(
     allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False)
 )
 
+redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
+redis_cache = redis and redis.cache("cache")
+
 class Module:
     client = Bloxlink
     r = r
     #session = aiohttp.ClientSession(loop=loop)
     loop = loop
-    redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
+    redis = redis
+    cache = redis_cache
     conn = Bloxlink.conn
 
 Bloxlink.Module = Module

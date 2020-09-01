@@ -1,13 +1,15 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
-from discord import Embed
+from discord import Embed, Object
 from os import environ as env
-from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass # pylint: disable=import-error
-from resources.constants import DEFAULTS, NICKNAME_TEMPLATES # pylint: disable=import-error
+from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted # pylint: disable=import-error
+from resources.constants import DEFAULTS, NICKNAME_TEMPLATES, CACHE_CLEAR, TIP_CHANCES, GREEN_COLOR, ORANGE_COLOR, BROWN_COLOR, ARROW # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
+import random
 
-verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member"])
+verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
+is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
 
 try:
     from config import TRELLO
@@ -22,12 +24,13 @@ except ImportError:
 
 @Bloxlink.command
 class VerifyCommand(Bloxlink.Module):
-    """link your Roblox accont to your Discord account"""
+    """link your Roblox account to your Discord account and get your server roles"""
 
     def __init__(self):
         self.examples = ["add", "unlink", "view", "blox_link"]
         self.category = "Account"
         self.cooldown = 5
+        self.aliases = ["getrole", "getroles"]
 
 
     @staticmethod
@@ -45,14 +48,29 @@ class VerifyCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         guild = CommandArgs.message.guild
         author = CommandArgs.message.author
+        response = CommandArgs.response
+        prefix = CommandArgs.prefix
 
         if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
             await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
-                                             f"Please use ``{CommandArgs.prefix}verify add`` instead.")
+                                             f"Please use ``{prefix}verify add`` instead.")
+
+            return await self.add(CommandArgs)
+
+        if CommandArgs.real_command_name in ("getrole", "getroles"):
+            CommandArgs.string_args = []
 
         username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
+
         if username:
             return await self.add(CommandArgs)
+
+        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        premium = donator_profile.features.get("premium")
+
+        if not premium:
+            donator_profile, _ = await is_premium(author, guild=guild)
+            premium = donator_profile.features.get("premium")
 
         trello_options = {}
 
@@ -60,27 +78,35 @@ class VerifyCommand(Bloxlink.Module):
             trello_options, _ = await get_options(trello_board)
             guild_data.update(trello_options)
 
-        try:
-            _, _, _, _, roblox_user = await update_member(
+        async with response.loading():
+            try:
+                added, removed, nickname, errors, roblox_user = await update_member(
                     CommandArgs.message.author,
                     guild                = guild,
                     guild_data           = guild_data,
                     roles                = True,
                     nickname             = True,
                     trello_board         = CommandArgs.trello_board,
-                    author_data          = await self.r.table("users").get(str(author.id)).run(),
-                    given_trello_options = True)
+                    author_data          = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
+                    given_trello_options = True,
+                    cache                = not premium,
+                    response             = response)
 
-        except BloxlinkBypass:
-            raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
+            except BloxlinkBypass:
+                raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
 
-        except UserNotVerified:
-            await self.add(CommandArgs)
-        else:
-            welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
-            welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+            except Blacklisted as b:
+                if str(b):
+                    raise Error(f"{author.mention} is **blacklisted** for: ``{b}``.")
+                else:
+                    raise Error(f"{author.mention} is **blacklisted** from Bloxlink.")
 
-            raise Message(welcome_message)
+            except UserNotVerified:
+                await self.add(CommandArgs)
+            else:
+                welcome_message, embed = await format_update_embed(roblox_user, prefix, added, removed, errors, author, guild_data, premium)
+
+                await response.send(content=welcome_message, embed=embed)
 
 
     @Bloxlink.subcommand()
@@ -92,12 +118,20 @@ class VerifyCommand(Bloxlink.Module):
 
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
+        prefix = CommandArgs.prefix
 
         response = CommandArgs.response
 
         username = len(CommandArgs.string_args) >= 1 and CommandArgs.string_args[0]
 
         args = []
+        trello_options = {}
+
+        if trello_board:
+            trello_options, _ = await get_options(trello_board)
+            guild_data.update(trello_options)
+
+        dm_verification = guild_data.get("dmVerifications", DEFAULTS.get("dmVerifications"))
 
         if not username:
             args.append({
@@ -114,28 +148,30 @@ class VerifyCommand(Bloxlink.Module):
             "choices": ["yes", "no"]
         })
 
-        args = await CommandArgs.prompt(args, dm=True)
+        args = await CommandArgs.prompt(args, dm=dm_verification)
         username = username or args["username"]
 
         # TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
         # groupVerify = [group_ids...]
 
-        trello_options = {}
+        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        premium = donator_profile.features.get("premium")
 
-        if trello_board:
-            trello_options, _ = await get_options(trello_board)
-            guild_data.update(trello_options)
+        if not premium:
+            donator_profile, _ = await is_premium(author, guild=guild)
+            premium = donator_profile.features.get("premium")
 
         try:
             username = await verify_as(
                 author,
                 guild,
-                response = CommandArgs.response,
-                primary  = args["default"] == "yes",
-                username = username,
+                response       = CommandArgs.response,
+                primary        = args["default"] == "yes",
+                username       = username,
                 trello_options = trello_options,
-                guild_data = guild_data,
-                update_user = False)
+                dm             = dm_verification,
+                guild_data     = guild_data,
+                update_user    = False)
 
         except Message as e:
             if e.type == "error":
@@ -143,7 +179,7 @@ class VerifyCommand(Bloxlink.Module):
             else:
                 await response.send(e)
         except Error as e:
-            await response.error(e, dm=True, no_dm_post=True)
+            await response.error(e, dm=dm_verification, no_dm_post=True)
         else:
             try:
                 added, removed, nickname, errors, roblox_user = await update_member(
@@ -153,19 +189,28 @@ class VerifyCommand(Bloxlink.Module):
                     roles                = True,
                     nickname             = True,
                     trello_board         = trello_board,
-                    author_data          = await self.r.table("users").get(str(author.id)).run(),
-                    given_trello_options = True)
+                    author_data          = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
+                    given_trello_options = True,
+                    cache                = not premium,
+                    response             = response)
 
             except BloxlinkBypass:
                 await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, you were still linked to Bloxlink.", dm=True, no_dm_post=True)
 
                 return
 
-            welcome_message = (trello_options.get("welcomeMessage", "")) or guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
+            except Blacklisted as b:
+                if str(b):
+                    raise Error(f"{author.mention} is **blacklisted** for: ``{b}``.")
+                else:
+                    raise Error(f"{author.mention} is **blacklisted** from Bloxlink.")
 
-            welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-            await response.send(welcome_message, dm=True, no_dm_post=True)
+            welcome_message, embed = await format_update_embed(roblox_user, prefix, added, removed, errors, author, guild_data, premium)
+
+            await post_event(guild, guild_data, "verification", f"{author.mention} has **verified** as ``{username}``.", GREEN_COLOR)
+
+            await response.send(content=welcome_message, embed=embed, dm=dm_verification, no_dm_post=True)
 
 
     @Bloxlink.subcommand(permissions=Bloxlink.Permissions().build("BLOXLINK_MANAGER"))
@@ -175,8 +220,12 @@ class VerifyCommand(Bloxlink.Module):
         # TODO: able to set: "forced groups"
 
         prefix = CommandArgs.prefix
-        guild = CommandArgs.message.guild
         response = CommandArgs.response
+
+        author = CommandArgs.message.author
+
+        guild = CommandArgs.message.guild
+        guild_data = CommandArgs.guild_data
 
 
         choice = (await CommandArgs.prompt([{
@@ -226,10 +275,12 @@ class VerifyCommand(Bloxlink.Module):
                 except (TrelloNotFound, TrelloBadRequest):
                     pass
 
-            await self.r.db("canary").table("guilds").insert({
+            await self.r.table("guilds").insert({
                 "id": str(guild.id),
                 "welcomeMessage": welcome_message
             }, conflict="update").run()
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``{choice}``.", BROWN_COLOR)
 
         raise Message(f"Successfully saved your new ``{choice}``!", type="success")
 
@@ -244,20 +295,39 @@ class VerifyCommand(Bloxlink.Module):
 
         try:
             primary_account, accounts = await get_user("username", author=author, everything=False, basic_details=True)
-        except RobloxNotFound:
+        except UserNotVerified:
             raise Message("You have no accounts linked to Bloxlink!", type="silly")
         else:
             accounts = list(accounts)
 
-            if primary_account and primary_account.id in accounts:
-                accounts.remove(primary_account.id)
+            parsed_accounts = await parse_accounts(accounts, reverse_search=True)
+            parsed_accounts_str = []
+            primary_account_str = "No primary account set"
 
-            parsed_accounts = await parse_accounts(accounts)
-            parsed_accounts_str = ", ".join(parsed_accounts.keys())
+            for roblox_username, roblox_data in parsed_accounts.items():
+                if roblox_data[1]:
+                    username_str = []
+
+                    for discord_account in roblox_data[1]:
+                        username_str.append(f"{discord_account} ({discord_account.id})")
+
+                    username_str = ", ".join(username_str)
+
+                    if primary_account and roblox_username == primary_account.username:
+                        primary_account_str = f"**{roblox_username}** {ARROW} {username_str}"
+                    else:
+                        parsed_accounts_str.append(f"**{roblox_username}** {ARROW} {username_str}")
+
+                else:
+                    parsed_accounts_str.append(f"**{roblox_username}**")
+
+            parsed_accounts_str = "\n".join(parsed_accounts_str)
+
 
             embed = Embed(title="Linked Roblox Accounts")
-            embed.add_field(name="Primary Account", value=primary_account and primary_account.username or "No primary account set")
-            embed.add_field(name="Other Accounts", value=parsed_accounts_str or "No other accounts saved")
+            embed.add_field(name="Primary Account", value=primary_account_str)
+            embed.add_field(name="Secondary Accounts", value=parsed_accounts_str or "No secondary account saved")
+            embed.set_author(name=author, icon_url=author.avatar_url)
 
             await response.send(embed=embed, dm=True, strict_post=True)
 
@@ -269,6 +339,9 @@ class VerifyCommand(Bloxlink.Module):
         author = CommandArgs.message.author
         prefix = CommandArgs.prefix
         response = CommandArgs.response
+
+        guild = CommandArgs.message.guild
+        guild_data = CommandArgs.guild_data
 
         try:
             _, accounts = await get_user("username", author=author, everything=False, basic_details=True)
@@ -299,15 +372,19 @@ class VerifyCommand(Bloxlink.Module):
                 username = parsed_args["account"]
                 roblox_id = (parsed_accounts.get(username)).id
 
-                success = await unverify_member(author, roblox_id)
+                try:
+                    success = await unverify_member(author, roblox_id)
+                except Blacklisted:
+                    raise Error(f"You're not authorized to remove an account from Bloxlink.")
 
                 if success:
                     await response.success(f"Successfully unlinked **{username}** from your account! Please note that it may take up to "
-                                            "10 minutes for the unlinking to reflect in every server you share with the bot due to "
+                                           f"{CACHE_CLEAR} minutes for the unlinking to reflect in every server you share with the bot due to "
                                             "Bloxlink using a cache for accounts.", dm=True, no_dm_post=True)
-                else:
-                    await response.error(f"Failed to unlink **{username}** from your account.", dm=True, no_dm_post=True)
 
+                    await post_event(guild, guild_data, "verification", f"{author.mention} has **unverified** from ``{username}``.", ORANGE_COLOR)
+                else:
+                    await response.send("Sorry, we failed to remove the account from you.")
 
         except UserNotVerified:
             raise Error(f"You're not linked to Bloxlink. Please use ``{prefix}verify add`` to add a new account.")

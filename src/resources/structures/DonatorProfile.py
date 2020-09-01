@@ -2,6 +2,7 @@ class DonatorProfile:
     def __init__(self, author):
         self.author = author
         self.features = {}
+        self.notes = []
         self.attributes = {
             "patreon": False,
             "selly": False,
@@ -14,9 +15,9 @@ class DonatorProfile:
         # selly stuff
         self.days = None
 
-    def load_patreon(self, payment_data):
+    def load_patreon(self, data):
         self.attributes["patreon"] = True
-        self.amount_cents = payment_data["attributes"]["amount_cents"]
+        self.amount_cents = data["pledged"]
 
     def load_selly(self, days):
         self.attributes["selly"] = True
@@ -25,3 +26,6 @@ class DonatorProfile:
     def add_features(self, *args):
         for arg in args:
             self.features[arg] = True
+
+    def add_note(self, text):
+        self.notes.append(text)

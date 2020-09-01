@@ -20,7 +20,10 @@ class PingCommand(Bloxlink.Module):
         if response.webhook_only:
             m = await response.send("Pinging...")
         else:
-            await message.channel.trigger_typing()
+            try:
+                await message.channel.trigger_typing()
+            except NotFound:
+                pass
 
         t_2 = time.perf_counter()
         time_delta = round((t_2-t_1)*1000)

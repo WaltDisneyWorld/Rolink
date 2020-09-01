@@ -1,5 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import PermissionError # pylint: disable=import-error
+from resources.constants import BROWN_COLOR # pylint: disable=import-error
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 from os import environ as env
 
@@ -14,7 +15,7 @@ except ImportError:
         "LIST_LIMIT": 10
     }
 
-get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
+get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
 
 @Bloxlink.command
 class PrefixCommand(Bloxlink.Module):
@@ -41,6 +42,8 @@ class PrefixCommand(Bloxlink.Module):
         locale = CommandArgs.locale
         response = CommandArgs.response
 
+        author = CommandArgs.message.author
+
         guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
@@ -50,7 +53,7 @@ class PrefixCommand(Bloxlink.Module):
             if not CommandArgs.has_permission:
                 raise PermissionError("You do not meet the required permissions for this command.")
 
-            await self.r.db("canary").table("guilds").insert({
+            await self.r.table("guilds").insert({
                 "id": str(guild.id),
                 "prefix": new_prefix
             }, conflict="update").run()
@@ -74,6 +77,7 @@ class PrefixCommand(Bloxlink.Module):
                     else:
                         await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``prefix`` option.", BROWN_COLOR)
 
             await response.success("Your prefix was successfully changed!")
 

@@ -7,16 +7,18 @@ from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
-from discord import Embed, Object
+from discord import Embed, Object, Member
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
 from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response
-from ..constants import MAGIC_ROLES, OWNER, DEFAULTS # pylint: disable=import-error
+from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE # pylint: disable=import-error
 
 
 get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 cache_get, cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["get", "set", "pop"])
+
+merge = Bloxlink.get_module("merge", attrs=["merge"])
 
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
@@ -83,7 +85,7 @@ class Commands(Bloxlink.Module):
         channel_id = channel and str(channel.id)
         guild_id = guild and str(guild.id)
 
-        guild_data = guild_data or (guild and (await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
+        guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
         trello_board = await get_board(guild_data=guild_data, guild=guild)
         prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
@@ -94,6 +96,9 @@ class Commands(Bloxlink.Module):
         trello_options = {}
         trello_options_checked = True
 
+        if guild and RELEASE != "CANARY":
+            await merge(guild, guild_data)
+
         if check:
             after = content[len(check):].strip()
             args = after.split(" ")
@@ -101,17 +106,33 @@ class Commands(Bloxlink.Module):
             del args[0]
 
             if command_name:
-                # merge commands from add-ons
+                # TODO: merge commands from add-ons
                 guild_addons = guild_data.get("addons")
 
                 if guild_addons:
                     addon_commands = get_addon_commands(guild_data)
 
                     if addon_commands:
-                        pass
+                        pass # TODO
 
-                for index, command in dict(commands).items():
+                for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
+                        donator_profile = None
+
+                        if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
+                            donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+
+                            if not donator_profile.features.get("pro"):
+                                try:
+                                    await channel.send(f"Server not authorized to use Pro. Please use the ``{prefix}donate`` command to see information on "
+                                                        "how to get Bloxlink Pro.")
+
+                                except (Forbidden, NotFound):
+                                    pass
+
+                                finally:
+                                    return
+
                         ignored_channels = guild_data.get("ignoredChannels", {})
 
                         if ignored_channels.get(channel_id):
@@ -122,21 +143,23 @@ class Commands(Bloxlink.Module):
                                     return
 
 
-                        if command.cooldown:
-                            cooldown_from_cache = cache_get(f"cooldown_cache_{command.name}", author.id) or 0
-                            time_now = time.time()
+                        if command.cooldown and self.cache:
+                            redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
 
-                            profile, _ = await is_premium(author)
+                            if not donator_profile or (donator_profile and not donator_profile.features.get("premium")):
+                                donator_profile, _ = await is_premium(author, guild=guild)
 
-                            if not profile.features.get("premium"):
-                                if cooldown_from_cache < time_now:
-                                    cache_pop(f"cooldown_cache_{command.name}", author.id)
-                                else:
-                                    seconds = math.ceil(cooldown_from_cache - time_now)
+                            if not donator_profile.features.get("premium"):
+                                on_cooldown = await self.cache.get(redis_cooldown_key)
+
+                                if on_cooldown:
+                                    cooldown_time = await self.redis.ttl(redis_cooldown_key)
+
                                     embed = Embed(title="Slow down!")
                                     embed.description = "This command has a short cooldown since it's relatively expensive for the bot. " \
-                                                        f"You'll need to wait **{seconds}** more second(s).\n\nDid you know? __Bloxlink Premium__ " \
-                                                        f"subscribers NEVER see any cooldowns. Find out more information with ``{prefix}donate``."
+                                                        f"You'll need to wait **{cooldown_time}** more second(s).\n\nDid you know? " \
+                                                        "**[Bloxlink Premium](https://www.patreon.com/join/bloxlink?)** subscribers NEVER " \
+                                                        f"see any cooldowns. Find out more information with ``{prefix}donate``."
 
                                     try:
                                         m = await channel.send(embed=embed)
@@ -153,12 +176,12 @@ class Commands(Bloxlink.Module):
 
                                     return
 
-                                cache_set(f"cooldown_cache_{command.name}", author.id, time_now + command.cooldown)
+                                await self.cache.set(redis_cooldown_key, True, expire_time=command.cooldown)
 
 
                         if not (command.dm_allowed or guild):
                             try:
-                                await channel.send("This command does not support DM. Please run it in a server.")
+                                await channel.send("This command does not support DM; please run it in a server.")
                             except Forbidden:
                                 pass
                             finally:
@@ -179,12 +202,13 @@ class Commands(Bloxlink.Module):
                         after = args and " ".join(args) or ""
 
                         CommandArgs = Args(
-                            command_name = command_name,
+                            command_name = index,
+                            real_command_name = command_name,
                             message = message,
                             guild_data = guild_data,
                             flags = {},
                             prefix = prefix,
-                            has_permission = False
+                            has_permission = False,
                         )
 
                         if getattr(fn, "__flags__", False):
@@ -258,7 +282,7 @@ class Commands(Bloxlink.Module):
                         except CancelledPrompt as e:
                             arguments.cancelled = True
 
-                            guild_data = guild_data or (guild and (await self.r.db("canary").table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
+                            guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
 
                             if trello_board:
                                 trello_options, _ = await get_options(trello_board)
@@ -295,8 +319,7 @@ class Commands(Bloxlink.Module):
                         except NotImplementedError:
                             await response.error("The option you specified is currently not implemented, but will be coming soon!")
                         except CancelledError:
-                            # TODO: save command and args to a database and then re-execute it when the bot restarts
-                            await response.send("I'm sorry, but Bloxlink is currently restarting for updates, so your prompt has been cancelled. Please retry this in a few minutes.")
+                            pass
                         except Exception as e:
                             await response.error(locale("errors.commandError"))
                             Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
@@ -339,6 +362,12 @@ class Commands(Bloxlink.Module):
             check_verify_channel = True
 
         if check_verify_channel and guild:
+            if not isinstance(author, Member):
+                try:
+                    author = await guild.fetch_member(author.id)
+                except NotFound:
+                    return
+
             verify_channel_id = guild_data.get("verifyChannel")
 
             if verify_channel_id and channel_id == verify_channel_id:
@@ -352,7 +381,6 @@ class Commands(Bloxlink.Module):
     def new_command(self, command_structure):
         c = command_structure()
         command = Command(c)
-        subcommands = {}
 
         Bloxlink.log(f"Adding command {command.name}")
 
@@ -361,10 +389,7 @@ class Commands(Bloxlink.Module):
 
             if callable(attr) and hasattr(attr, "__issubcommand__"):
                 command.subcommands[attr_name] = attr
-                #subcommands[attr_name] = attr
 
-        #self.cooldown_cache[command.name] = {}
-        #self._cooldown_cache[command.name] = {}
         commands[command.name] = command
 
         return command_structure
@@ -420,10 +445,10 @@ class Command:
                 raise PermissionError("This command is reserved for the Bloxlink Developer.")
 
         if (kwargs.get("premium", self.premium) or permissions.premium) and not kwargs.get("free_to_use", self.free_to_use):
-            prem, _ = await is_premium(guild.owner or Object(id=guild.owner_id))
+            prem, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
 
             if not prem.features.get("premium"):
-                prem, _ = await is_premium(author)
+                prem, _ = await is_premium(author, guild=guild)
 
                 if not prem.attributes["PREMIUM_ANYWHERE"]:
                     raise Message("This command is reserved for Bloxlink Premium subscribers!\n"

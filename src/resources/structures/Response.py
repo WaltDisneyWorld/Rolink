@@ -42,7 +42,7 @@ class ResponseLoading:
                 self.reaction_success = True
                 self.reaction = reaction
 
-        except NotFound:
+        except (NotFound, asyncio.TimeoutError):
             pass
 
     async def _remove_loading(self, success=True, error=False):
@@ -53,7 +53,7 @@ class ResponseLoading:
                         try:
                             async for user in reaction.users():
                                 await self.original_message.remove_reaction(self.reaction, user)
-                        except NotFound:
+                        except (NotFound, HTTPException):
                             pass
 
                 if error:
@@ -64,7 +64,7 @@ class ResponseLoading:
             elif self.from_reaction_fail_msg is not None:
                 await self.from_reaction_fail_msg.delete()
 
-        except NotFound:
+        except (NotFound, HTTPException):
             pass
 
     def __enter__(self):
@@ -97,7 +97,7 @@ class Response(Bloxlink.Module):
         self.message = CommandArgs.message
         self.author = CommandArgs.message.author
         self.channel = CommandArgs.message.channel
-        self.prompt = None
+        self.prompt = None # filled in on commands.py
         self.args = CommandArgs
 
         self.delete_message_queue = []
@@ -127,9 +127,9 @@ class Response(Bloxlink.Module):
         if self.webhook_only:
             try:
                 for webhook in await self.channel.webhooks():
-                    if (webhook.user and webhook.user.id) == self.client.user.id:
-                        verified_webhook = webhook
-            except Forbidden:
+                    verified_webhook = webhook
+                    break
+            except (Forbidden, NotFound):
                 self.webhook_only = False
 
             if not verified_webhook:
@@ -137,14 +137,17 @@ class Response(Bloxlink.Module):
                 try:
                     verified_webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
                     self.webhook_only = True
-                except Forbidden:
+                except (Forbidden, NotFound):
                     self.webhook_only = False
                     verified_webhook = False
 
                     try:
                         await channel.send("Customized Bot is enabled, but I couldn't "
                                            "create the webhook! Please give me the ``Manage Webhooks`` permission.")
-                    except Forbidden:
+                    except (Forbidden, NotFound):
+                        pass
+
+                    except asyncio.TimeoutError:
                         pass
 
         paginate = False
@@ -164,23 +167,36 @@ class Response(Bloxlink.Module):
         if not paginate:
             try:
                 if verified_webhook and not dm:
-                    msg = await verified_webhook.send(embed=embed, content=content,
-                                                      wait=True, username=self.bot_name,
-                                                      avatar_url=self.bot_avatar)
+                    try:
+                        msg = await verified_webhook.send(embed=embed, content=content,
+                                                          wait=True, username=self.bot_name,
+                                                          avatar_url=self.bot_avatar)
+                    except asyncio.TimeoutError:
+                        return None
+
                 else:
-                    msg = await channel.send(embed=embed, content=content, files=files)
+                    try:
+                        msg = await channel.send(embed=embed, content=content, files=files)
+                    except asyncio.TimeoutError:
+                        return None
 
                 if dm and not no_dm_post:
                     if verified_webhook:
-                        await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",
-                                                    username=self.bot_name, avatar_url=self.bot_avatar
-                        )
+                        try:
+                            await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",
+                                                        username=self.bot_name, avatar_url=self.bot_avatar)
+                        except asyncio.TimeoutError:
+                            return None
+
                     else:
-                        await self.channel.send(self.author.mention + ", **check your DMs!**")
+                        try:
+                            await self.channel.send(self.author.mention + ", **check your DMs!**")
+                        except asyncio.TimeoutError:
+                            return None
 
                 return msg
 
-            except Forbidden:
+            except (Forbidden, NotFound):
                 channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
 
                 try:
@@ -191,24 +207,35 @@ class Response(Bloxlink.Module):
 
                     return await channel.send(content=on_error or content, embed=embed, files=files, allowed_mentions=allowed_mentions)
 
-                except Forbidden:
+                except (Forbidden, NotFound):
                     try:
                         if dm:
                             if verified_webhook:
-                                await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
-                                                             "Please check your privacy settings and try again.",
-                                                             username=self.bot_name, avatar_url=self.bot_avatar)
-                            else:
-                                await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
-                                                         "Please check your privacy settings and try again.")
-                        else:
-                            await self.author.send(f"You attempted to use command {self.args.command_name} in "
-                                                   f"{self.channel.mention}, but I was unable to post there. "
-                                                    "You may need to grant me the ``Embed Links`` permission.", files=files)
-                        return False
+                                try:
+                                    await verified_webhook.send(f"{self.author.mention}, I was unable to DM you. "
+                                                                "Please check your privacy settings and try again.",
+                                                                username=self.bot_name, avatar_url=self.bot_avatar)
+                                except asyncio.TimeoutError:
+                                    return None
 
-                    except Forbidden:
-                        return False
+                            else:
+                                try:
+                                    await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
+                                                            "Please check your privacy settings and try again.")
+                                except asyncio.TimeoutError:
+                                    return None
+                        else:
+                            try:
+                                await self.author.send(f"You attempted to use command {self.args.command_name} in "
+                                                       f"{self.channel.mention}, but I was unable to post there. "
+                                                        "You may need to grant me the ``Embed Links`` permission.", files=files)
+                            except asyncio.TimeoutError:
+                                return None
+
+                        return None
+
+                    except (Forbidden, NotFound):
+                        return None
 
             except HTTPException:
                 if not ignore_http_check:
@@ -227,7 +254,7 @@ class Response(Bloxlink.Module):
 
             return await paginator()
 
-        return True
+        return None
 
     async def error(self, text, *, embed_color=0xE74C3C, embed=None, dm=False, **kwargs):
         emoji = self.webhook_only and ":cry:" or "<:BloxlinkError:506622933226225676>"

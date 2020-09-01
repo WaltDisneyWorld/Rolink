@@ -1,5 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import DEFAULTS
+from resources.constants import DEFAULTS, BROWN_COLOR # pylint: disable=import-error
+
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 @Bloxlink.command
 class AutoVerifyCommand(Bloxlink.Module):
@@ -12,15 +14,21 @@ class AutoVerifyCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
+
+        author = CommandArgs.message.author
+
+        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
         toggle = not guild_data.get("autoVerification", DEFAULTS.get("autoVerification"))
 
         guild_data["autoVerification"] = toggle
 
-        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+        await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         if toggle:
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** ``autoVerification``.", BROWN_COLOR)
             await response.success("Successfully **enabled** Auto-Verification!")
         else:
+            await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** ``autoVerification``.", BROWN_COLOR)
             await response.success("Successfully **disabled** Auto-Verification!")

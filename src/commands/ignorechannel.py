@@ -22,7 +22,7 @@ class IgnoreChannelCommand(Bloxlink.Module):
 
         disabled = bool(ignored_channels[channel_id])
 
-        await self.r.db("canary").table("guilds").insert({
+        await self.r.table("guilds").insert({
             "id": str(guild.id),
             "ignoredChannels": ignored_channels
         }, conflict="update").run()

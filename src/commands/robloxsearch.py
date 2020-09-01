@@ -1,8 +1,9 @@
-from resources.structures.Bloxlink import Bloxlink
-from resources.exceptions import UserNotVerified, Message, Error, RobloxNotFound
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.exceptions import UserNotVerified, Message, Error, RobloxNotFound # pylint: disable=import-error
 from discord import Embed
 
 get_user, get_binds = Bloxlink.get_module("roblox", attrs=["get_user", "get_binds"])
+parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 
 
 @Bloxlink.command
@@ -32,8 +33,15 @@ class RobloxSearchCommand(Bloxlink.Module):
         target = CommandArgs.parsed_args["target"]
         flags = CommandArgs.flags
         response = CommandArgs.response
+        message = CommandArgs.message
+        guild = CommandArgs.message.guild
+        prefix = CommandArgs.prefix
 
-        valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "blurb", "age", "banned"]
+        if message.mentions:
+            message.content = f"{prefix}getinfo {message.mentions[0].id}"
+            return await parse_message(message)
+
+        valid_flags = ["username", "id", "avatar", "premium", "badges", "groups", "description", "age", "banned"]
 
         if not all(f in valid_flags for f in flags.keys()):
             raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")
@@ -52,6 +60,6 @@ class RobloxSearchCommand(Bloxlink.Module):
             role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
 
             try:
-                account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
+                account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))
             except RobloxNotFound:
                 raise Error("This Roblox account doesn't exist.")

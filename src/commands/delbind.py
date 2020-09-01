@@ -1,12 +1,15 @@
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
-from resources.exceptions import Error, Message
-from resources.constants import ARROW
+from resources.exceptions import Error, Message # pylint: disable=import-error
+from resources.constants import ARROW, RED_COLOR # pylint: disable=import-error
 from aiotrello.exceptions import TrelloException
 import asyncio
 
 get_binds, get_group, count_binds = Bloxlink.get_module("roblox", attrs=["get_binds", "get_group", "count_binds"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
+
+BIND_TYPES = ("asset", "badge", "gamepass")
 
 async def delete_bind_from_cards(type="group", bind_id=None, trello_binds_list=None, bind_data_trello=None, rank=None, high=None, low=None):
     if not (trello_binds_list and bind_data_trello):
@@ -114,7 +117,7 @@ async def delete_bind_from_cards(type="group", bind_id=None, trello_binds_list=N
                                 trello_binds_list.parsed_bind_data = None
 
 
-    elif type in ("asset", "badge"):
+    elif type in BIND_TYPES:
         cards = bind_data_trello.get("trello", {}).get("cards", [])
 
         for card in cards:
@@ -150,6 +153,7 @@ class UnBindCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
+        author = CommandArgs.message.author
 
         role_binds = guild_data.get("roleBinds", {"groups": {}, "assets": {}})
         role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild=guild, trello_board=trello_board)
@@ -196,8 +200,8 @@ class UnBindCommand(Bloxlink.Module):
                         del group_ids[bind_id]
 
                         guild_data["groupIDs"] = group_ids
-                        await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
-                                                                                                               # cancel bind deletion below
+                        await self.r.table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
+                                                                                                  # cancel bind deletion below
 
                         removed_main_group = True
 
@@ -238,7 +242,12 @@ class UnBindCommand(Bloxlink.Module):
 
                             if int(low) == range_["low"] and int(high) == range_["high"]:
                                 await delete_bind_from_cards(low=low_, high=high_, trello_binds_list=trello_binds_list, bind_id=bind_id, bind_data_trello=range_)
-                                ranges.remove(range_)
+
+                                for range__ in found_group.get("ranges", []):
+                                    if int(low) == range__["low"] and int(high) == range__["high"]:
+                                        found_group["ranges"].remove(range__)
+                                        role_binds["groups"][bind_id]["ranges"] = found_group["ranges"]
+                                        break
 
                                 break
                         else:
@@ -275,21 +284,29 @@ class UnBindCommand(Bloxlink.Module):
             guild_data["roleBinds"] = role_binds
             guild_data["groupIDs"] = group_ids
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
+
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", RED_COLOR)
 
             raise Message("All bind removals were successful.", type="success")
 
         else:
             bind_category = bind_category.lower()
 
-            if bind_category.endswith("s"):
-                bind_category = bind_category[:-1]
+            if bind_category.endswith("s") and bind_category != "gamepass":
+                if bind_category in "gamepasses":
+                    bind_category = "gamepass"
+                else:
+                    bind_category = bind_category[:-1]
 
-            bind_category_plural = f"{bind_category}s"
-
-            if bind_category in ("asset", "badge"):
+            if bind_category == "gamepass":
+                bind_category_plural = "gamePasses"
+                bind_category_title = "GamePass"
+            else:
+                bind_category_plural = f"{bind_category}s"
                 bind_category_title = bind_category.title()
 
+            if bind_category in BIND_TYPES:
                 bind_id = str((await CommandArgs.prompt([
                     {
                         "prompt": f"Please specify the **{bind_category_title} ID** to delete from.",
@@ -313,17 +330,18 @@ class UnBindCommand(Bloxlink.Module):
 
                     guild_data["roleBinds"] = role_binds
 
-                    await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+                    await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-                found_bind_trello = role_binds_trello.get("assets", {}).get(bind_id) or {}
+                found_bind_trello = role_binds_trello.get(bind_category_plural, {}).get(bind_id) or {}
 
                 if found_bind_trello:
                     await delete_bind_from_cards(type=bind_category, bind_id=bind_id, trello_binds_list=trello_binds_list, bind_data_trello=found_bind_trello)
 
 
+                await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", RED_COLOR)
+
                 raise Message("All bind removals were successful.", type="success")
 
 
             else:
-                raise Error("Unsupported bind type.")
-
+                raise Error(f"Unsupported bind type. Valid types are: <group ID>, {BIND_TYPES}")

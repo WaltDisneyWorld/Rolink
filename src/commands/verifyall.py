@@ -1,5 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, RobloxNotFound # pylint: disable=import-error
+from resources.exceptions import (Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, # pylint: disable=import-error
+                                  RobloxNotFound, CancelCommand, Blacklisted, RobloxDown)
 from config import REACTIONS, VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
 from discord import Embed
 from discord.errors import Forbidden, NotFound
@@ -67,13 +68,20 @@ class VerifyAllCommand(Bloxlink.Module):
                         trello_binds_list = trello_binds_list,
                         roles             = roles,
                         nickname          = nickname,
-                        author_data       = await self.r.table("users").get(str(member.id)).run())
+                        author_data       = await self.r.db("bloxlink").table("users").get(str(member.id)).run())
 
-                except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden):
+                except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden, RobloxAPIError, CancelCommand, Blacklisted):
                     pass
 
                 except NotFound:
                     await response.error("Please do not delete roles/channels while a scan is going on... This scan is now cancelled.")
+                    break
+
+                except Error as e:
+                    await response.error(f"Encountered an error: ``{e}``. Scan cancelled.")
+                    break
+                except RobloxDown:
+                    await response.error("Roblox appears to be down, so this scan has been cancelled.")
                     break
 
 

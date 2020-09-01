@@ -18,7 +18,7 @@ async def user(request):
             "error": "No Discord ID specified"
         }, 400)
 
-    user_data = await r.table("users").get(discord_id).run() or {}
+    user_data = await r.db("bloxlink").table("users").get(discord_id).run() or {}
 
     if not (user_data.get("robloxID") or user_data.get("robloxAccounts")):
         return await render.json({
@@ -94,7 +94,7 @@ async def user_verify(request):
     is_primary = request.query.get("primary") == "true"
     guild_id = request.query.get("guild")
 
-    user_data = await r.table("users").get(discord_id).run() or {"id": discord_id}
+    user_data = await r.db("bloxlink").table("users").get(discord_id).run() or {"id": discord_id}
 
     if is_primary:
         user_data["robloxID"] = roblox_id
@@ -114,7 +114,7 @@ async def user_verify(request):
 
     user_data["robloxAccounts"] = roblox_accounts
 
-    await r.table("users").insert(user_data, conflict="update").run()
+    await r.db("bloxlink").table("users").insert(user_data, conflict="update").run()
     await r.table("gameVerification").get(roblox_id).delete().run()
 
     json_data = {

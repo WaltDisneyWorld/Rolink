@@ -1,8 +1,8 @@
 import re
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
-from resources.exceptions import PermissionError, Error, RobloxNotFound, Message, CancelCommand  # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES, ARROW, LIMITS  # pylint: disable=import-error
-from discord import Embed
+from resources.exceptions import PermissionError, Error, RobloxNotFound, RobloxAPIError, Message, CancelCommand  # pylint: disable=import-error
+from resources.constants import NICKNAME_TEMPLATES, ARROW, LIMITS, RED_COLOR  # pylint: disable=import-error
+from discord import Embed, Object
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
@@ -11,14 +11,14 @@ bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
 get_group, parse_trello_binds, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds", "count_binds", "get_binds"])
-fetch, is_premium = Bloxlink.get_module("utils", attrs=["fetch", "is_premium"])
+fetch, is_premium, post_event = Bloxlink.get_module("utils", attrs=["fetch", "is_premium", "post_event"])
 
 API_URL = "https://api.roblox.com"
 FREE_BIND_COUNT, PREM_BIND_COUNT = LIMITS["BINDS"]["FREE"], LIMITS["BINDS"]["PREMIUM"]
 
 @Bloxlink.command
 class BindCommand(Bloxlink.Module):
-    """bind a discord role to a roblox group rank"""
+    """bind a discord role to a roblox group, asset, or badge"""
 
     def __init__(self):
         self.aliases = ["newbind"]
@@ -26,18 +26,18 @@ class BindCommand(Bloxlink.Module):
         self.category = "Binds"
 
     @staticmethod
-    def find_range(tuple_set, ranges):
+    def find_range(range_set, ranges):
+        low = int(range_set[0])
+        high = int(range_set[1])
+
         for i, range_ in enumerate(ranges):
-            if range_["low"] == tuple_set[0] and range_["high"] == tuple_set[1]:
+            if range_["low"] == low and range_["high"] == high:
                 return range_, i
 
         return {}, 0
 
     @staticmethod
     async def validate_group(message, content):
-        if content.lower() in ("skip", "next"):
-            return "skip"
-
         regex_search = roblox_group_regex.search(content)
 
         if regex_search:
@@ -58,13 +58,14 @@ class BindCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
+        author = CommandArgs.message.author
 
         role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild=guild, trello_board=trello_board)
 
         bind_count = count_binds(guild_data, role_binds=role_binds_trello, group_ids=group_ids_trello)
 
         if bind_count >= FREE_BIND_COUNT:
-            profile, _ = await is_premium(guild.owner)
+            profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
 
             if not profile.features.get("premium"):
                 raise Error(f"You've exceeded the free bind limit of **{FREE_BIND_COUNT}.** Please delete some with "
@@ -78,23 +79,25 @@ class BindCommand(Bloxlink.Module):
 
         parsed_args = await CommandArgs.prompt([
             {
-                "prompt": "A bind is a link between a Roblox group or asset and a Discord role. Please select a "
+                "prompt": "A bind is a link between a Roblox entity and a Discord role. Please select a "
                           "bind type:\n"
                           f"``group`` {ARROW} bind a Roblox group rank to a Discord role\n"
                           f"``asset`` {ARROW} bind a Roblox catalog asset to a Discord role\n"
-                          f"``badge`` {ARROW} bind a Roblox badge to a Discord role\n",
-                          # f"``gamepass`` {ARROW} bind a Roblox badge to a Discord role",
+                          f"``badge`` {ARROW} bind a Roblox badge to a Discord role\n"
+                          f"``gamepass`` {ARROW} bind a Roblox gamepass to a Discord role",
                 "name": "bind_choice",
-                "choices": ["group", "asset", "badge"],
+                "type": "choice",
+                "choices": ["group", "asset", "badge", "gamepass"],
                 "formatting": False
             },
             {
-                "prompt": "Should these members be given a nickname different from the server-wide ``!nickname``? Please specify a nickname, or "
-                          "say ``skip`` to skip this option and default to the server-wide nickname ``!nickname`` template.\n\nYou may use these templates:"
-                         f"```{NICKNAME_TEMPLATES}```",
+                "prompt": f"Should these members be given a nickname different from the server-wide ``{prefix}nickname``? Please specify a nickname, or "
+                          f"say ``skip`` to skip this option and default to the server-wide nickname ``{prefix}nickname`` template.\n\nYou may use these templates:"
+                          f"```{NICKNAME_TEMPLATES}```",
                 "name": "nickname",
                 "max": 100,
                 "type": "string",
+                "footer": "Say **skip** to skip this option.",
                 "formatting": False
             }
         ])
@@ -123,9 +126,9 @@ class BindCommand(Bloxlink.Module):
                     "entire group": {},
                     "binds": {}
                 },
-                "assets": {
-
-                }
+                "assets": {},
+                "badges": {},
+                "gamePasses": {}
             }
 
         if nickname.lower() in ("skip", "done", "next"):
@@ -142,14 +145,17 @@ class BindCommand(Bloxlink.Module):
                     "validation": self.validate_group
                 },
                 {
-                    "prompt": f"Would you like to integrate the entire group to receive roles (binds will be made for _all_ Rolesets), or only select a few ranks to receive a role?\n\n"
-                            "Select one: ``entire group`` or ``select ranks``",
+                    "prompt": f"Please select a group bind integration mode:\n"
+                              f"``entire group`` {ARROW} the entire group will be linked; members will get "
+                                "roles which correspond to their group roleset name. The Discord roles __MUST ALWAYS MATCH__ "
+                                "with the roleset names.\n"
+                              f"``select ranks`` {ARROW} you can choose which specific roleset to bind with specific Discord roles. "
+                                "The Discord roles can be renamed and can be different from the roleset names.",
                     "name": "type",
                     "type": "choice",
                     "choices": ["entire group", "select ranks"]
                 }
             ])
-
 
             group = parsed_args_group["group"]
             group_id = group.group_id
@@ -165,13 +171,13 @@ class BindCommand(Bloxlink.Module):
                         group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
                         guild_data["groupIDs"] = group_ids
 
-                        await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+                        await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
                         trello_group_bind = trello_card_binds["groups"]["entire group"].get(group_id)
 
                         make_trello_card = True
 
-                        if trello_group_bind:
+                        if trello_group_bind and trello_group_bind["nickname"]:
                             for card_data in trello_group_bind["trello"].get("cards", []):
                                 card = card_data["card"]
 
@@ -197,13 +203,18 @@ class BindCommand(Bloxlink.Module):
                             if trello_binds_list:
                                 trello_binds_list.parsed_bind_data = None
 
+                        ending_s = group.name.endswith("s") and "'" or "'s"
+
+                        await post_event(guild, guild_data, "bind", f"{author.mention} has **changed** ``{group.name}``{ending_s} nickname template.", RED_COLOR)
+
                         raise Message("Since your group is already linked, the nickname was updated.", type="success")
+
                     else:
                         raise Message("This group is already linked.", type="silly")
 
                 for roleset in group.rolesets:
-                    roleset_name = roleset.get("Name") or roleset.get("name")
-                    roleset_rank = roleset.get("Rank") or roleset.get("rank")
+                    roleset_name = roleset.get("name")
+                    roleset_rank = roleset.get("rank")
 
                     if roleset_rank:
                         discord_role = find(lambda r: r.name == roleset_name, guild.roles)
@@ -218,7 +229,7 @@ class BindCommand(Bloxlink.Module):
                 group_ids[group_id] = {"nickname": nickname not in ("skip", "next") and nickname, "groupName": group.name}
                 guild_data["groupIDs"] = group_ids
 
-                await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+                await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
                 if trello_binds_list:
                     try:
@@ -229,6 +240,7 @@ class BindCommand(Bloxlink.Module):
                     except (TrelloNotFound, TrelloBadRequest):
                         pass
 
+                await post_event(guild, guild_data, "bind", f"{author.mention} has **linked** group ``{group.name}``.", RED_COLOR)
                 raise Message("Success! Your group was successfully linked.", type="success")
 
             else:
@@ -260,7 +272,7 @@ class BindCommand(Bloxlink.Module):
                 role_binds["groups"][group_id]["ranges"] = role_binds["groups"][group_id].get("ranges") or {}
                 role_binds["groups"][group_id]["groupName"] = group.name
 
-                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x.get('name') or x.get('Name')}** {ARROW} {x.get('Rank') or x.get('rank')}" for x in group.rolesets if x.get('Rank') or x.get('rank')))
+                rolesets_embed = Embed(title=f"{group.name} Rolesets", description="\n".join(f"**{x.get('name')}** {ARROW} {x.get('rank')}" for x in group.rolesets if x.get('rank')))
 
                 rolesets_embed = await CommandArgs.response.send(embed=rolesets_embed)
 
@@ -310,7 +322,7 @@ class BindCommand(Bloxlink.Module):
 
                             if range_search:
                                 num1, num2 = range_search.group(1), range_search.group(2)
-                                new_ranks["ranges"].append((num1, num2))
+                                new_ranks["ranges"].append([num1, num2])
                             else:
                                 # they specified a roleset name as a string
                                 pending_roleset_names.append(rank)
@@ -319,8 +331,8 @@ class BindCommand(Bloxlink.Module):
                         found = False
 
                         for roleset in group.rolesets:
-                            roleset_name = roleset.get("Name") or roleset.get("name")
-                            roleset_rank = roleset.get("Rank") or roleset.get("rank")
+                            roleset_name = roleset.get("name")
+                            roleset_rank = roleset.get("rank")
 
                             if roleset_name in pending_roleset_names and roleset_name not in new_ranks["binds"]:
                                 new_ranks["binds"].append(str(roleset_rank))
@@ -366,7 +378,6 @@ class BindCommand(Bloxlink.Module):
 
                             if trello_card_binds:
                                 trello_bind_group = trello_card_binds["groups"]["binds"].get(group_id, {}).get("binds")
-                                #print(trello_card_binds, flush=True)
 
                                 if trello_bind_group:
                                     card_data_ = trello_bind_group.get(x)
@@ -376,7 +387,6 @@ class BindCommand(Bloxlink.Module):
                                             trello_card = card["card"]
                                             trello_ranks = card.get("ranks") or []
 
-                                            #print(trello_ranks, x in trello_ranks, len(trello_ranks) == 1, flush=True)
                                             if (x in trello_ranks or x == "all") and len(trello_ranks) == 1:
                                                 trello_bind_roles = card.get("roles", set())
                                                 card_bind_data = [
@@ -434,6 +444,7 @@ class BindCommand(Bloxlink.Module):
 
                     for x in new_ranks["ranges"]: # list of dictionaries: [{"high": 10, "low": 1, "nickname": ""},...]
                         range_, num = self.find_range(x, role_binds["groups"][group_id]["ranges"])
+                        found = bool(range_)
 
                         if not role_id in range_.get("roles", []):
                             range_["roles"] = range_.get("roles") or []
@@ -445,7 +456,9 @@ class BindCommand(Bloxlink.Module):
                                 if not range_.get("nickname"):
                                     range_["nickname"] = None
 
-                        if not num:
+                        if found:
+                            role_binds["groups"][group_id]["ranges"][num] = range_
+                        else:
                             range_["low"] = int(x[0])
                             range_["high"] = int(x[1])
                             role_binds["groups"][group_id]["ranges"].append(range_)
@@ -458,39 +471,42 @@ class BindCommand(Bloxlink.Module):
 
                                 if trello_range_group:
                                     for trello_range in trello_range_group:
-                                        trello_ranks = trello_range["trello"].get("ranks", [])
+                                        trello_data = trello_range["trello"]
 
-                                        if trello_range["low"] == range_["low"] and trello_range["high"] == range_["high"] and len(trello_ranks) == 1:
-                                            trello_data = trello_range["trello"]
-                                            trello_card = trello_data["card"]
-                                            trello_bind_roles = trello_range.get("roles", set())
-                                            card_bind_data = [
-                                                f"Group: {group_id}",
-                                                f"Nickname: {(nickname != 'skip' and nickname) or trello_range.get('nickname') or 'None'}",
-                                            ]
+                                        for card in trello_data.get("cards", []):
+                                            trello_card = card["card"]
+                                            trello_ranks = card.get("ranks", [])
 
-                                            trello_bind_roles.add(discord_role.name)
-                                            card_bind_data.append(f"Roles: {', '.join(trello_bind_roles)}")
+                                            if trello_range["low"] == range_["low"] and trello_range["high"] == range_["high"] and len(trello_ranks) == 1:
+                                                trello_data = trello_range["trello"]
+                                                trello_bind_roles = trello_range.get("roles", set())
+                                                card_bind_data = [
+                                                    f"Group: {group_id}",
+                                                    f"Nickname: {(nickname != 'skip' and nickname) or trello_range.get('nickname') or 'None'}",
+                                                ]
 
-                                            card_bind_data.append(f"Ranks: {trello_data['trello_str']['ranks']}")
+                                                trello_bind_roles.add(discord_role.name)
+                                                card_bind_data.append(f"Roles: {', '.join(trello_bind_roles)}")
 
-                                            trello_card_desc = "\n".join(card_bind_data)
+                                                card_bind_data.append(f"Ranks: {card['trello_str']['ranks']}")
 
-                                            if trello_card_desc != trello_card.description:
-                                                trello_card.description = trello_card_desc
+                                                trello_card_desc = "\n".join(card_bind_data)
 
-                                                try:
-                                                    await trello_card.edit(desc=trello_card_desc)
-                                                except TrelloUnauthorized:
-                                                    await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
-                                                                         "Trello board.")
-                                                except (TrelloNotFound, TrelloBadRequest):
-                                                    pass
+                                                if trello_card_desc != trello_card.description:
+                                                    trello_card.description = trello_card_desc
 
-                                                trello_binds_list.parsed_bind_data = None
-                                                make_binds_card = False
+                                                    try:
+                                                        await trello_card.edit(desc=trello_card_desc)
+                                                    except TrelloUnauthorized:
+                                                        await response.error("In order for me to edit your Trello binds, please add ``@bloxlink`` to your "
+                                                                             "Trello board.")
+                                                    except (TrelloNotFound, TrelloBadRequest):
+                                                        pass
 
-                                                break
+                                                    trello_binds_list.parsed_bind_data = None
+                                                    make_binds_card = False
+
+                                                    break
 
                             if make_binds_card:
                                 card_bind_data = [
@@ -513,7 +529,7 @@ class BindCommand(Bloxlink.Module):
                                 trello_binds_list.parsed_bind_data = None
 
 
-            await self.r.db("canary").table("guilds").insert({
+            await self.r.table("guilds").insert({
                 "id": str(guild.id),
                 "roleBinds": role_binds
             }, conflict="update").run()
@@ -534,11 +550,17 @@ class BindCommand(Bloxlink.Module):
 
             text = "".join(text)
 
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** group ``{group.name}``.", RED_COLOR)
+
             await response.success(text)
 
-        elif bind_choice in ("asset", "badge"):
-            bind_choice_title = bind_choice.title()
-            bind_choice_plural = f"{bind_choice}s"
+        elif bind_choice in ("asset", "badge", "gamepass"):
+            if bind_choice == "gamepass":
+                bind_choice_title = "GamePass"
+                bind_choice_plural = "gamePasses"
+            else:
+                bind_choice_title = bind_choice.title()
+                bind_choice_plural = f"{bind_choice}s"
 
             vg_parsed_args = await CommandArgs.prompt([
                 {
@@ -560,16 +582,40 @@ class BindCommand(Bloxlink.Module):
             role_id = str(discord_role.id)
 
             if bind_choice == "asset":
-                text, response_ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={bind_id}")
+                try:
+                    text, response_ = await fetch(f"{API_URL}/marketplace/productinfo?assetId={bind_id}")
+                except RobloxNotFound:
+                    raise Error(f"An Asset with ID ``{bind_id}`` does not exist.")
+
                 json_data = await response_.json()
 
                 display_name = json_data.get("Name")
 
             elif bind_choice == "badge":
-                text, response_ = await fetch(f"https://badges.roblox.com/v1/badges/{bind_id}")
+                try:
+                    text, response_ = await fetch(f"https://badges.roblox.com/v1/badges/{bind_id}")
+                except RobloxNotFound:
+                    raise Error(f"A Badge with ID ``{bind_id}`` does not exist.")
+
                 json_data = await response_.json()
 
                 display_name = json_data.get("displayName")
+
+            elif bind_choice == "gamepass":
+                bind_choice_title = "GamePass"
+                bind_choice_plural = "gamePasses"
+
+                try:
+                    text, response_ = await fetch(f"http://api.roblox.com/marketplace/game-pass-product-info?gamePassId={bind_id}")
+                except (RobloxNotFound, RobloxAPIError):
+                    raise Error(f"A GamePass with ID ``{bind_id}`` does not exist.")
+
+                json_data = await response_.json()
+
+                if json_data.get("ProductType") != "Game Pass":
+                    raise Error(f"A GamePass with ID ``{bind_id}`` does not exist.")
+
+                display_name = json_data.get("Name")
 
 
             role_binds = guild_data.get("roleBinds") or {}
@@ -607,7 +653,7 @@ class BindCommand(Bloxlink.Module):
                             card_bind_data = [
                                 f"{bind_choice_title} ID: {bind_id}",
                                 f"Display Name: {display_name}",
-                                f"Nickname: {(nickname != 'skip' and nickname) or rank.get('nickname') or card_data_.get('nickname') or 'None'}",
+                                f"Nickname: {(nickname != 'skip' and nickname) or trello_bind_vg.get('nickname') or 'None'}",
                             ]
 
                             trello_bind_roles.add(discord_role.name)
@@ -651,9 +697,12 @@ class BindCommand(Bloxlink.Module):
 
                     trello_binds_list.parsed_bind_data = None
 
-            await self.r.db("canary").table("guilds").insert({
+            await self.r.table("guilds").insert({
                 "id": str(guild.id),
                 "roleBinds": role_binds
             }, conflict="update").run()
+
+
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** {bind_choice_title} ``{display_name}``.", RED_COLOR)
 
             await response.success(f"Successfully **bound** {bind_choice_title} ``{display_name}`` ({bind_id}) with Discord role **{discord_role}!**")

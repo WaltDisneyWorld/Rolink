@@ -1,12 +1,12 @@
 from os import listdir
 from re import compile
 from ..structures import Bloxlink, DonatorProfile
-from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, Message
+from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, Message, CancelCommand
 from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
 from ..constants import RELEASE, TRANSFER_COOLDOWN
 from discord.errors import NotFound, Forbidden
 from discord.utils import find
-from discord import Object
+from discord import Object, Embed
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 from time import time
 from math import ceil
@@ -20,6 +20,7 @@ cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "ge
 class Utils(Bloxlink.Module):
     def __init__(self):
         self.option_regex = compile("(.+):(.+)")
+        self.timeout = aiohttp.ClientTimeout(total=20)
 
 
     @staticmethod
@@ -40,18 +41,40 @@ class Utils(Bloxlink.Module):
         finally:
             loop.close()
 
+    async def post_event(self, guild, guild_data, event_name, text, color=None):
+        log_channels = guild_data.get("logChannels", {})
+        log_channel = log_channels.get(event_name)
+
+        if log_channel:
+            text_channel = guild.get_channel(int(log_channel))
+
+            if text_channel:
+                embed = Embed(title=f"{event_name.title()} Event", description=text)
+                embed.colour = color
+
+                try:
+                    await text_channel.send(embed=embed)
+                except (Forbidden, NotFound):
+                    pass
+
     async def fetch(self, url, method="GET", params=None, headers=None, raise_on_failure=True, retry=HTTP_RETRY_LIMIT):
         params = params or {}
         headers = headers or {}
+
+        if RELEASE == "LOCAL":
+            Bloxlink.log(f"Making HTTP request: {url}")
 
         for k, v in params.items():
             if isinstance(v, bool):
                 params[k] = "true" if v else "false"
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=self.timeout) as session:
                 async with session.request(method, url, params=params, headers=headers) as response:
                     text = await response.text()
+
+                    if text == "The service is unavailable." or response.status == 503:
+                        raise RobloxDown
 
                     if raise_on_failure:
                         if response.status >= 500:
@@ -68,9 +91,6 @@ class Utils(Bloxlink.Module):
                         elif response.status == 404:
                             raise RobloxNotFound
 
-                    if text == "The service is unavailable.":
-                        raise RobloxDown
-
                     return text, response
 
         except ServerDisconnectedError:
@@ -83,39 +103,46 @@ class Utils(Bloxlink.Module):
             # TODO: raise HttpError with non-roblox URLs
             raise RobloxAPIError
 
+        except asyncio.TimeoutError:
+            raise CancelCommand
+
     async def get_prefix(self, guild=None, guild_data=None, trello_board=None):
         if not guild:
             return PREFIX, None
 
-        if RELEASE == "MAIN" and await guild.fetch_member(469652514501951518):
+        if RELEASE == "MAIN" and guild.get_member(469652514501951518):
             return "!!", None
 
         if trello_board:
-            List = await trello_board.get_list(lambda L: L.name == "Bloxlink Settings")
+            try:
+                List = await trello_board.get_list(lambda L: L.name == "Bloxlink Settings")
 
-            if List:
-                card = await List.get_card(lambda c: c.name[:6] == "prefix")
+                if List:
+                    card = await List.get_card(lambda c: c.name[:6] == "prefix")
 
-                if card:
-                    if card.name == "prefix":
-                        if card.desc:
-                            return card.desc.strip(), card
+                    if card:
+                        if card.name == "prefix":
+                            if card.desc:
+                                return card.desc.strip(), card
 
-                    else:
-                        match = self.option_regex.search(card.name)
+                        else:
+                            match = self.option_regex.search(card.name)
 
-                        if match:
-                            return match.group(2), card
+                            if match:
+                                return match.group(2), card
+
+            except asyncio.TimeoutError:
+                pass
 
 
 
-        guild_data = guild_data or await self.r.db("canary").table("guilds").get(str(guild.id)).run() or {}
+        guild_data = guild_data or await self.r.table("guilds").get(str(guild.id)).run() or {}
         prefix = guild_data.get("prefix")
 
         return prefix or PREFIX, None
 
     async def add_features(self, user, features, *, days=-1, code=None, premium_anywhere=None):
-        user_data = await self.r.table("users").get(str(user.id)).run() or {"id": str(user.id)}
+        user_data = await self.r.db("bloxlink").table("users").get(str(user.id)).run() or {"id": str(user.id)}
         user_data_premium = user_data.get("premium") or {}
         prem_expiry = user_data_premium.get("expiry", 1)
 
@@ -161,9 +188,9 @@ class Utils(Bloxlink.Module):
 
         user_data["premium"] = user_data_premium
 
-        await self.r.table("users").insert(user_data, conflict="update").run()
+        await self.r.db("bloxlink").table("users").insert(user_data, conflict="update").run()
 
-        cache_pop("premium_cache", user.id)
+        await cache_pop("premium_cache", user.id)
 
 
     async def has_selly_premium(self, author, author_data):
@@ -194,7 +221,8 @@ class Utils(Bloxlink.Module):
 
 
     async def transfer_premium(self, transfer_from, transfer_to, apply_cooldown=True):
-        profile, _ = await self.is_premium(transfer_to)
+        profile, _ = await self.is_premium(transfer_to, partner_check=False)
+
         if profile.features.get("premium"):
             raise Message("This user already has premium!", type="silly")
 
@@ -202,8 +230,8 @@ class Utils(Bloxlink.Module):
             raise Message("You cannot transfer premium to yourself!")
 
 
-        transfer_from_data = await self.r.table("users").get(str(transfer_from.id)).run() or {"id": str(transfer_from.id)}
-        transfer_to_data   = await self.r.table("users").get(str(transfer_to.id)).run() or {"id": str(transfer_to.id)}
+        transfer_from_data = await self.r.db("bloxlink").table("users").get(str(transfer_from.id)).run() or {"id": str(transfer_from.id)}
+        transfer_to_data   = await self.r.db("bloxlink").table("users").get(str(transfer_to.id)).run() or {"id": str(transfer_to.id)}
 
         transfer_from_data["premium"] = transfer_from_data.get("premium", {})
         transfer_to_data["premium"]   = transfer_to_data.get("premium", {})
@@ -214,56 +242,66 @@ class Utils(Bloxlink.Module):
         if apply_cooldown:
             transfer_from_data["premium"]["transferCooldown"] = time() + (86400*TRANSFER_COOLDOWN)
 
-        await self.r.table("users").insert(transfer_from_data, conflict="update").run()
-        await self.r.table("users").insert(transfer_to_data,   conflict="update").run()
+        await self.r.db("bloxlink").table("users").insert(transfer_from_data, conflict="update").run()
+        await self.r.db("bloxlink").table("users").insert(transfer_to_data,   conflict="update").run()
 
-        cache_pop("premium_cache", transfer_to.id)
-        cache_pop("premium_cache", transfer_from.id)
+        await cache_pop("premium_cache", transfer_to.id)
+        await cache_pop("premium_cache", transfer_from.id)
 
 
-    async def is_premium(self, author, author_data=None, cache=True, rec=True):
+    async def is_premium(self, author, author_data=None, guild=None, cache=True, rec=True, partner_check=True):
+        guild = guild or getattr(author, "guild", None)
+
+        profile = DonatorProfile(author)
+
+        if not rec:
+            cache = False
+
         if cache:
-            premium_cache = cache_get("premium_cache", author.id)
+            premium_cache = await cache_get("premium_cache", author.id)
 
             if premium_cache:
                 return premium_cache[0], premium_cache[1]
 
 
-        profile = DonatorProfile(author)
-
-        author_data = author_data or await self.r.table("users").get(str(author.id)).run() or {"id": str(author.id)}
+        author_data = author_data or await self.r.db("bloxlink").table("users").get(str(author.id)).run() or {"id": str(author.id)}
         premium_data = author_data.get("premium") or {}
 
         if rec:
             if premium_data.get("transferTo"):
                 if cache:
-                    cache_set("premium_cache", author.id, (profile, premium_data["transferTo"]))
+                    await cache_set("premium_cache", author.id, (profile, premium_data["transferTo"]))
 
                 return profile, premium_data["transferTo"]
 
             elif premium_data.get("transferFrom"):
                 transfer_from = premium_data["transferFrom"]
-                transferee_data = await self.r.table("users").get(str(transfer_from)).run() or {}
-                transferee_premium, _ = await self.is_premium(Object(id=transfer_from), transferee_data, rec=False, cache=False)
+                transferee_data = await self.r.db("bloxlink").table("users").get(str(transfer_from)).run() or {}
+                transferee_premium, _ = await self.is_premium(Object(id=transfer_from), transferee_data, rec=False, cache=False, partner_check=False)
 
-                if transferee_premium:
+                if transferee_premium.features.get("premium"):
                     if cache:
-                        cache_set("premium_cache", author.id, (transferee_premium, _))
+                        await cache_set("premium_cache", author.id, (transferee_premium, _))
 
                     return transferee_premium, _
                 else:
                     premium_data["transferFrom"] = None
+                    premium_data["transferTo"] = None
+                    premium_data["transferCooldown"] = None
                     transferee_data["transferTo"] = None
+                    transferee_data["transferFrom"] = None
+                    transferee_data["transferCooldown"] = None
 
                     author_data["premium"] = premium_data
                     transferee_data["premium"] = transferee_data
 
-                    await self.r.table("users").insert(author_data, conflict="update").run()
-                    await self.r.table("users").insert(transferee_data, conflict="update").run()
+                    await self.r.db("bloxlink").table("users").insert(author_data, conflict="update").run()
+                    await self.r.db("bloxlink").table("users").insert(transferee_data, conflict="update").run()
 
 
         if author_data.get("flags", {}).get("premiumAnywhere"):
             profile.attributes["PREMIUM_ANYWHERE"] = True
+            profile.add_note("This user can use premium in _any_ server.")
             profile.add_features("premium", "pro")
 
         data_patreon = await self.has_patreon_premium(author, author_data)
@@ -281,7 +319,15 @@ class Utils(Bloxlink.Module):
             if data_selly["pro_access"]:
                 profile.add_features("pro")
 
+        if guild and partner_check:
+            partners_cache = await cache_get("partners", guild.id)
+
+            if partners_cache:
+                profile.add_features("premium")
+                profile.days = 0
+                profile.add_note("This server has free premium from a partnership.")
+
         if cache:
-            cache_set("premium_cache", author.id, (profile, None))
+            await cache_set("premium_cache", author.id, (profile, None))
 
         return profile, None

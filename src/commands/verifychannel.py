@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from resources.exceptions import PermissionError, Error # pylint: disable=import-error
 from resources.constants import DEFAULTS # pylint: disable=import-error
 from discord.utils import find
-from discord.errors import Forbidden, NotFound
+from discord.errors import Forbidden, NotFound, HTTPException
 
 @Bloxlink.command
 class VerifyChannelCommand(Bloxlink.Module):
@@ -24,17 +24,36 @@ class VerifyChannelCommand(Bloxlink.Module):
             category = find(lambda c: c.name == "Verification", guild.categories) or \
                        await guild.create_category("Verification")
 
-            verify_channel = find(lambda t: t.name == "verify", category.channels) or \
-                             await guild.create_text_channel("verify", category=category)
-
             verify_info = find(lambda t: t.name == "verify-instructions", category.channels) or \
                           await guild.create_text_channel("verify-instructions", category=category)
+
+            verify_channel = find(lambda t: t.name == "verify", category.channels) or \
+                             await guild.create_text_channel("verify", category=category)
 
             sample_channel = await guild.create_text_channel("sample-channel")
 
         except Forbidden:
             raise PermissionError("I was unable to create the necessary channels. Please ensure I have the "
-                                  "Manage Channels`` permission.")
+                                  "``Manage Channels`` permission.")
+
+        except HTTPException:
+            raise Error("You have too many channels or categories! Please delete some before continuing.")
+
+        try:
+            await verify_info.send("This server uses Bloxlink to manage Roblox verification. In "
+                                   "order to unlock all the features of this server, you'll need "
+                                   "to verify your Roblox account with your Discord account!\n\nTo "
+                                   f"do this, run ``{prefix}verify`` in {verify_channel.mention} and follow the instructions.")
+
+            await sample_channel.send("This is a sample channel that only Verified users " \
+                                      "can read. This channel is not important, you may freely delete it.\n" \
+                                      "To create another sample channel, right click this channel and click 'Clone " \
+                                      "Text Channel', or just run this command again.")
+
+        except (Forbidden, NotFound):
+            raise PermissionError("I was unable to send messages to the created channels. Please give me the "
+                                  "proper permissions.")
+
 
         try:
             await verify_info.set_permissions(guild.me, send_messages=True, read_messages=True)
@@ -61,23 +80,8 @@ class VerifyChannelCommand(Bloxlink.Module):
         except NotFound:
             raise Error("Please do not delete the created channels while I'm setting them up...")
 
-        try:
-            await verify_info.send("This server uses Bloxlink to manage Roblox verification. In "
-                                   "order to unlock all the features of this server, you'll need "
-                                   "to verify your Roblox account with your Discord account!\n\nTo "
-                                   f"do this, run ``{prefix}verify`` in {verify_channel.mention} and follow the instructions.")
 
-            await sample_channel.send("This is a sample channel that only Verified users " \
-                                      "can read. This channel is not important, you may freely delete it.\n" \
-                                      "To create another sample channel, right click this channel and click 'Clone " \
-                                      "Text Channel', or just run this command again.")
-
-        except (Forbidden, NotFound):
-            raise PermissionError("I was unable to send messages to the created channels. Please give me the "
-                                  "proper permissions.")
-
-
-        await self.r.db("canary").table("guilds").insert({
+        await self.r.table("guilds").insert({
             "id": str(guild.id),
             "verifyChannel": str(verify_channel.id)
         }, conflict="update").run()

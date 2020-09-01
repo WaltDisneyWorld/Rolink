@@ -1,7 +1,11 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES, DEFAULTS, UNVERIFIED_TEMPLATES
-from resources.exceptions import Message
+from resources.constants import NICKNAME_TEMPLATES, DEFAULTS, UNVERIFIED_TEMPLATES, BROWN_COLOR # pylint: disable=import-error
+from resources.exceptions import Message # pylint: disable=import-error
 from discord.errors import NotFound, HTTPException, Forbidden
+
+
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+
 
 @Bloxlink.command
 class JoinDMCommand(Bloxlink.Module):
@@ -32,6 +36,9 @@ class JoinDMCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
         verifiedDM = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
 
+        author = CommandArgs.message.author
+        guild = CommandArgs.message.guild
+
         response = CommandArgs.response
 
         if verifiedDM:
@@ -57,13 +64,14 @@ class JoinDMCommand(Bloxlink.Module):
 
             guild_data["verifiedDM"] = parsed_args_2
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+            await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         elif parsed_args_1 == "disable":
             guild_data["verifiedDM"] = None
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``joinDM`` option for ``verified`` members.", BROWN_COLOR)
 
         raise Message(f"Successfully **{parsed_args_1}d** your DM message.", type="success")
 
@@ -100,12 +108,16 @@ class JoinDMCommand(Bloxlink.Module):
 
             guild_data["unverifiedDM"] = parsed_args_2
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="update").run()
+            await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         elif parsed_args_1 == "disable":
             guild_data["unverifiedDM"] = None
 
-            await self.r.db("canary").table("guilds").insert(guild_data, conflict="replace").run()
+            await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
+        author = CommandArgs.message.author
+        guild = CommandArgs.message.guild
+
+        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``joinDM`` option for ``unverified`` members.", BROWN_COLOR)
 
         raise Message(f"Successfully **{parsed_args_1}d** your DM message.", type="success")
