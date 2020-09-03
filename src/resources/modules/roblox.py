@@ -813,6 +813,11 @@ class Roblox(Bloxlink.Module):
         roblox_user = None
 
         if RELEASE == "PRO":
+            donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+
+            if not donator_profile.features.get("pro"):
+                return
+
             PREFIX = "!"
         else:
             PREFIX = "!!"
@@ -1025,10 +1030,10 @@ class Roblox(Bloxlink.Module):
         allow_old_roles = guild_data.get("allowOldRoles", DEFAULTS.get("allowOldRoles"))
 
         if unverify_role:
-            unverified_role = find(lambda r: r.name == unverified_role_name, guild.roles)
+            unverified_role = find(lambda r: r.name == unverified_role_name and not r.managed, guild.roles)
 
         if verify_role:
-            verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
+            verified_role = find(lambda r: r.name == verified_role_name and not r.managed, guild.roles)
 
         inactive_role = await RobloxProfile.get_inactive_role(guild, guild_data, trello_board)
 
@@ -1076,7 +1081,7 @@ class Roblox(Bloxlink.Module):
                         remove_roles.add(unverified_role)
 
                 if verify_role:
-                    verified_role = find(lambda r: r.name == verified_role_name, guild.roles)
+                    verified_role = find(lambda r: r.name == verified_role_name and not r.managed, guild.roles)
 
                     if not verified_role:
                         try:
@@ -1149,7 +1154,7 @@ class Roblox(Bloxlink.Module):
 
                                     for role_id in bound_roles:
                                         int_role_id = role_id.isdigit() and int(role_id)
-                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                        role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                         if not role:
                                             if bind_data.get("trello"):
@@ -1178,7 +1183,7 @@ class Roblox(Bloxlink.Module):
                                 else:
                                     for role_id in bound_roles:
                                         int_role_id = role_id.isdigit() and int(role_id)
-                                        role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                        role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                         if not allow_old_roles and role and role in author.roles:
                                             remove_roles.add(role)
@@ -1204,7 +1209,7 @@ class Roblox(Bloxlink.Module):
                                             if bound_roles:
                                                 for role_id in bound_roles:
                                                     int_role_id = role_id.isdigit() and int(role_id)
-                                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, author.roles)
+                                                    role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, author.roles)
 
                                                     if role and not allow_old_roles:
                                                         remove_roles.add(role)
@@ -1215,7 +1220,7 @@ class Roblox(Bloxlink.Module):
 
                                             for role_id in bound_roles:
                                                 int_role_id = role_id.isdigit() and int(role_id)
-                                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                 if not role:
                                                     if bind_data.get("trello"):
@@ -1244,7 +1249,7 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             for role_id in bound_roles:
                                                 int_role_id = role_id.isdigit() and int(role_id)
-                                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                 if not allow_old_roles and role and role in author.roles:
                                                     remove_roles.add(role)
@@ -1254,7 +1259,7 @@ class Roblox(Bloxlink.Module):
                                             if bound_roles:
                                                 for role_id in bound_roles:
                                                     int_role_id = role_id.isdigit() and int(role_id)
-                                                    role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                    role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                     if not role:
                                                         if bind_data.get("trello"):
@@ -1284,7 +1289,7 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             for role_id in bound_roles:
                                                 int_role_id = role_id.isdigit() and int(role_id)
-                                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                 if not allow_old_roles and role and role in author.roles:
                                                     remove_roles.add(role)
@@ -1302,7 +1307,7 @@ class Roblox(Bloxlink.Module):
 
                                             for role_id in bound_roles:
                                                 int_role_id = role_id.isdigit() and int(role_id)
-                                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                 if not role:
                                                     if bind_range.get("trello"):
@@ -1328,7 +1333,7 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             for role_id in bound_roles:
                                                 int_role_id = role_id.isdigit() and int(role_id)
-                                                role = find(lambda r: (int_role_id and r.id == int_role_id) or r.name == role_id, guild.roles)
+                                                role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
 
                                                 if not allow_old_roles and role and role in author.roles:
                                                     remove_roles.add(role)
@@ -1343,7 +1348,7 @@ class Roblox(Bloxlink.Module):
 
                             if group:
                                 await group.apply_rolesets()
-                                group_role = find(lambda r: r.name == group.user_rank_name, guild.roles)
+                                group_role = find(lambda r: r.name == group.user_rank_name and not r.managed, guild.roles)
 
                                 if not group_role:
                                     if guild_data.get("dynamicRoles", DEFAULTS.get("dynamicRoles")):
@@ -1359,7 +1364,7 @@ class Roblox(Bloxlink.Module):
 
                                 for roleset in group.rolesets:
                                     roleset_name = roleset["name"]
-                                    has_role = find(lambda r: r.name == roleset_name, author.roles)
+                                    has_role = find(lambda r: r.name == roleset_name and not r.managed, author.roles)
 
                                     if has_role:
                                         if not allow_old_roles and group.user_rank_name != roleset_name:
@@ -1445,7 +1450,7 @@ class Roblox(Bloxlink.Module):
                                     raise Error(f"Error for linked group bind: group ``{group_id}`` not found")
 
                                 for roleset in group.rolesets:
-                                    group_role = find(lambda r: r.name == roleset["name"], author.roles)
+                                    group_role = find(lambda r: r.name == roleset["name"] and not r.managed, author.roles)
 
                                     if not allow_old_roles and group_role:
                                         remove_roles.add(group_role)
@@ -2020,13 +2025,13 @@ class RobloxProfile(Bloxlink.Module):
 
                 if inactive_role_trello:
                     inactive_role_id = inactive_role_trello.isdigit() and int(inactive_role_trello)
-                    inactive_role = find(lambda r: (inactive_role_id and r.id == inactive_role_id) or (r.name == inactive_role_trello), guild.roles)
+                    inactive_role = find(lambda r: ((inactive_role_id and r.id == inactive_role_id) or (r.name == inactive_role_trello)) and not r.managed, guild.roles)
             else:
                 inactive_role_id = guild_data.get("inactiveRole")
 
                 if inactive_role_id:
                     inactive_role_id = int(inactive_role_id)
-                    inactive_role = find(lambda r: r.id == inactive_role_id, guild.roles)
+                    inactive_role = find(lambda r: r.id == inactive_role_id and not r.managed, guild.roles)
 
         return inactive_role
 
