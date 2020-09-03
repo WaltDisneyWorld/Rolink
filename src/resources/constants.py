@@ -148,21 +148,21 @@ TRANSFER_COOLDOWN = 5
 SERVER_INVITE = "https://discord.gg/jJKWpsr"
 
 TABLE_STRUCTURE = {
-	"bloxlink": [
-		"users",
-		"guilds",
-		"groupShouts",
-		"gameVerification",
+    "bloxlink": [
+        "users",
+        "guilds",
+        "groupShouts",
+        "gameVerification",
         "robloxAccounts"
-	],
-	"canary": [
-		"guilds",
-		"groupShouts"
-	],
-	"patreon": [
-		"refreshTokens",
-		"patrons"
-	]
+    ],
+    "canary": [
+        "guilds",
+        "groupShouts"
+    ],
+    "patreon": [
+        "refreshTokens",
+        "patrons"
+    ]
 }
 
 LIMITS = {
