@@ -311,7 +311,7 @@ class Roblox(Bloxlink.Module):
         return success
 
 
-    async def get_clan_tag(self, author, guild, response, user_data=None):
+    async def get_clan_tag(self, author, guild, response, dm=False, user_data=None):
         user_data = user_data or await self.r.db("bloxlink").table("users").get(str(author.id)).run() or {"id": str(author.id)}
         clan_tags = user_data.get("clanTags", {})
 
@@ -327,7 +327,7 @@ class Roblox(Bloxlink.Module):
                       "or it may not properly show.\nIf you want to skip this, then say ``skip``.",
             "name": "clan_tag",
             "max": 32
-        }]))["clan_tag"]
+        }], dm=dm))["clan_tag"]
 
         if clan_tag.lower() == "skip":
             return get_from_db()
@@ -373,7 +373,7 @@ class Roblox(Bloxlink.Module):
 
         return welcome_message, embed
 
-    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, response=None, is_nickname=True, guild_data=None, user_data=None, roblox_user=None, prefix=None):
+    async def get_nickname(self, author, template=None, group=None, *, guild=None, skip_roblox_check=False, response=None, is_nickname=True, guild_data=None, user_data=None, roblox_user=None, dm=False, prefix=None):
         template = template or ""
 
         if template == "{disable-nicknaming}":
@@ -478,7 +478,7 @@ class Roblox(Bloxlink.Module):
             template = template.replace("{{{0}}}".format(outer_nick), nick_value)
 
         # clan tags are done at the end bc we may need to shorten them, and brackets are removed at the end
-        clan_tag = "clan-tag" in template and (await self.get_clan_tag(author, guild, response, user_data) or "N/A")
+        clan_tag = "clan-tag" in template and (await self.get_clan_tag(author=author, guild=guild, response=response, user_data=user_data, dm=dm) or "N/A")
 
         if is_nickname:
             if clan_tag:
@@ -861,7 +861,8 @@ class Roblox(Bloxlink.Module):
                     nickname                = True,
                     roblox_user             = roblox_user,
                     given_trello_options    = True,
-                    cache                   = cache)
+                    cache                   = cache,
+                    dm                      = dm)
 
             except (NotFound, RobloxAPIError, Error, CancelCommand, RobloxDown, Blacklisted):
                 return
@@ -918,7 +919,7 @@ class Roblox(Bloxlink.Module):
                         return
 
             if dm and verified_dm:
-                verified_dm = await self.get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
+                verified_dm = await self.get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=roblox_user, dm=dm, is_nickname=False)
 
                 try:
                     await member.send(verified_dm)
@@ -963,14 +964,14 @@ class Roblox(Bloxlink.Module):
                 return
 
             if dm and unverified_dm:
-                unverified_dm = await self.get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, is_nickname=False)
+                unverified_dm = await self.get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, dm=dm, is_nickname=False)
 
                 try:
                     await member.send(unverified_dm)
                 except (Forbidden, HTTPException):
                     pass
 
-    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False, response=None, cache=True):
+    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False, response=None, dm=False, cache=True):
         blacklisted = await cache_get("blacklist:discord_ids", author.id, primitives=True)
 
         if blacklisted is not None:
@@ -1066,7 +1067,7 @@ class Roblox(Bloxlink.Module):
                     remove_roles.add(inactive_role)
 
             if nickname:
-                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data, user_data=author_data, response=response)
+                nickname = await self.get_nickname(author=author, skip_roblox_check=True, guild=guild, guild_data=guild_data, dm=dm, user_data=author_data, response=response)
 
             unverified = True
 
@@ -1175,9 +1176,9 @@ class Roblox(Bloxlink.Module):
 
                                         if role and nickname and bind_nickname and bind_nickname != "skip":
                                             if author.top_role == role:
-                                                top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                top_role_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
-                                            resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                            resolved_nickname = await self.get_nickname(author=author, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                             if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                 possible_nicknames.append([role, resolved_nickname])
@@ -1241,9 +1242,9 @@ class Roblox(Bloxlink.Module):
 
                                                 if role and nickname and bind_nickname and bind_nickname != "skip":
                                                     if author.top_role == role:
-                                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
-                                                    resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                    resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                                     if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                         possible_nicknames.append([role, resolved_nickname])
@@ -1281,9 +1282,9 @@ class Roblox(Bloxlink.Module):
 
                                                     if role and nickname and bind_nickname and bind_nickname != "skip":
                                                         if author.top_role == role:
-                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
-                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                             possible_nicknames.append([role, resolved_nickname])
@@ -1324,10 +1325,10 @@ class Roblox(Bloxlink.Module):
                                                         add_roles.add(role)
 
                                                         if nickname and author.top_role == role and bind_nickname:
-                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                            top_role_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                                     if nickname and bind_nickname and bind_nickname != "skip":
-                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=bind_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                                             possible_nicknames.append([role, resolved_nickname])
@@ -1414,10 +1415,10 @@ class Roblox(Bloxlink.Module):
 
                                 if nickname and group_nickname and group_role:
                                     if author.top_role == group_role and group_nickname:
-                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                        top_role_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                     if group_nickname and group_nickname != "skip":
-                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, response=response)
+                                        resolved_nickname = await self.get_nickname(author=author, group=group, template=group_nickname, roblox_user=roblox_user, user_data=author_data, dm=dm, response=response)
 
                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                             possible_nicknames.append([group_role, resolved_nickname])
@@ -1491,10 +1492,10 @@ class Roblox(Bloxlink.Module):
                             nickname = highest_role[0][1]
 
                 else:
-                    nickname = top_role_nickname or await self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), author=author, user_data=author_data, roblox_user=roblox_user, response=response)
+                    nickname = top_role_nickname or await self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), author=author, user_data=author_data, roblox_user=roblox_user, dm=dm, response=response)
 
                 if isinstance(nickname, bool):
-                    nickname = self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), roblox_user=roblox_user, author=author, user_data=author_data, response=response)
+                    nickname = self.get_nickname(template=guild_data.get("nicknameTemplate", DEFAULTS.get("nicknameTemplate")), roblox_user=roblox_user, author=author, user_data=author_data, dm=dm, response=response)
 
             if nickname and nickname != author.display_name:
                 try:

@@ -138,7 +138,7 @@ class Arguments:
 
 						await self.say(prompt_text, embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 
-						if dm:
+						if dm and IS_DOCKER:
 							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
 							my_arg = message_content[0]
 
@@ -158,7 +158,7 @@ class Arguments:
 								my_arg = "cancel (timeout)"
 
 						else:
-							message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
+							message = await Bloxlink.wait_for("message", check=self._check_prompt(dm), timeout=PROMPT["PROMPT_TIMEOUT"])
 
 							my_arg = message.content
 
@@ -225,9 +225,14 @@ class Arguments:
 			prompts.pop(self.author.id, None)
 
 
-	def _check_prompt(self):
+	def _check_prompt(self, dm=False):
 		def wrapper(message):
-			return message.author.id  == self.message.author.id and \
-				   message.channel.id == self.message.channel.id
+			if message.author.id  == self.message.author.id:
+				if dm:
+					return not message.guild
+				else:
+					return message.channel.id == self.message.channel.id
+			else:
+				return False
 
 		return wrapper

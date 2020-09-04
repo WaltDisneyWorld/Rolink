@@ -124,6 +124,7 @@ class Response(Bloxlink.Module):
             if not IS_DOCKER:
                 dm = False
 
+
         channel = channel_override or (dm and self.author or self.channel)
 
         verified_webhook = False
@@ -149,7 +150,7 @@ class Response(Bloxlink.Module):
 
                         try:
                             await channel.send("Customized Bot is enabled, but I couldn't "
-                                            "create the webhook! Please give me the ``Manage Webhooks`` permission.")
+                                               "create the webhook! Please give me the ``Manage Webhooks`` permission.")
                         except (Forbidden, NotFound):
                             pass
 

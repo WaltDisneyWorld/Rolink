@@ -5,7 +5,7 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.01"
+VERSION = "v3.02"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
@@ -153,7 +153,8 @@ TABLE_STRUCTURE = {
         "guilds",
         "groupShouts",
         "gameVerification",
-        "robloxAccounts"
+        "robloxAccounts",
+        "commands"
     ],
     "canary": [
         "guilds",

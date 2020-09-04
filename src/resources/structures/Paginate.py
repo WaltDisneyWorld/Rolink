@@ -1,6 +1,7 @@
 from discord.errors import Forbidden, NotFound
-from resources.exceptions import CancelCommand, Error
-from resources.structures import Bloxlink
+from ..exceptions import CancelCommand, Error
+from ..structures import Bloxlink
+from ..constants import SERVER_INVITE
 from asyncio import TimeoutError
 
 class Paginate:
@@ -126,12 +127,12 @@ class Paginate:
             self.sent_message = await self.response.send(embed=self.embed, channel_override=self.channel, ignore_http_check=True)
 
             if not self.sent_message:
-                raise CancelCommand
+                return False
+
+        return True
 
     async def __call__(self):
-        if self.dm:
-            send_to = self.original_channel or self.channel
-            await send_to.send(self.author.mention + ", **check your DMs!**")
+        send_to = self.original_channel or self.channel
 
         pages = self._pages or Paginate.get_pages(self.embed, self.embed.fields, self.field_limit)
         len_pages = len(pages)
@@ -139,7 +140,20 @@ class Paginate:
         i = 0
         user = None
 
-        await self.turn_page(i, pages)
+        success = await self.turn_page(i, pages)
+
+        if success:
+            if self.dm:
+                await send_to.send(self.author.mention + ", **check your DMs!**")
+        else:
+            if self.dm:
+                await send_to.send(self.author.mention + ", I was unable to DM you! Please check your privacy settings and try again.")
+            else:
+                await send_to.send(self.author.mention + ", an unknown error occured while sending the message. Please report this to the Bloxlink "
+                                                         f"support server here: {SERVER_INVITE}")
+
+            raise CancelCommand
+
 
         if len_pages > 1:
             reactions = {'\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}': lambda: 0,

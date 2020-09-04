@@ -91,7 +91,8 @@ class VerifyCommand(Bloxlink.Module):
                     author_data          = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
                     given_trello_options = True,
                     cache                = not premium,
-                    response             = response)
+                    response             = response,
+                    dm                   = False)
 
             except BloxlinkBypass:
                 raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
@@ -193,7 +194,8 @@ class VerifyCommand(Bloxlink.Module):
                     author_data          = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
                     given_trello_options = True,
                     cache                = not premium,
-                    response             = response)
+                    response             = response,
+                    dm                   = dm_verification)
 
             except BloxlinkBypass:
                 await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, you were still linked to Bloxlink.", dm=True, no_dm_post=True)
