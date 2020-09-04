@@ -3,7 +3,8 @@ from resources.constants import RELEASE, SERVER_INVITE # pylint: disable=import-
 from discord.errors import NotFound, Forbidden
 from discord import Object
 
-is_premium, get_prefix = Bloxlink.get_module("utils", attrs=["is_premium", "get_prefix"])
+get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_board = Bloxlink.get_module("trello", attrs=["get_board"])
 post_stats = Bloxlink.get_module("site_services", name_override="DBL", attrs="post_stats")
 
@@ -51,7 +52,7 @@ class GuildJoinEvent(Bloxlink.Module):
             prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
             if RELEASE == "PRO":
-                profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+                profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                 if not profile.features.get("pro"):
                     if chosen_channel:

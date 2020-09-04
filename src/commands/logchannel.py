@@ -4,8 +4,8 @@ from resources.constants import ARROW, BROWN_COLOR # pylint: disable=import-erro
 from discord import Embed, Object
 
 
-is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
-
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 @Bloxlink.command
@@ -81,7 +81,7 @@ class LogChannelCommand(Bloxlink.Module):
         action = None
 
         if log_type == "inactivity notices":
-            donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+            donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not donator_profile.features.get("premium"):
                 raise Message("Only premium subscribers can subscribe to ``inactivity notices``!\n"

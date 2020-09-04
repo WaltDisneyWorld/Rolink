@@ -39,7 +39,8 @@ bracket_search = re.compile(r"\[(.*)\]")
 
 loop = asyncio.get_event_loop()
 
-fetch, is_premium, post_event = Bloxlink.get_module("utils", attrs=["fetch", "is_premium", "post_event"])
+fetch, post_event = Bloxlink.get_module("utils", attrs=["fetch", "post_event"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
 cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
 
@@ -813,7 +814,7 @@ class Roblox(Bloxlink.Module):
         roblox_user = None
 
         if RELEASE == "PRO":
-            donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+            donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not donator_profile.features.get("pro"):
                 return
@@ -2014,7 +2015,7 @@ class RobloxProfile(Bloxlink.Module):
 
     @staticmethod
     async def get_inactive_role(guild, guild_data, trello_board):
-        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
         is_prem = donator_profile.features.get("premium")
         inactive_role = None
 

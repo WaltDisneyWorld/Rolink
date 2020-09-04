@@ -17,10 +17,11 @@ except ImportError:
         "LIST_LIMIT": 10
     }
 
-get_prefix, is_premium, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium", "post_event"])
+get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["set", "pop"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 
@@ -88,7 +89,7 @@ class SettingsCommand(Bloxlink.Module):
         text_buffer = []
         options_trello_data = {}
 
-        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
         if donator_profile.features.get("premium"):
             text_buffer.append("**This is a [Premium Server](https://www.patreon.com/join/bloxlink?)**\n")
@@ -166,7 +167,7 @@ class SettingsCommand(Bloxlink.Module):
 
         if option_find:
             if option_find[3]:
-                profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+                profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                 if not profile.features.get("premium"):
                     raise Error("This option is premium-only! The server owner must have premium for it to be changed.\n"

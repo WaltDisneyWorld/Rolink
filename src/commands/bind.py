@@ -11,7 +11,8 @@ bind_num_range = re.compile(r"([0-9]+)\-([0-9]+)")
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
 get_group, parse_trello_binds, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds", "count_binds", "get_binds"])
-fetch, is_premium, post_event = Bloxlink.get_module("utils", attrs=["fetch", "is_premium", "post_event"])
+fetch, post_event = Bloxlink.get_module("utils", attrs=["fetch", "post_event"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 API_URL = "https://api.roblox.com"
 FREE_BIND_COUNT, PREM_BIND_COUNT = LIMITS["BINDS"]["FREE"], LIMITS["BINDS"]["PREMIUM"]
@@ -65,7 +66,7 @@ class BindCommand(Bloxlink.Module):
         bind_count = count_binds(guild_data, role_binds=role_binds_trello, group_ids=group_ids_trello)
 
         if bind_count >= FREE_BIND_COUNT:
-            profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+            profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not profile.features.get("premium"):
                 raise Error(f"You've exceeded the free bind limit of **{FREE_BIND_COUNT}.** Please delete some with "

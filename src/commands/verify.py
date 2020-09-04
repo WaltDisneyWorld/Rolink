@@ -9,7 +9,8 @@ import random
 
 verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
-is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 try:
     from config import TRELLO
@@ -65,11 +66,11 @@ class VerifyCommand(Bloxlink.Module):
         if username:
             return await self.add(CommandArgs)
 
-        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await is_premium(author, guild=guild)
+            donator_profile, _ = await get_features(author, guild=guild)
             premium = donator_profile.features.get("premium")
 
         trello_options = {}
@@ -154,11 +155,11 @@ class VerifyCommand(Bloxlink.Module):
         # TODO: if groupVerify is enabled, they must join the roblox group(s) to be able to verify. bypasses the cache.
         # groupVerify = [group_ids...]
 
-        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await is_premium(author, guild=guild)
+            donator_profile, _ = await get_features(author, guild=guild)
             premium = donator_profile.features.get("premium")
 
         try:

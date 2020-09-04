@@ -6,7 +6,7 @@ from discord import Embed, Object
 
 update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
-is_premium = Bloxlink.get_module("utils", attrs="is_premium")
+get_features = Bloxlink.get_module("premium", attrs="get_features")
 
 @Bloxlink.command
 class UpdateUserCommand(Bloxlink.Module):
@@ -55,11 +55,11 @@ class UpdateUserCommand(Bloxlink.Module):
             else:
                 raise PermissionError("You do not have permission to update arbitrary users!")
 
-        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await is_premium(author, guild=guild)
+            donator_profile, _ = await get_features(author, guild=guild)
             premium = donator_profile.features.get("premium")
 
 

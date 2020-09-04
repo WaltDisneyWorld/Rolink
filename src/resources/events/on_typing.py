@@ -8,7 +8,7 @@ import asyncio
 cache_get, cache_set = Bloxlink.get_module("cache", attrs=["get", "set"])
 guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
-is_premium = Bloxlink.get_module("utils", attrs=["is_premium"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 @Bloxlink.module
@@ -25,7 +25,7 @@ class ChannelTypingEvent(Bloxlink.Module):
                     guild = user.guild
 
                     if self.redis:
-                        donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+                        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                         if donator_profile.features.get("premium"):
                             if await cache_get(f"channel_typing:{guild.id}", user.id, primitives=True):

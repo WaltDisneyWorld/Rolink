@@ -3,7 +3,7 @@ from resources.constants import GOLD_COLOR # pylint: disable=import-error
 from discord import Embed
 
 
-is_premium = Bloxlink.get_module("utils", attrs=["is_premium"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 @Bloxlink.command
@@ -30,7 +30,7 @@ class StatusCommand(Bloxlink.Module):
         embed.set_author(name=user, icon_url=user.avatar_url)
 
         partner_check = user.id == guild.owner_id
-        profile, transfer_to = await is_premium(user, guild=guild, partner_check=partner_check)
+        profile, transfer_to = await get_features(user, partner_check=partner_check)
 
         attributes, features = profile.attributes, profile.features
         has_premium = features.get("premium")

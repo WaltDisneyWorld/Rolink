@@ -5,8 +5,9 @@ from discord import Embed, Object
 import re
 
 
-is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 get_group = Bloxlink.get_module("roblox", attrs=["get_group"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
@@ -79,7 +80,7 @@ class GroupLockCommand(Bloxlink.Module):
             if len(groups) >= 15:
                 raise Message("15 groups is the max you can add to your group-lock! Please delete some before adding any more.", type="silly")
 
-            profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+            profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if len(groups) >= 3 and not profile.features.get("premium"):
                 raise Message("If you would like to add more than **3** groups to your group-lock, then you need Bloxlink Premium.\n"
@@ -124,12 +125,11 @@ class GroupLockCommand(Bloxlink.Module):
             guild_data["groupLock"] = groups
 
             if groups:
-                await self.r.table("guilds").replace(guild_data).run()
-
+                await self.r.table("guilds").insert(guild_data, conflict="replace").run()
             else:
                 guild_data.pop("groupLock")
 
-                await self.r.table("guilds").replace(guild_data).run()
+                await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
             await post_event(guild, guild_data, "configuration", f"{author.mention} has **deleted** a group from the ``server-lock``.", BROWN_COLOR)
 

@@ -13,7 +13,8 @@ from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Respons
 from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE # pylint: disable=import-error
 
 
-get_prefix, is_premium = Bloxlink.get_module("utils", attrs=["get_prefix", "is_premium"])
+get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 cache_get, cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["get", "set", "pop"])
@@ -120,7 +121,7 @@ class Commands(Bloxlink.Module):
                         donator_profile = None
 
                         if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
-                            donator_profile, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+                            donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                             if not donator_profile.features.get("pro"):
                                 try:
@@ -147,7 +148,7 @@ class Commands(Bloxlink.Module):
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
 
                             if not donator_profile or (donator_profile and not donator_profile.features.get("premium")):
-                                donator_profile, _ = await is_premium(author, guild=guild)
+                                donator_profile, _ = await get_features(author, guild=guild)
 
                             if not donator_profile.features.get("premium"):
                                 on_cooldown = await self.cache.get(redis_cooldown_key)
@@ -392,7 +393,26 @@ class Commands(Bloxlink.Module):
 
         commands[command.name] = command
 
+        self.loop.create_task(self.inject_command(command))
+
         return command_structure
+
+    async def inject_command(self, command):
+        subcommands = []
+
+        if command.subcommands:
+            for subcommand_name, subcommand in command.subcommands.items():
+                subcommand_description = subcommand.__doc__ or "N/A"
+                subcommands.append({"id": subcommand_name, "description": subcommand_description})
+
+        await self.r.db("bloxlink").table("commands").insert({
+            "id": command.name,
+            "description": command.description,
+            #"usage": command.usage,
+            "category": command.category,
+            "hidden": command.hidden,
+            "subcommands": subcommands
+        }, conflict="replace").run()
 
 class Command:
     def __init__(self, command):
@@ -445,10 +465,10 @@ class Command:
                 raise PermissionError("This command is reserved for the Bloxlink Developer.")
 
         if (kwargs.get("premium", self.premium) or permissions.premium) and not kwargs.get("free_to_use", self.free_to_use):
-            prem, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+            prem, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not prem.features.get("premium"):
-                prem, _ = await is_premium(author, guild=guild)
+                prem, _ = await get_features(author, guild=guild)
 
                 if not prem.attributes["PREMIUM_ANYWHERE"]:
                     raise Message("This command is reserved for Bloxlink Premium subscribers!\n"

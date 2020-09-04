@@ -3,7 +3,8 @@ from resources.exceptions import Message, Error # pylint: disable=import-error
 from resources.constants import AVATARS, BROWN_COLOR # pylint: disable=import-error
 from discord import Object
 
-is_premium, post_event = Bloxlink.get_module("utils", attrs=["is_premium", "post_event"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 @Bloxlink.command
@@ -26,7 +27,7 @@ class WhiteLabelCommand(Bloxlink.Module):
 
         guild = CommandArgs.message.guild
 
-        premium_status, _ = await is_premium(Object(id=guild.owner_id), guild=guild)
+        premium_status, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
         if not premium_status.features.get("premium"):
             if guild_data.get("customBot"):

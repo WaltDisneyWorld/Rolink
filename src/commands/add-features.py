@@ -2,7 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from discord import Object
 
 
-add_features = Bloxlink.get_module("utils", attrs=["add_features"])
+add_features = Bloxlink.get_module("premium", attrs=["add_features"])
 
 
 @Bloxlink.command
@@ -31,6 +31,7 @@ class AddFeaturesCommand(Bloxlink.Module):
     async def __main__(self, CommandArgs):
         message = CommandArgs.message
         response = CommandArgs.response
+        guild = message.guild
 
         user = CommandArgs.parsed_args["recipient"]
         features = CommandArgs.parsed_args["features"].replace(" ", "").split(",")
@@ -58,6 +59,6 @@ class AddFeaturesCommand(Bloxlink.Module):
 
 
         for user in users:
-            await add_features(user, features=features, days=days, premium_anywhere=premium_anywhere)
+            await add_features(user, features=features, days=days, premium_anywhere=premium_anywhere, guild=guild)
 
         await response.success(f"Successfully added features to **{len(users)}** user{len(users) > 1 and 's' or ''}!")

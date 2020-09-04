@@ -1,5 +1,6 @@
 from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException, NotFound
+from discord import Object
 from ..exceptions import PermissionError, Message
 from ..structures import Bloxlink, Paginate
 from config import PREFIX, REACTIONS # pylint: disable=E0611
@@ -8,6 +9,7 @@ import asyncio
 
 loop = asyncio.get_event_loop()
 
+get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 class ResponseLoading:
     def __init__(self, response, backup_text):
@@ -95,6 +97,7 @@ class Response(Bloxlink.Module):
         self.webhook_only = CommandArgs.guild_data.get("customBot", {})
 
         self.message = CommandArgs.message
+        self.guild = CommandArgs.message.guild
         self.author = CommandArgs.message.author
         self.channel = CommandArgs.message.channel
         self.prompt = None # filled in on commands.py
@@ -124,31 +127,38 @@ class Response(Bloxlink.Module):
         channel = channel_override or (dm and self.author or self.channel)
 
         verified_webhook = False
-        if self.webhook_only:
-            try:
-                for webhook in await self.channel.webhooks():
-                    verified_webhook = webhook
-                    break
-            except (Forbidden, NotFound):
-                self.webhook_only = False
+        if self.webhook_only and self.guild:
+            profile, _ = await get_features(Object(id=self.guild.owner_id), guild=self.guild)
 
-            if not verified_webhook:
-                # try to create the webhook
+            if profile.features.get("premium"):
                 try:
-                    verified_webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
-                    self.webhook_only = True
+                    for webhook in await self.channel.webhooks():
+                        verified_webhook = webhook
+                        break
                 except (Forbidden, NotFound):
                     self.webhook_only = False
-                    verified_webhook = False
 
+                if not verified_webhook:
+                    # try to create the webhook
                     try:
-                        await channel.send("Customized Bot is enabled, but I couldn't "
-                                           "create the webhook! Please give me the ``Manage Webhooks`` permission.")
+                        verified_webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
+                        self.webhook_only = True
                     except (Forbidden, NotFound):
-                        pass
+                        self.webhook_only = False
+                        verified_webhook = False
 
-                    except asyncio.TimeoutError:
-                        pass
+                        try:
+                            await channel.send("Customized Bot is enabled, but I couldn't "
+                                            "create the webhook! Please give me the ``Manage Webhooks`` permission.")
+                        except (Forbidden, NotFound):
+                            pass
+
+                        except asyncio.TimeoutError:
+                            pass
+            else:
+                self.webhook_only = False
+                verified_webhook = False
+
 
         paginate = False
         pages = None
