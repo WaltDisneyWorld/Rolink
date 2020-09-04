@@ -2,6 +2,7 @@ from views import render
 from core.db import r
 from core.auth import authenticate
 
+
 async def index(request):
     data = "hello"
 
@@ -122,3 +123,15 @@ async def user_verify(request):
     }
 
     return await render.json(json_data, 200)
+
+
+async def list_commands(request):
+    commands = await r.db("bloxlink").table("commands").run()
+    command_categories = {}
+
+    async for command in commands:
+        if command["category"] != "Developer" and not command["hidden"]:
+            command_categories[command["category"]] = command_categories.get(command["category"]) or []
+            command_categories[command["category"]].append(command)
+
+    return await render.json(command_categories, 200)
