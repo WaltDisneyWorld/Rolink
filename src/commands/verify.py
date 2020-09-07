@@ -70,7 +70,7 @@ class VerifyCommand(Bloxlink.Module):
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await get_features(author, guild=guild)
+            donator_profile, _ = await get_features(author)
             premium = donator_profile.features.get("premium")
 
         trello_options = {}
@@ -160,7 +160,7 @@ class VerifyCommand(Bloxlink.Module):
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await get_features(author, guild=guild)
+            donator_profile, _ = await get_features(author)
             premium = donator_profile.features.get("premium")
 
         try:

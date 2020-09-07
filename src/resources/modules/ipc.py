@@ -79,7 +79,8 @@ class IPC(Bloxlink.Module):
                 waiting_for = message["waiting_for"] or len(self.clusters)
 
                 if task[2] == waiting_for:
-                    task[0].set_result(True)
+                    if not task[0].done():
+                        task[0].set_result(True)
 
         elif type == "DM":
             if 0 in SHARD_RANGE:

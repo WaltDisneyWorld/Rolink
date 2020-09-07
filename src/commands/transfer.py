@@ -55,7 +55,7 @@ class TransferCommand(Bloxlink.Module):
             raise Error("You may not transfer premium that someone else transferred to you. You must first revoke the transfer "
                        f"with ``{prefix}transfer disable``.")
 
-        prem_data, _ = await get_features(author, author_data, cache=False, rec=False, partner_check=False)
+        prem_data, _ = await get_features(author, author_data=author_data, cache=False, rec=False, partner_check=False)
 
         if not prem_data.features.get("premium"):
             raise Error("You must have premium in order to transfer it!")

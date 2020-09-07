@@ -824,7 +824,7 @@ class Roblox(Bloxlink.Module):
             PREFIX = "!!"
 
         try:
-            roblox_user, _ = await self.get_user(author=member, cache=cache)
+            roblox_user, _ = await self.get_user(author=member, everything=True, cache=cache)
         except (UserNotVerified, RobloxAPIError):
             pass
 
@@ -852,7 +852,7 @@ class Roblox(Bloxlink.Module):
 
         if auto_verification or group_roles:
             try:
-                added, removed, nickname, errors, roblox_user = await self.update_member(
+                added, removed, nickname, errors, _ = await self.update_member(
                     member,
                     guild                   = guild,
                     guild_data              = guild_data,
@@ -1512,7 +1512,7 @@ class Roblox(Bloxlink.Module):
             raise UserNotVerified
 
         if not roblox_user:
-            roblox_user, _ = await self.get_user(author=author, guild=guild, author_data=author_data)
+            roblox_user, _ = await self.get_user(author=author, guild=guild, everything=True, author_data=author_data)
 
         return [r.name for r in add_roles], [r.name for r in remove_roles], nickname, errors, roblox_user
 

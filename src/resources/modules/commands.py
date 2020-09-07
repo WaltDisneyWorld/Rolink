@@ -148,7 +148,7 @@ class Commands(Bloxlink.Module):
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
 
                             if not donator_profile or (donator_profile and not donator_profile.features.get("premium")):
-                                donator_profile, _ = await get_features(author, guild=guild)
+                                donator_profile, _ = await get_features(author)
 
                             if not donator_profile.features.get("premium"):
                                 on_cooldown = await self.cache.get(redis_cooldown_key)
@@ -468,7 +468,7 @@ class Command:
             prem, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not prem.features.get("premium"):
-                prem, _ = await get_features(author, guild=guild)
+                prem, _ = await get_features(author)
 
                 if not prem.attributes["PREMIUM_ANYWHERE"]:
                     raise Message("This command is reserved for Bloxlink Premium subscribers!\n"

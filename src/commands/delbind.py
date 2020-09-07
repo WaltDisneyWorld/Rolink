@@ -17,17 +17,20 @@ async def delete_bind_from_cards(type="group", bind_id=None, trello_binds_list=N
 
     if type == "group":
         if rank in ("main", "everything"):
-            for rank_id, rank_data in bind_data_trello.get("binds", {}).items():
-                cards = rank_data.get("trello", {}).get("cards")
+            cards = bind_data_trello.get("trello", {}).get("cards", [])
 
-                if cards:
-                    for card_data in cards:
-                        try:
-                            await card_data["card"].archive()
-                        except TrelloException:
-                            break
-                        else:
-                            trello_binds_list.parsed_bind_data = None
+            for rank_id, rank_data in bind_data_trello.get("binds", {}).items():
+                cards_ = rank_data.get("trello", {}).get("cards", [])
+                cards += cards_
+
+            if cards:
+                for card_data in cards:
+                    try:
+                        await card_data["card"].archive()
+                    except TrelloException:
+                        break
+                    else:
+                        trello_binds_list.parsed_bind_data = None
             return
 
         cards = bind_data_trello.get("trello", {}).get("cards")
@@ -203,7 +206,7 @@ class UnBindCommand(Bloxlink.Module):
                         await self.r.table("guilds").insert(guild_data, conflict="replace").run() # so they can delete this and still
                                                                                                   # cancel bind deletion below
 
-                        removed_main_group = True
+                    removed_main_group = True
 
             found_group_trello = role_binds_trello.get("groups", {}).get(bind_id) or {}
             found_group = role_binds.get("groups", {}).get(bind_id) or {}
@@ -272,7 +275,7 @@ class UnBindCommand(Bloxlink.Module):
                             del binds[rank_id]
 
                         if not (found_group.get("binds", {}) or found_group.get("ranges", {})):
-                            del role_binds["groups"][bind_id]
+                            role_binds["groups"].pop(bind_id, None)
 
                     else:
                         raise Error(f"No matching bind found for group ``{bind_id}`` with rank ``{rank_id}``!")

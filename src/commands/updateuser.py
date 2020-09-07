@@ -59,9 +59,8 @@ class UpdateUserCommand(Bloxlink.Module):
         premium = donator_profile.features.get("premium")
 
         if not premium:
-            donator_profile, _ = await get_features(author, guild=guild)
+            donator_profile, _ = await get_features(author)
             premium = donator_profile.features.get("premium")
-
 
         trello_board = CommandArgs.trello_board
         trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")

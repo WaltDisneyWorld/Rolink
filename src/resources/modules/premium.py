@@ -96,7 +96,7 @@ class Premium(Bloxlink.Module):
 
 
     async def transfer_premium(self, transfer_from, transfer_to, guild=None, apply_cooldown=True):
-        profile, _ = await self.get_features(transfer_to, partner_check=False)
+        profile, _ = await self.get_features(transfer_to, cache=False, partner_check=False)
 
         if profile.features.get("premium"):
             raise Message("This user already has premium!", type="silly")
@@ -127,12 +127,12 @@ class Premium(Bloxlink.Module):
             await cache_pop("premium_cache", guild.id)
 
 
-    async def get_features(self, author=None, guild=None, author_data=None, cache=True, rec=True, partner_check=True):
+    async def get_features(self, author=None, guild=None, author_data=None, cache=True, cache_as_guild=True, rec=True, partner_check=True):
         author = author or guild.owner
         profile = DonatorProfile(author)
 
         if cache:
-            if guild:
+            if guild and cache_as_guild:
                 guild_premium_cache = await cache_get("premium_cache", guild.id)
 
                 if guild_premium_cache:
@@ -149,7 +149,7 @@ class Premium(Bloxlink.Module):
         if rec:
             if premium_data.get("transferTo"):
                 if cache:
-                    if guild:
+                    if guild and cache_as_guild:
                         await cache_set("premium_cache", guild.id, (profile, premium_data["transferTo"]))
                     else:
                         await cache_set("premium_cache", author.id, (profile, premium_data["transferTo"]))
@@ -159,11 +159,11 @@ class Premium(Bloxlink.Module):
             elif premium_data.get("transferFrom"):
                 transfer_from = premium_data["transferFrom"]
                 transferee_data = await self.r.db("bloxlink").table("users").get(str(transfer_from)).run() or {}
-                transferee_premium, _ = await self.get_features(Object(id=transfer_from), transferee_data, rec=False, cache=False, partner_check=False)
+                transferee_premium, _ = await self.get_features(Object(id=transfer_from), author_data=transferee_data, rec=False, cache=False, partner_check=False)
 
                 if transferee_premium.features.get("premium"):
                     if cache:
-                        if guild:
+                        if guild and cache_as_guild:
                             await cache_set("premium_cache", guild.id, (transferee_premium, _))
                         else:
                             await cache_set("premium_cache", author.id, (transferee_premium, _))
@@ -213,7 +213,7 @@ class Premium(Bloxlink.Module):
                 profile.add_note("This server has free premium from a partnership.")
 
         if cache:
-            if guild:
+            if guild and cache_as_guild:
                 await cache_set("premium_cache", guild.id, (profile, None))
             else:
                 await cache_set("premium_cache", author.id, (profile, None))
