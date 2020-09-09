@@ -1,5 +1,5 @@
-discord.py==1.4.1
-#git+https://github.com/Rapptz/discord.py@master
+#discord.py==1.4.1
+git+https://github.com/Rapptz/discord.py@feature/intents
 rethinkdb==2.4.0
 aiodns==2.0.0
 cchardet==2.1.6

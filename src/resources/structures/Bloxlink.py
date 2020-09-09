@@ -1,6 +1,6 @@
 from importlib import import_module
 from os import environ as env
-from discord import AutoShardedClient, AllowedMentions
+from discord import AutoShardedClient, AllowedMentions, Intents
 from config import WEBHOOKS # pylint: disable=E0611
 from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE
 from . import Args, Permissions
@@ -319,12 +319,32 @@ class BloxlinkStructure(AutoShardedClient):
     def __repr__(self):
         return "< Bloxlink Client >"
 
-Bloxlink = BloxlinkStructure(
-    fetch_offline_members=False,
-    shard_count=SHARD_COUNT,
-    shard_ids=SHARD_RANGE,
-    allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False)
-)
+if RELEASE in ("CANARY", "LOCAL"):
+    intents = Intents.none()
+
+    intents.members = True # pylint: disable=assigning-non-slot
+    intents.guilds = True # pylint: disable=assigning-non-slot
+    intents.guild_reactions = True # pylint: disable=assigning-non-slot
+    intents.guild_messages = True # pylint: disable=assigning-non-slot
+    intents.dm_messages = True # pylint: disable=assigning-non-slot
+
+    if RELEASE == "PRO":
+        intents.guild_typing = True # pylint: disable=assigning-non-slot
+
+    Bloxlink = BloxlinkStructure(
+        fetch_offline_members=False,
+        shard_count=SHARD_COUNT,
+        shard_ids=SHARD_RANGE,
+        allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
+        intents=intents,
+    )
+else:
+    Bloxlink = BloxlinkStructure(
+        fetch_offline_members=False,
+        shard_count=SHARD_COUNT,
+        shard_ids=SHARD_RANGE,
+        allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
+    )
 
 redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
 redis_cache = redis and redis.cache("cache")
