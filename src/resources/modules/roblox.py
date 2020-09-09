@@ -1296,12 +1296,15 @@ class Roblox(Bloxlink.Module):
                                                 if not allow_old_roles and role and role in author.roles:
                                                     remove_roles.add(role)
 
-                                if group:
-                                    user_rank = group.user_rank_id
 
-                                    for bind_range in data.get("ranges", []):
-                                        bind_nickname = bind_range.get("nickname")
-                                        bound_roles = bind_range.get("roles", set())
+
+
+                                for bind_range in data.get("ranges", []):
+                                    bind_nickname = bind_range.get("nickname")
+                                    bound_roles = bind_range.get("roles", set())
+
+                                    if group:
+                                        user_rank = group.user_rank_id
 
                                         if bind_range["low"] <= user_rank <= bind_range["high"]:
                                             if not bound_roles:
@@ -1317,7 +1320,7 @@ class Roblox(Bloxlink.Module):
                                                             role = await guild.create_role(name=role_id)
                                                         except Forbidden:
                                                             raise PermissionError(f"Sorry, I wasn't able to create the role {role_id}."
-                                                                                   "Please ensure I have the ``Manage Roles`` permission.")
+                                                                                    "Please ensure I have the ``Manage Roles`` permission.")
                                                         except HTTPException:
                                                             raise Error("Unable to create role: this server has reached the max amount of roles!")
                                                 if role:
@@ -1339,6 +1342,15 @@ class Roblox(Bloxlink.Module):
 
                                                 if not allow_old_roles and role and role in author.roles:
                                                     remove_roles.add(role)
+                                    else:
+                                        for role_id in bound_roles:
+                                            int_role_id = role_id.isdigit() and int(role_id)
+                                            role = find(lambda r: ((int_role_id and r.id == int_role_id) or r.name == role_id) and not r.managed, guild.roles)
+
+                                            if not allow_old_roles and role and role in author.roles:
+                                                remove_roles.add(role)
+
+
 
                 if group_roles and group_ids:
                     #author_groups = author_data and author_data.get("groups", {})
