@@ -11,7 +11,7 @@ from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from os import environ as env
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR,
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW, TIP_CHANCES,
-                         SERVER_INVITE, PURPLE_COLOR, GREEN_COLOR)
+                         SERVER_INVITE, PURPLE_COLOR, GREEN_COLOR, RED_COLOR)
 import json
 import random
 import re
@@ -812,6 +812,8 @@ class Roblox(Bloxlink.Module):
 
     async def guild_obligations(self, member, guild, guild_data=None, cache=True, dm=False, event=False):
         roblox_user = None
+        accounts = []
+        donator_profile = None
 
         if RELEASE == "PRO":
             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
@@ -824,7 +826,7 @@ class Roblox(Bloxlink.Module):
             PREFIX = "!!"
 
         try:
-            roblox_user, _ = await self.get_user(author=member, everything=True, cache=cache)
+            roblox_user, accounts = await self.get_user(author=member, everything=True, cache=cache)
         except (UserNotVerified, RobloxAPIError):
             pass
 
@@ -842,13 +844,67 @@ class Roblox(Bloxlink.Module):
 
             await cache_set("guild_data", guild.id, guild_data)
 
-        group_roles = guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
-        verify_enabled = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
+        group_roles       = guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
+        verify_enabled    = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
         auto_verification = guild_data.get("autoVerification", verify_enabled)
 
-        verified_dm = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
+        verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
         unverified_dm = guild_data.get("unverifiedDM")
-        age_limit = guild_data.get("ageLimit")
+        age_limit     = guild_data.get("ageLimit")
+
+        disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
+        disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
+
+        if disallow_alts or disallow_ban_evaders:
+            if not donator_profile:
+                donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
+
+                if donator_profile.features.get("premium"):
+                    accounts = set(accounts)
+
+                    if roblox_user: #FIXME: temp until primary accounts are saved to the accounts array
+                        accounts.add(roblox_user.id)
+
+                    if accounts and (disallow_alts or disallow_ban_evaders):
+                        for roblox_id in accounts:
+                            discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs") or []
+
+                            for discord_id in discord_ids:
+                                discord_id = int(discord_id)
+
+                                if discord_id != member.id:
+                                    if disallow_alts:
+                                        # check the server
+
+                                        try:
+                                            user_find = await guild.fetch_member(discord_id)
+                                        except NotFound:
+                                            pass
+                                        else:
+                                            try:
+                                                await user_find.kick(reason=f"disallowAlts is enabled - alt of {member} ({member.id})")
+                                            except Forbidden:
+                                                pass
+                                            else:
+                                                await post_event(guild, guild_data, "moderation", f"{user_find.mention} is an alt of {member.mention} and has been ``kicked``.", RED_COLOR)
+
+                                    if disallow_ban_evaders:
+                                        # check the bans
+
+                                        try:
+                                            ban_entry = await guild.fetch_ban(Object(discord_id))
+                                        except (NotFound, Forbidden):
+                                            pass
+                                        else:
+                                            try:
+                                                await guild.ban(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})")
+                                            except (Forbidden, HTTPException):
+                                                pass
+                                            else:
+                                                await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``banned``.", RED_COLOR)
+                                            finally:
+                                                return
+
 
         if auto_verification or group_roles:
             try:

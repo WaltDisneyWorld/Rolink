@@ -42,6 +42,7 @@ CYAN_COLOR      = 0x4DD3CC
 PURPLE_COLOR    = 0xa830c5
 GREEN_COLOR     = 0x0ec37e
 BROWN_COLOR     = 0xa2734a
+BLURPLE_COLOR   = 0x4a58a2
 
 DEV_COLOR               = 0x4DD3CC
 STAFF_COLOR             = 0x3ca770
@@ -95,6 +96,10 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "shorterNicknames":      (None,  "boolean", None,False, "Brackets in group rank names will be captured instead of the full rank name, resulting in a shorter nickname."),
     "ageLimit":              (None,  "number", None, True,  "Set the minimum Roblox age in days a user must be to enter your server. People who are less than this value will be kicked."),
     "inactiveRole":          (lambda g, gd: gd.get("inactiveRole") and find(lambda r: r.id == int(gd["inactiveRole"]), g.roles), "role", None, True, "Set the role given to people who declared themselves as \"inactive\" from ``{prefix}profile``."),
+    "banRelatedAccounts":    (None, "boolean", None, True,  "If this is enabled: when members are banned, their known alts are also banned from the server."),
+    "unbanRelatedAccounts":  (None, "boolean", None, True,  "If this is enabled: when members are unbanned, their known alts are also unbanned from the server."),
+    "disallowAlts":          (None, "boolean", None, True,  "If this is enabled: when someone joins the server and already has a linked account in the server, kick then old alt out."),
+    "disallowBanEvaders":    (None, "boolean", None, True,  "If this is enabled: when members join, and they have a banned account in the server, their new account will also be banned."),
     #"groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
     "whiteLabel":            (lambda g, gd: bool(gd.get("customBot")),  None, None, True,      "Modify the username and profile picture of __most__ Bloxlink responses."),
     "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."),
@@ -125,6 +130,10 @@ DEFAULTS = {
     "whiteLabel": False,
     "promptDelete": True,
     "inactiveRole": None,
+    "banRelatedAccounts": False,
+    "unbanRelatedAccounts": False,
+    "disallowAlts": False,
+    "disallowBanEvaders": False,
     #"groupRequired": True,
     "trelloBindMode": "merge"
 }

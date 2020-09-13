@@ -327,6 +327,7 @@ if RELEASE in ("CANARY", "LOCAL"):
     intents.guild_reactions = True # pylint: disable=assigning-non-slot
     intents.guild_messages = True # pylint: disable=assigning-non-slot
     intents.dm_messages = True # pylint: disable=assigning-non-slot
+    intents.bans = True # pylint: disable=assigning-non-slot
 
     if RELEASE == "PRO":
         intents.guild_typing = True # pylint: disable=assigning-non-slot
