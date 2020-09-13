@@ -57,12 +57,15 @@ class LogChannelCommand(Bloxlink.Module):
                           "``configurations`` "   + ARROW + " any Bloxlink setting alteration will be "
                                                             "logged to your channel\n"
                          "``inactivity notices`` _(premium)_ " + ARROW + " user-set inactivity notices will "
-                                                                        "from ``" + prefix + "profie`` will "
-                                                                        "be logged to your channel\n"
-                        "``binds`` "            + ARROW +   " bind insertions/deletions will be logged to your channel",
+                                                                         "from ``" + prefix + "profie`` will "
+                                                                         "be logged to your channel\n"
+                        "``binds`` "              + ARROW +   " bind insertions/deletions will be logged to your channel\n"
+                        "``moderation`` "         + ARROW +   " automatic moderation actions by certain features will be "
+                                                              "logged to your channel",
+
                 "name": "log_type",
                 "type": "choice",
-                "choices": ["verifications", "configurations", "inactivity notices", "binds"]
+                "choices": ["verifications", "configurations", "inactivity notices", "binds", "moderation"]
             },
             {
                 "prompt": "Please either **mention a channel**, or say a **channel name.**\n"
@@ -76,7 +79,11 @@ class LogChannelCommand(Bloxlink.Module):
             }
         ])
 
-        log_type    = parsed_args["log_type"][:-1] # remove ending "s" - looks better on embed titles
+        log_type = parsed_args["log_type"]
+
+        if log_type.endswith("s"):
+            log_type = log_type[:-1] # remove ending "s" - looks better on embed titles
+
         log_channel = parsed_args["log_channel"]
         action = None
 
