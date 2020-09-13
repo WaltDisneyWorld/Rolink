@@ -124,10 +124,3 @@ class Trello(Bloxlink.Module):
             return options, List
 
         return {}, None
-
-    """
-    async def __setup__(self):
-        while True:
-            self.trello_boards = {}
-            await asyncio.sleep(60 * 10)
-    """
