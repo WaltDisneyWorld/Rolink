@@ -1,7 +1,7 @@
 import re
 from resources.structures.Bloxlink import Bloxlink  # pylint: disable=import-error
 from resources.exceptions import PermissionError, Error, RobloxNotFound, RobloxAPIError, Message, CancelCommand  # pylint: disable=import-error
-from resources.constants import NICKNAME_TEMPLATES, ARROW, LIMITS, RED_COLOR  # pylint: disable=import-error
+from resources.constants import NICKNAME_TEMPLATES, ARROW, LIMITS, BLURPLE_COLOR  # pylint: disable=import-error
 from discord import Embed, Object
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
@@ -206,7 +206,7 @@ class BindCommand(Bloxlink.Module):
 
                         ending_s = group.name.endswith("s") and "'" or "'s"
 
-                        await post_event(guild, guild_data, "bind", f"{author.mention} has **changed** ``{group.name}``{ending_s} nickname template.", RED_COLOR)
+                        await post_event(guild, guild_data, "bind", f"{author.mention} has **changed** ``{group.name}``{ending_s} nickname template.", BLURPLE_COLOR)
 
                         raise Message("Since your group is already linked, the nickname was updated.", type="success")
 
@@ -241,7 +241,7 @@ class BindCommand(Bloxlink.Module):
                     except (TrelloNotFound, TrelloBadRequest):
                         pass
 
-                await post_event(guild, guild_data, "bind", f"{author.mention} has **linked** group ``{group.name}``.", RED_COLOR)
+                await post_event(guild, guild_data, "bind", f"{author.mention} has **linked** group ``{group.name}``.", BLURPLE_COLOR)
                 raise Message("Success! Your group was successfully linked.", type="success")
 
             else:
@@ -551,7 +551,7 @@ class BindCommand(Bloxlink.Module):
 
             text = "".join(text)
 
-            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** group ``{group.name}``.", RED_COLOR)
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** group ``{group.name}``.", BLURPLE_COLOR)
 
             await response.success(text)
 
@@ -704,6 +704,6 @@ class BindCommand(Bloxlink.Module):
             }, conflict="update").run()
 
 
-            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** {bind_choice_title} ``{display_name}``.", RED_COLOR)
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** {bind_choice_title} ``{display_name}``.", BLURPLE_COLOR)
 
             await response.success(f"Successfully **bound** {bind_choice_title} ``{display_name}`` ({bind_id}) with Discord role **{discord_role}!**")

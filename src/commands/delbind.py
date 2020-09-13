@@ -1,7 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
 from resources.exceptions import Error, Message # pylint: disable=import-error
-from resources.constants import ARROW, RED_COLOR # pylint: disable=import-error
+from resources.constants import ARROW, BLURPLE_COLOR # pylint: disable=import-error
 from aiotrello.exceptions import TrelloException
 import asyncio
 
@@ -289,7 +289,7 @@ class UnBindCommand(Bloxlink.Module):
 
             await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-            await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", RED_COLOR)
+            await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", BLURPLE_COLOR)
 
             raise Message("All bind removals were successful.", type="success")
 
@@ -341,7 +341,7 @@ class UnBindCommand(Bloxlink.Module):
                     await delete_bind_from_cards(type=bind_category, bind_id=bind_id, trello_binds_list=trello_binds_list, bind_data_trello=found_bind_trello)
 
 
-                await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", RED_COLOR)
+                await post_event(guild, guild_data, "bind", f"{author.mention} has **removed** some ``binds``.", BLURPLE_COLOR)
 
                 raise Message("All bind removals were successful.", type="success")
 
