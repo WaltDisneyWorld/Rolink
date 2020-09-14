@@ -405,14 +405,15 @@ class Commands(Bloxlink.Module):
                 subcommand_description = subcommand.__doc__ or "N/A"
                 subcommands.append({"id": subcommand_name, "description": subcommand_description})
 
-        await self.r.db("bloxlink").table("commands").insert({
-            "id": command.name,
-            "description": command.description,
-            #"usage": command.usage,
-            "category": command.category,
-            "hidden": command.hidden,
-            "subcommands": subcommands
-        }, conflict="replace").run()
+        if RELEASE == "MAIN":
+            await self.r.db("bloxlink").table("commands").insert({
+                "id": command.name,
+                "description": command.description,
+                #"usage": command.usage,
+                "category": command.category,
+                "hidden": command.hidden,
+                "subcommands": subcommands
+            }, conflict="replace").run()
 
 class Command:
     def __init__(self, command):
