@@ -1,9 +1,0 @@
-aiohttp
-gunicorn
-rethinkdb==2.4.6
-async-timeout==3.0.1
-six
-#peewee==2.10.2
-#peewee_async
-#aiopg
-#psycopg2
