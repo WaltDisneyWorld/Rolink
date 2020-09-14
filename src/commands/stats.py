@@ -24,7 +24,6 @@ class StatsCommand(Bloxlink.Module):
 
         if IS_DOCKER:
             guilds = 0
-            users = 0
             mem = 0
             errored = 0
 
@@ -36,19 +35,15 @@ class StatsCommand(Bloxlink.Module):
                     errored += 1
                 else:
                     guilds += cluster_data[0]
-                    users += cluster_data[1]
-                    mem += cluster_data[2]
+                    mem += cluster_data[1]
 
             if errored:
                 guilds = f"{guilds} ({len(self.client.guilds)}) ({errored} errored)"
-                users = f"{users} ({len(self.client.users)}) ({errored} errored)"
             else:
                 guilds = f"{guilds} ({len(self.client.guilds)})"
-                users = f"{users} ({len(self.client.users)})"
 
         else:
             guilds = str(len(self.client.guilds))
-            users = str(len(self.client.users))
             clusters = 1
 
             process = Process(getpid())
@@ -81,7 +76,6 @@ class StatsCommand(Bloxlink.Module):
         embed.add_field(name="Cluster", value=CLUSTER_ID)
         embed.add_field(name="Shards", value=SHARD_RANGE)
         embed.add_field(name="Servers", value=guilds)
-        embed.add_field(name="_Cached_ Users", value=users)
         embed.add_field(name="Uptime", value=uptime)
         embed.add_field(name="Memory Usage", value=f"{mem} MB")
 

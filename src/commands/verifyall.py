@@ -22,7 +22,6 @@ class Comparable:
         return self.id < other.id
 
 
-
 @Bloxlink.command
 class VerifyAllCommand(Bloxlink.Module):
     """force update everyone in the server"""
@@ -41,13 +40,13 @@ class VerifyAllCommand(Bloxlink.Module):
         self.category = "Premium"
 
         self.queue = []
-        self.processed = {}
         self.queue_loop_running = False
+        self.REDIS_COOLDOWN_KEY = "guild_scan:{id}"
 
     async def process_guild(self, guild, author=None, roles=True, nickname=True, guild_data=None, trello_board=None, trello_binds_list=None, response=None):
         if not guild.chunked:
             try:
-                await self.client.request_offline_members(guild)
+                await guild.chunk()
             except:
                 pass
 
@@ -92,7 +91,10 @@ class VerifyAllCommand(Bloxlink.Module):
 
         cooldown = max(cooldown_1, cooldown_2)
 
-        self.processed[guild.id][0] = time.time() + (cooldown * 60)
+        redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(id=guild.id)
+
+        if self.cache:
+            await self.cache.set(redis_cooldown_key, True, expire_time=cooldown * 60)
 
         await response.success("This server's scan has finished.")
 
@@ -133,46 +135,34 @@ class VerifyAllCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
 
         author = CommandArgs.message.author
-        channel = CommandArgs.message.channel
 
         trello_board = CommandArgs.trello_board
         trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
-        process_guild = self.processed.get(guild.id)
 
-        if process_guild:
-            cooldown = process_guild[0]
-            time_now = time.time()
+        if self.cache:
+            redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(id=guild.id)
+            on_cooldown = await self.cache.get(redis_cooldown_key)
 
-            if cooldown and time_now > cooldown:
-                del self.processed[guild.id]
-            else:
-                ending = (cooldown is not None and f"please wait **{math.ceil((cooldown-time_now)/60)}** more minutes.") or "please wait until your server has finished scanning."
-
-                if process_guild[1] == author:
-                    raise Message(f"You've recently ran a scan, {ending}", type="silly")
+            if on_cooldown:
+                if on_cooldown == "processing":
+                    raise Message(f"This server is still queued.")
                 else:
-                    raise Message(f"**{str(process_guild[1])}** recently ran a scan, {ending}", type="silly")
+                    cooldown_time = await self.redis.ttl(redis_cooldown_key)
 
+                    raise Message(f"This server has an ongoing cooldown! You must wait **{math.ceil(cooldown_time/60)}** more minutes.")
 
-        self.processed[guild.id] = [None, author]
+            await self.cache.set(redis_cooldown_key, "processing")
 
-        if not guild.chunked:
-            async with channel.typing():
-                try:
-                    await Bloxlink.request_offline_members(guild)
-                except:
-                    pass
+            update_roles    = update_what in ("roles", "both")
+            update_nickname = update_what in ("nickname", "both")
 
-        update_roles    = update_what in ("roles", "both")
-        update_nickname = update_what in ("nickname", "both")
+            t = (len(guild.members), Comparable(guild.id), guild, author, response, trello_binds_list, trello_board, update_roles, update_nickname, guild_data)
 
-        t = (len(guild.members), Comparable(guild.id), guild, author, response, trello_binds_list, trello_board, update_roles, update_nickname, guild_data)
+            heapq.heappush(self.queue, t)
 
-        heapq.heappush(self.queue, t)
-
-        if not self.queue_loop_running:
-            loop.create_task(self.start_queue())
-            await response.send("Your server will be scanned momentarily.")
-        else:
-            await response.send("Your server is now queued for full-member updating.")
+            if not self.queue_loop_running:
+                loop.create_task(self.start_queue())
+                await response.send("Your server will be scanned momentarily.")
+            else:
+                await response.send("Your server is now queued for full-member updating.")

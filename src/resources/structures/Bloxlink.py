@@ -1,6 +1,6 @@
 from importlib import import_module
 from os import environ as env
-from discord import AutoShardedClient, AllowedMentions, Intents
+from discord import AutoShardedClient, AllowedMentions, Intents, MemberCacheFlags
 from config import WEBHOOKS # pylint: disable=E0611
 from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE
 from . import Args, Permissions
@@ -223,32 +223,35 @@ class BloxlinkStructure(AutoShardedClient):
 
 
     async def check_database(self, conn):
-        for missing_database in set(TABLE_STRUCTURE.keys()).difference(await r.db_list().run()):
-            if RELEASE in ("LOCAL", "CANARY"):
-                await r.db_create(missing_database).run()
+        try:
+            for missing_database in set(TABLE_STRUCTURE.keys()).difference(await r.db_list().run()):
+                if RELEASE in ("LOCAL", "CANARY"):
+                    await r.db_create(missing_database).run()
 
-                for table in TABLE_STRUCTURE[missing_database]:
-                    await r.db(missing_database).table_create(table).run()
-            else:
-                print(f"CRITICAL: Missing database: {missing_database}", flush=True)
-
-        for db_name, table_names in TABLE_STRUCTURE.items():
-            try:
-                await r.db(db_name).wait().run()
-            except ReqlOpFailedError as e:
-                if RELEASE == "LOCAL":
-                    await r.db_create(db_name).run()
+                    for table in TABLE_STRUCTURE[missing_database]:
+                        await r.db(missing_database).table_create(table).run()
                 else:
-                    print(f"CRITICAL: {e}", flush=True)
+                    print(f"CRITICAL: Missing database: {missing_database}", flush=True)
 
-            for table_name in table_names:
+            for db_name, table_names in TABLE_STRUCTURE.items():
                 try:
-                    await r.db(db_name).table(table_name).wait().run()
+                    await r.db(db_name).wait().run()
                 except ReqlOpFailedError as e:
                     if RELEASE == "LOCAL":
-                        await r.db(db_name).table_create(table_name).run()
+                        await r.db_create(db_name).run()
                     else:
                         print(f"CRITICAL: {e}", flush=True)
+
+                for table_name in table_names:
+                    try:
+                        await r.db(db_name).table(table_name).wait().run()
+                    except ReqlOpFailedError as e:
+                        if RELEASE == "LOCAL":
+                            await r.db(db_name).table_create(table_name).run()
+                        else:
+                            print(f"CRITICAL: {e}", flush=True)
+        except ReqlOpFailedError:
+            pass
 
     async def load_database(self, save_conn=True):
         if self.conn:
@@ -319,33 +322,29 @@ class BloxlinkStructure(AutoShardedClient):
     def __repr__(self):
         return "< Bloxlink Client >"
 
-if RELEASE in ("CANARY", "LOCAL"):
-    intents = Intents.none()
 
-    intents.members = True # pylint: disable=assigning-non-slot
-    intents.guilds = True # pylint: disable=assigning-non-slot
-    intents.guild_reactions = True # pylint: disable=assigning-non-slot
-    intents.guild_messages = True # pylint: disable=assigning-non-slot
-    intents.dm_messages = True # pylint: disable=assigning-non-slot
-    intents.bans = True # pylint: disable=assigning-non-slot
+intents = Intents.none()
+member_cache_flags = MemberCacheFlags.none()
 
-    if RELEASE == "PRO":
-        intents.guild_typing = True # pylint: disable=assigning-non-slot
+intents.members = True # pylint: disable=assigning-non-slot
+intents.guilds = True # pylint: disable=assigning-non-slot
+intents.guild_reactions = True # pylint: disable=assigning-non-slot
+intents.guild_messages = True # pylint: disable=assigning-non-slot
+intents.dm_messages = True # pylint: disable=assigning-non-slot
+intents.bans = True # pylint: disable=assigning-non-slot
 
-    Bloxlink = BloxlinkStructure(
-        fetch_offline_members=False,
-        shard_count=SHARD_COUNT,
-        shard_ids=SHARD_RANGE,
-        allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
-        intents=intents,
-    )
-else:
-    Bloxlink = BloxlinkStructure(
-        fetch_offline_members=False,
-        shard_count=SHARD_COUNT,
-        shard_ids=SHARD_RANGE,
-        allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
-    )
+if RELEASE == "PRO":
+    intents.guild_typing = True # pylint: disable=assigning-non-slot
+
+Bloxlink = BloxlinkStructure(
+    fetch_offline_members=False,
+    shard_count=SHARD_COUNT,
+    shard_ids=SHARD_RANGE,
+    allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
+    intents=intents,
+    member_cache_flags=member_cache_flags
+)
+
 
 redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
 redis_cache = redis and redis.cache("cache")

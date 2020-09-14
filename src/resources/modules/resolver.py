@@ -62,6 +62,7 @@ class Resolver(Bloxlink.Module):
 
         return False, f"Choice must be of either: {str(arg['choices'])}"
 
+
     async def user_resolver(self, message, arg, content=None):
         if not content:
             content = message.content
@@ -108,13 +109,7 @@ class Resolver(Bloxlink.Module):
                     except NotFound:
                         return False, "A user with this discord ID does not exist"
             else:
-                user = guild.get_member_named(content)
-
-                if user:
-                    return user, None
-                else:
-                    return None, "Unable to find a matching user"
-
+                return None, "Please search for a member via ID or a ping. See ``[this article](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-) ``for instructions on getting someone's ID."
 
             return False, "Invalid user"
         else:
@@ -136,22 +131,21 @@ class Resolver(Bloxlink.Module):
 
                 users.append(user)
 
-            for member in guild.members:
+            for lookup_string in lookup_strings:
                 if max:
                     if count >= max:
                         break
 
-                for lookup_string in lookup_strings:
-                    if lookup_string.isdigit():
-                        if member.id == int(lookup_string):
-                            users.append(member)
-                            count += 1
-                            break
+                if lookup_string.isdigit():
+                    try:
+                        member = await guild.fetch_member(int(lookup_string))
+                    except NotFound:
+                        pass
                     else:
-                        if member.name == lookup_string or str(member) == lookup_string:
-                            users.append(member)
-                            count += 1
-                            break
+                        users.append(member)
+
+                    count += 1
+
 
             return users, None
 
