@@ -1,6 +1,8 @@
-from ..structures import Bloxlink
+from ..structures import Bloxlink # pylint: disable=import-error
+from ..constants import RELEASE # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
+from time import time
 import re
 
 
@@ -34,13 +36,34 @@ class Blacklist(Bloxlink.Module):
 
 
     async def load_blacklist(self):
-        try:
-            self.trello_board = await trello.get_board("https://trello.com/b/jkvnyaJo/blacklist")
-        except (TrelloNotFound, TrelloUnauthorized, ConnectionResetError, ClientOSError, ServerDisconnectedError):
-            pass
-        else:
-            roblox_ids = await self.trello_board.get_list(lambda l: l.name == "Roblox Accounts")
-            discord_ids = await self.trello_board.get_list(lambda l: l.name == "Discord Accounts")
+        if RELEASE == "CANARY":
+            try:
+                self.trello_board = await trello.get_board("https://trello.com/b/jkvnyaJo/blacklist")
+            except (TrelloNotFound, TrelloUnauthorized, ConnectionResetError, ClientOSError, ServerDisconnectedError):
+                pass
+            else:
+                roblox_ids = await self.trello_board.get_list(lambda l: l.name == "Roblox Accounts")
+                discord_ids = await self.trello_board.get_list(lambda l: l.name == "Discord Accounts")
 
-            await self.parse_data(roblox_ids, "roblox_ids")
-            await self.parse_data(discord_ids, "discord_ids")
+                await self.parse_data(roblox_ids, "roblox_ids")
+                await self.parse_data(discord_ids, "discord_ids")
+
+            restricted_users = await self.r.db("bloxlink").table("restrictedUsers").run()
+
+            time_now = (time()) * 1000 # for compatibility with the Javascript Bloxlink API
+
+            async for restricted_user in restricted_users:
+                restrictions = restricted_user["restrictions"]
+
+                for i, restriction in enumerate(list(restrictions)):
+                    if restriction["expiry"] <= time_now:
+                        restrictions.pop(i)
+                        restricted_user["restrictions"] = restrictions
+
+                        await self.r.db("bloxlink").table("restrictedUsers").insert(restricted_user, conflict="update").run()
+                    else:
+                        if restriction["type"] in ("global", "bot"):
+                            await cache_set(f"blacklist:discord_ids", int(restricted_user["id"]), restriction["reason"])
+
+                if not restrictions:
+                    await self.r.db("bloxlink").table("restrictedUsers").get(restricted_user["id"]).delete().run()

@@ -22,23 +22,22 @@ class MemberUnBanEvent(Bloxlink.Module):
             if self.redis:
                 donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
+                guild_data = await cache_get("guild_data", guild.id)
+
+                if not guild_data:
+                    guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
+
+                    trello_board = await get_board(guild=guild, guild_data=guild_data)
+                    trello_options = {}
+
+                    if trello_board:
+                        trello_options, _ = await get_options(trello_board)
+                        guild_data.update(trello_options)
+
                 if donator_profile.features.get("premium"):
                     if await cache_get("unbanRelatedAccounts", guild.id, primitives=True) is None:
-                        guild_data = await cache_get("guild_data", guild.id)
-
-                        if not guild_data:
-                            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
-
-                            trello_board = await get_board(guild=guild, guild_data=guild_data)
-                            trello_options = {}
-
-                            if trello_board:
-                                trello_options, _ = await get_options(trello_board)
-                                guild_data.update(trello_options)
-
                         await cache_set("guild_data", guild.id, guild_data)
                         await cache_set("unbanRelatedAccounts", guild.id, bool(guild_data.get("unbanRelatedAccounts", DEFAULTS.get("unbanRelatedAccounts"))))
-
 
                     if await cache_get("unbanRelatedAccounts", guild.id, primitives=True):
                         try:

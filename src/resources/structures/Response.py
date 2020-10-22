@@ -4,7 +4,7 @@ from discord import Object
 from ..exceptions import PermissionError, Message
 from ..structures import Bloxlink, Paginate
 from config import PREFIX, REACTIONS # pylint: disable=E0611
-from ..constants import IS_DOCKER
+from ..constants import IS_DOCKER, EMBED_COLOR
 import asyncio
 
 loop = asyncio.get_event_loop()
@@ -112,7 +112,9 @@ class Response(Bloxlink.Module):
             self.bot_name = self.bot_avatar = None
 
     def loading(self, text="Please wait until the operation completes."):
-        return ResponseLoading(self, text)
+        #return ResponseLoading(self, text)
+        pass
+
 
     def delete(self, *messages):
         for message in messages:
@@ -120,9 +122,8 @@ class Response(Bloxlink.Module):
                 self.delete_message_queue.append(message)
 
     async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None, allowed_mentions=None):
-        if dm:
-            if not IS_DOCKER:
-                dm = False
+        if dm and not IS_DOCKER:
+            dm = False
 
 
         channel = channel_override or (dm and self.author or self.channel)
@@ -172,8 +173,7 @@ class Response(Bloxlink.Module):
 
 
         if embed and not dm and not embed.color:
-            #embed.color = self.guild.me.color
-            embed.color = 0x36393E
+            embed.color = EMBED_COLOR
 
         if not paginate:
             try:
@@ -298,3 +298,6 @@ class Response(Bloxlink.Module):
             embed.color = embed_color
 
         return await self.send(f"{emoji} {text}", embed=embed, dm=dm, **kwargs)
+
+    async def reply(self, text, embed=None, embed_color=0x36393E, dm=False, **kwargs):
+        return await self.send(f"{self.author.mention}, {text}", embed=embed, dm=dm, **kwargs)

@@ -1,6 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.constants import ARROW, BROWN_COLOR, NICKNAME_TEMPLATES, RELEASE # pylint: disable=import-error
 from resources.exceptions import Error, RobloxNotFound, CancelCommand # pylint: disable=import-error
+from resources.secrets import TRELLO # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 from discord.errors import Forbidden, HTTPException
 from discord import Embed
@@ -17,17 +18,6 @@ trello = Bloxlink.get_module("trello", attrs=["trello"])
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
-
-try:
-    from config import TRELLO
-except ImportError:
-    TRELLO = {
-        "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN"),
-	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "CARD_LIMIT": 100,
-        "LIST_LIMIT": 10
-    }
 
 
 @Bloxlink.command

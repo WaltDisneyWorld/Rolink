@@ -1,7 +1,5 @@
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import UserNotVerified, BloxlinkBypass, PermissionError, RobloxAPIError, Error, CancelCommand, RobloxDown
-from ..constants import DEFAULTS, SERVER_INVITE, RELEASE
-from discord.errors import Forbidden, HTTPException, NotFound
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import RobloxDown # pylint: disable=import-error
 
 guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 
@@ -20,4 +18,7 @@ class MemberJoinEvent(Bloxlink.Module):
             if member.bot:
                 return
 
-            await guild_obligations(member, guild, cache=False, dm=True, event=True)
+            try:
+                await guild_obligations(member, guild, cache=False, dm=True, event=True)
+            except RobloxDown:
+                pass

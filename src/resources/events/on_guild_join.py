@@ -52,7 +52,7 @@ class GuildJoinEvent(Bloxlink.Module):
             prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
 
             if RELEASE == "PRO":
-                profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
+                profile, _ = await get_features(Object(id=guild.owner_id), guild=guild, cache=False)
 
                 if not profile.features.get("pro"):
                     if chosen_channel:

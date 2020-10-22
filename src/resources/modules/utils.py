@@ -110,8 +110,12 @@ class Utils(Bloxlink.Module):
         if not guild:
             return PREFIX, None
 
-        if RELEASE == "MAIN" and guild.get_member(469652514501951518):
-            return "!!", None
+        if RELEASE == "PRO":
+            if guild_data:
+                prefix = guild_data.get("proPrefix")
+
+                if prefix:
+                    return prefix, None
 
         if trello_board:
             try:

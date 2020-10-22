@@ -1,19 +1,11 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import PermissionError # pylint: disable=import-error
-from resources.constants import BROWN_COLOR # pylint: disable=import-error
+from resources.constants import BROWN_COLOR, RELEASE # pylint: disable=import-error
+from resources.secrets import TRELLO # pylint: disable=import-error
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 from os import environ as env
 
-try:
-    from config import TRELLO
-except ImportError:
-    TRELLO = {
-        "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN"),
-	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "CARD_LIMIT": 100,
-        "LIST_LIMIT": 10
-    }
+
 
 get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
 
@@ -53,9 +45,14 @@ class PrefixCommand(Bloxlink.Module):
             if not CommandArgs.has_permission:
                 raise PermissionError("You do not meet the required permissions for this command.")
 
+            if RELEASE == "PRO":
+                prefix_name = "proPrefix"
+            else:
+                prefix_name = "prefix"
+
             await self.r.table("guilds").insert({
                 "id": str(guild.id),
-                "prefix": new_prefix
+                prefix_name: new_prefix
             }, conflict="update").run()
 
             trello_board = CommandArgs.trello_board

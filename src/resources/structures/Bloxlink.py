@@ -2,8 +2,9 @@ from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient, AllowedMentions, Intents, MemberCacheFlags
 from config import WEBHOOKS # pylint: disable=E0611
-from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE
-from . import Args, Permissions
+from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE # pylint: disable=import-error
+from ..secrets import REDIS, RETHINKDB # pylint: disable=import-error
+from . import Args, Permissions # pylint: disable=import-error
 from ast import literal_eval
 from async_timeout import timeout
 import functools
@@ -12,6 +13,7 @@ import datetime
 import logging
 import aiohttp
 import aredis
+#import sentry_sdk
 import asyncio; loop = asyncio.get_event_loop()
 
 from rethinkdb.errors import ReqlDriverError, ReqlOpFailedError
@@ -33,24 +35,6 @@ logger = logging.getLogger()
 
 loaded_modules = {}
 
-try:
-    from config import RETHINKDB
-except ImportError:
-    RETHINKDB = {
-        "HOST": env.get("RETHINKDB_HOST"),
-        "PASSWORD": env.get("RETHINKDB_PASSWORD"),
-        "PORT": int(env.get("RETHINKDB_PORT")),
-        "DB": env.get("RETHINKDB_DB")
-    }
-
-try:
-    from config import REDIS
-except ImportError:
-    REDIS = {
-        "HOST": env.get("REDIS_HOST"),
-        "PORT": int(env.get("REDIS_PORT")),
-        "PASSWORD": env.get("REDIS_PASSWORD"),
-    }
 
 
 class BloxlinkStructure(AutoShardedClient):
@@ -68,9 +52,27 @@ class BloxlinkStructure(AutoShardedClient):
 
     @staticmethod
     def log(*text, level=LOG_LEVEL):
-        if level.upper() == LOG_LEVEL:
-            print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
+        print(f"{LABEL} | {LOG_LEVEL} | {'| '.join(text)}", flush=True)
 
+
+    """
+    def error(self, e=None, **kwargs):
+        if not e:
+            e = traceback.format_exc()
+
+        logger.exception(e)
+
+        with sentry_sdk.push_scope() as scope:
+            for tag_name, tag_value in kwargs.items():
+                if tag_name == "user":
+                    scope.user = {"id": tag_value[0], "username": tag_value[1]}
+                else:
+                    scope.set_tag(tag_name, tag_value)
+
+            scope.level = "error"
+
+            return sentry_sdk.capture_exception()
+    """
     def error(self, text, title=None):
         logger.exception(text)
         loop.create_task(self._error(str(text), title=title))
@@ -122,7 +124,8 @@ class BloxlinkStructure(AutoShardedClient):
             else:
                 msg = str(context["message"])
 
-        self.error(str(msg), title)
+
+        self.error(future_info or str(context["message"]), title=title)
 
     @staticmethod
     def module(module):
@@ -174,13 +177,13 @@ class BloxlinkStructure(AutoShardedClient):
                 Bloxlink.log(f"ERROR | {e}")
                 traceback_text = traceback.format_exc()
                 traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
-                Bloxlink.error(traceback_text, title=f"Error source: {dir_name}.py")
+                Bloxlink.error(traceback_text, title=f"{dir_name}.py")
 
             except Exception as e:
                 Bloxlink.log(f"ERROR | Module {dir_name} failed to load: {e}")
                 traceback_text = traceback.format_exc()
                 traceback_text = len(traceback_text) < 500 and traceback_text or f"...{traceback_text[len(traceback_text)-500:]}"
-                Bloxlink.error(traceback_text, title=f"Error source: {dir_name}.py")
+                Bloxlink.error(traceback_text, title=f"{dir_name}.py")
             else:
                 for attr_name in dir(module):
                     if attr_name.lower() == name_obj:
@@ -324,7 +327,6 @@ class BloxlinkStructure(AutoShardedClient):
 
 
 intents = Intents.none()
-member_cache_flags = MemberCacheFlags.none()
 
 intents.members = True # pylint: disable=assigning-non-slot
 intents.guilds = True # pylint: disable=assigning-non-slot
@@ -336,18 +338,31 @@ intents.bans = True # pylint: disable=assigning-non-slot
 if RELEASE == "PRO":
     intents.guild_typing = True # pylint: disable=assigning-non-slot
 
+
 Bloxlink = BloxlinkStructure(
-    fetch_offline_members=False,
+    chunk_guilds_at_startup=False,
     shard_count=SHARD_COUNT,
     shard_ids=SHARD_RANGE,
     allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False),
     intents=intents,
-    member_cache_flags=member_cache_flags
 )
 
 
-redis = IS_DOCKER and aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
-redis_cache = redis and redis.cache("cache")
+def load_redis():
+    redis = redis_cache = None
+
+    if IS_DOCKER:
+        while not redis:
+            try:
+                redis = aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
+            except aredis.exceptions.ConnectionError:
+                pass
+            else:
+                redis_cache = redis.cache("cache")
+
+    return redis, redis_cache
+
+redis, redis_cache = load_redis()
 
 class Module:
     client = Bloxlink

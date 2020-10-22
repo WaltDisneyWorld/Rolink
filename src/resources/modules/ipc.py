@@ -2,9 +2,12 @@ from os import getpid
 import json
 import uuid
 import asyncio
-from discord import Status, Game, Streaming
-from ..structures.Bloxlink import Bloxlink
-from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER, PLAYING_STATUS
+from discord import Status, Game, Streaming, Object
+from discord.errors import NotFound, Forbidden
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER, PLAYING_STATUS, RELEASE, GREEN_COLOR # pylint: disable=import-error
+from ..exceptions import (BloxlinkBypass, Blacklisted, UserNotVerified, Blacklisted, PermissionError, # pylint: disable=import-error
+                         RobloxAPIError, CancelCommand) # pylint: disable=import-error
 from config import PROMPT, PREFIX # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
@@ -13,8 +16,8 @@ from psutil import Process
 import async_timeout
 
 eval = Bloxlink.get_module("evalm", attrs="__call__")
-
-
+post_event = Bloxlink.get_module("utils", attrs="post_event")
+update_member, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_user"])
 
 
 @Bloxlink.module
@@ -29,9 +32,9 @@ class IPC(Bloxlink.Module):
         data = message["data"]
         type = message["type"]
         nonce = message["nonce"]
-        original_cluster = message["original_cluster"]
-        waiting_for = message["waiting_for"]
-        cluster_id = message["cluster_id"]
+        original_cluster = message.get("original_cluster")
+        waiting_for = message.get("waiting_for")
+        cluster_id = message.get("cluster_id")
         extras = message.get("extras", {})
 
         if type == "IDENTIFY":
@@ -54,7 +57,82 @@ class IPC(Bloxlink.Module):
                     "waiting_for": waiting_for
                 })
 
-                await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+                await self.redis.publish(f"{RELEASE}:CLUSTER_{original_cluster}", data)
+
+        elif type == "VERIFICATION":
+            discord_id = int(data["discordID"])
+            guild_id = int(data["guildID"])
+            roblox_id = data["robloxID"]
+            roblox_accounts = data["robloxAccounts"]
+
+            guild = Bloxlink.get_guild(guild_id)
+
+            if guild:
+                member = guild.get_member(discord_id)
+
+                if not member:
+                    try:
+                        member = await guild.fetch_member(discord_id)
+                    except NotFound:
+                        pass
+                    else:
+                        roblox_user, _ = await get_user(roblox_id=roblox_id)
+
+                        try:
+                            added, removed, nickname, errors, roblox_user = await update_member(
+                                member,
+                                guild                = guild,
+                                roles                = True,
+                                nickname             = True,
+                                roblox_user          = roblox_user,
+                                author_data          = await self.r.db("bloxlink").table("users").get(str(member.id)).run(),
+                                cache                = False,
+                                dm                   = False)
+
+                        except Blacklisted as b:
+                            blacklist_text = ""
+
+                            if str(b):
+                                blacklist_text = f"You have an active restriction for: ``{b}``"
+                            else:
+                                blacklist_text = f"You have an active restriction from Bloxlink."
+
+                            try:
+                                await member.send(f"Failed to update you in the server: ``{blacklist_text}``")
+                            except Forbidden:
+                                pass
+
+                        except BloxlinkBypass:
+                            try:
+                                await member.send(f"You have the ``Bloxlink Bypass`` role, so I am unable to update you in the server.")
+                            except Forbidden:
+                                pass
+
+                        except RobloxAPIError:
+                            try:
+                                await member.send("An unknown Roblox API error occured, so I was unable to update you in the server. Please try again later.")
+                            except Forbidden:
+                                pass
+
+                        except PermissionError as e:
+                            try:
+                                await member.send(f"A permission error occured, so I was unable to update you in the server: ``{e}``")
+                            except Forbidden:
+                                pass
+
+                        except CancelCommand:
+                            pass
+
+                        else:
+                            try:
+                                await member.send(f"Your account was successfully updated to **{roblox_user.username}** in the server **{guild.name}.**")
+                            except Forbidden:
+                                pass
+
+                            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
+
+                            await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+
 
         elif type == "EVAL":
             res = (await eval(data, codeblock=False)).description
@@ -68,7 +146,7 @@ class IPC(Bloxlink.Module):
                 "waiting_for": waiting_for
             })
 
-            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+            await self.redis.publish(f"{RELEASE}:CLUSTER_{original_cluster}", data)
 
         elif type == "CLIENT_RESULT":
             task = self.pending_tasks.get(nonce)
@@ -98,7 +176,7 @@ class IPC(Bloxlink.Module):
                     "waiting_for": waiting_for
                 })
 
-                await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+                await self.redis.publish(f"{RELEASE}:CLUSTER_{original_cluster}", data)
 
         elif type == "STATS":
             seconds = floor(time() - STARTED)
@@ -132,7 +210,7 @@ class IPC(Bloxlink.Module):
                 "waiting_for": waiting_for
             })
 
-            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+            await self.redis.publish(f"{RELEASE}:CLUSTER_{original_cluster}", data)
 
         elif type == "PLAYING_STATUS":
             presence_type = extras.get("presence_type", "normal")
@@ -154,13 +232,13 @@ class IPC(Bloxlink.Module):
                 "waiting_for": waiting_for
             })
 
-            await self.redis.publish(f"CLUSTER_{original_cluster}", data)
+            await self.redis.publish(f"{RELEASE}:CLUSTER_{original_cluster}", data)
 
 
     async def __setup__(self):
         if IS_DOCKER:
             pubsub = self.redis.pubsub()
-            await pubsub.subscribe("GLOBAL", f"CLUSTER_{CLUSTER_ID}")
+            await pubsub.subscribe(f"{RELEASE}:GLOBAL", f"{RELEASE}:CLUSTER_{CLUSTER_ID}", "VERIFICATION")
 
             data = json.dumps({
                 "nonce": None,
@@ -171,7 +249,7 @@ class IPC(Bloxlink.Module):
                 "waiting_for": None
             })
 
-            await self.redis.publish("GLOBAL", data)
+            await self.redis.publish(f"{RELEASE}:GLOBAL", data)
 
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True)
@@ -180,7 +258,7 @@ class IPC(Bloxlink.Module):
                     self.loop.create_task(self.handle_message(message))
 
 
-    async def broadcast(self, message, type, send_to="GLOBAL", waiting_for=None, timeout=10, response=True, **kwargs):
+    async def broadcast(self, message, type, send_to=f"{RELEASE}:GLOBAL", waiting_for=None, timeout=10, response=True, **kwargs):
         nonce = str(uuid.uuid4())
 
         if waiting_for and isinstance(waiting_for, str):

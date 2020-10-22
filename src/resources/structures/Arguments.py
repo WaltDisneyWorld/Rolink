@@ -139,7 +139,7 @@ class Arguments:
 						await self.say(prompt_text, embed_title=prompt.get("embed_title"), embed_color=prompt.get("embed_color"), footer=prompt.get("footer"), type=error and "error", embed=embed, dm=dm)
 
 						if dm and IS_DOCKER:
-							message_content = await broadcast(self.author.id, type="DM", send_to="CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
+							message_content = await broadcast(self.author.id, type="DM", send_to=f"{RELEASE}:CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
 							my_arg = message_content[0]
 
 							if not my_arg:
@@ -182,33 +182,48 @@ class Arguments:
 
 					continue
 
-				resolver = get_resolver(prompt.get("type", "string"))
-				resolved, error_message = await resolver(message, prompt, my_arg)
+				resolver_types = prompt.get("type", "string")
 
-				if resolved:
-					if prompt.get("validation"):
-						res = [await prompt["validation"](content=my_arg, message=not dm and message)]
+				if not isinstance(resolver_types, list):
+					resolver_types = [resolver_types]
 
-						if isinstance(res[0], tuple):
-							if not res[0][0]:
-								error_message = res[0][1]
-								resolved = False
+				resolve_errors = []
+				resolved = False
+				error_message = None
 
-						else:
-							if not res[0]:
-								error_message = "Prompt failed validation. Please try again."
-								resolved = False
+				for resolver_type in resolver_types:
+					resolver = get_resolver(resolver_type)
+					resolved, error_message = await resolver(message, prompt, my_arg)
 
-						if resolved:
-							resolved = res[0]
-				else:
-					error_message = f"{self.locale('prompt.errors.invalidArgument', arg='**' + prompt.get('type', 'string') + '**')}: ``{error_message}``"
+					if resolved:
+						if prompt.get("validation"):
+							res = [await prompt["validation"](content=my_arg, message=not dm and message)]
+
+							if isinstance(res[0], tuple):
+								if not res[0][0]:
+									error_message = res[0][1]
+									resolved = False
+
+							else:
+								if not res[0]:
+									error_message = "Prompt failed validation. Please try again."
+									resolved = False
+
+							if resolved:
+								resolved = res[0]
+					else:
+						error_message = f"{self.locale('prompt.errors.invalidArgument', arg='**' + resolver_type + '**')}: ``{error_message}``"
+
+					if error_message:
+						resolve_errors.append(error_message)
+					else:
+						break
 
 				if resolved:
 					checked_args += 1
 					resolved_args[prompt["name"]] = resolved
 				else:
-					await self.say(error_message, type="error", embed=embed, dm=dm)
+					await self.say("\n".join(resolve_errors), type="error", embed=embed, dm=dm)
 
 					try:
 						skipped_args[checked_args] = None

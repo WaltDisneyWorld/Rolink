@@ -15,7 +15,7 @@ class MessageEvent:
 		async def on_message(message):
 			author = message.author
 
-			if author.bot or not message.channel or Arguments.in_prompt(author):
+			if (author.bot or not message.channel or Arguments.in_prompt(author)) or (message.guild and message.guild.unavailable):
 				return
 
 			await parse_message(message)

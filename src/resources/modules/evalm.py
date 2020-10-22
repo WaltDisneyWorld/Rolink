@@ -2,8 +2,8 @@ from contextlib import redirect_stdout
 import textwrap
 import io
 from discord import Embed
-from ..structures.Bloxlink import Bloxlink
-from ..constants import RED_COLOR, INVISIBLE_COLOR
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..constants import RED_COLOR, INVISIBLE_COLOR # pylint: disable=import-error
 
 # Adapted from https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py
 
@@ -31,6 +31,7 @@ class EvalM(Bloxlink.Module):
 			"guild": message and message.guild,
 			"message": message,
 			"r": self.r,
+			"redis": self.redis,
 			"_": self._last_result
 		}
 

@@ -2,7 +2,7 @@ import math
 from resources.structures.Bloxlink import Bloxlink
 from discord import Embed
 from time import time
-from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED, IS_DOCKER
+from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED, IS_DOCKER, RELEASE
 from psutil import Process
 from os import getpid
 
@@ -23,7 +23,7 @@ class StatsCommand(Bloxlink.Module):
         clusters = 0
 
         if IS_DOCKER:
-            guilds = 0
+            total_guilds = guilds = 0
             mem = 0
             errored = 0
 
@@ -34,16 +34,16 @@ class StatsCommand(Bloxlink.Module):
                 if cluster_data in ("cluster offline", "cluster timeout"):
                     errored += 1
                 else:
-                    guilds += cluster_data[0]
+                    total_guilds += cluster_data[0]
                     mem += cluster_data[1]
 
             if errored:
-                guilds = f"{guilds} ({len(self.client.guilds)}) ({errored} errored)"
+                guilds = f"{total_guilds} ({len(self.client.guilds)}) ({errored} errored)"
             else:
-                guilds = f"{guilds} ({len(self.client.guilds)})"
+                guilds = f"{total_guilds} ({len(self.client.guilds)})"
 
         else:
-            guilds = str(len(self.client.guilds))
+            total_guilds = guilds = str(len(self.client.guilds))
             clusters = 1
 
             process = Process(getpid())
@@ -82,5 +82,17 @@ class StatsCommand(Bloxlink.Module):
         embed.add_field(name="Invite **Bloxlink**", value=f"https://blox.link/invite")
         embed.add_field(name="Website", value=f"https://blox.link")
 
-
         await response.send(embed=embed)
+
+        if IS_DOCKER and RELEASE == "MAIN": # FIXME: temp until we get an update-server
+            await self.r.table("miscellaneous").insert({
+                "id": "stats",
+                "stats": {
+                    "guilds": total_guilds,
+                    "version": VERSION,
+                    "memory": f"{mem} MB",
+                    "uptime": uptime,
+                    "clusters": clusters
+                }
+
+            }, conflict="update").run()

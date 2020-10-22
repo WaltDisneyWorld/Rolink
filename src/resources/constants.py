@@ -5,12 +5,13 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.03"
+VERSION = "v3.10"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
 
 TOPGG_API = "https://top.gg/api"
+DBL_API = "https://discordbotlist.com/api/v1"
 
 SHARDS_PER_CLUSTER = int(env.get("SHARDS_PER_CLUSTER", "1"))
 
@@ -34,7 +35,7 @@ for _ in range(SHARDS_PER_CLUSTER):
 
 STARTED = time()
 
-RED_COLOR       = 0xE74C3C
+RED_COLOR       = 0xdb2323
 INVISIBLE_COLOR = 0x36393E
 ORANGE_COLOR    = 0xCE8037
 GOLD_COLOR      = 0xFDC333
@@ -43,6 +44,8 @@ PURPLE_COLOR    = 0xa830c5
 GREEN_COLOR     = 0x0ec37e
 BROWN_COLOR     = 0xa2734a
 BLURPLE_COLOR   = 0x4a58a2
+YELLOW_COLOR    = 0xf1c40f
+PINK_COLOR      = 0xf47fff
 
 DEV_COLOR               = 0x4DD3CC
 STAFF_COLOR             = 0x3ca770
@@ -50,6 +53,24 @@ COMMUNITY_MANAGER_COLOR = 0xc4306f
 VIP_MEMBER_COLOR        = 0x3271c2
 
 PARTNERED_SERVER        = 0x4f91a0
+
+if RELEASE == "PRO":
+    EMBED_COLOR = YELLOW_COLOR
+elif RELEASE == "MAIN":
+    EMBED_COLOR = RED_COLOR
+elif RELEASE == "CANARY":
+    EMBED_COLOR = ORANGE_COLOR
+elif RELEASE == "LOCAL":
+    EMBED_COLOR = PURPLE_COLOR
+"""
+if RELEASE == "CANARY":
+    VERIFY_URL = "https://canary.blox.link/verify/"
+    ACCOUNT_SETTINGS_URL = "https://canary.blox.link/account/"
+else:
+"""
+
+VERIFY_URL = "https://blox.link/verify/"
+ACCOUNT_SETTINGS_URL = "https://blox.link/account/"
 
 NICKNAME_TEMPLATES = (
     "{roblox-name} \u2192 changes to their Roblox username\n"
@@ -76,7 +97,7 @@ UNVERIFIED_TEMPLATES = (
 ESCAPED_NICKNAME_TEMPLATES = NICKNAME_TEMPLATES.replace("{", "{{").replace("}", "}}")
 
 OPTIONS = {                # fn,  type, max length or choices, premium only, desc
-    "prefix":                (None, "string", 10,    False, "The prefix is used before commands to activate them"),
+    "prefix":                (lambda g, gd: RELEASE == "PRO" and gd.get("proPrefix") or gd.get("prefix"), "string", 10,    False, "The prefix is used before commands to activate them"),
     "verifiedRoleName":      (None, "string", 20,    False, "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."),
     "verifiedRoleEnabled":   (None, "boolean", None, False, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."),
     "unverifiedRoleEnabled": (None, "boolean", None, False, "The Unverified role is given to people who aren't linked on Bloxlink. Enable/disable it here."),
@@ -98,7 +119,7 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "inactiveRole":          (lambda g, gd: gd.get("inactiveRole") and find(lambda r: r.id == int(gd["inactiveRole"]), g.roles), "role", None, True, "Set the role given to people who declared themselves as \"inactive\" from ``{prefix}profile``."),
     "banRelatedAccounts":    (None, "boolean", None, True,  "If this is enabled: when members are banned, their known alts are also banned from the server."),
     "unbanRelatedAccounts":  (None, "boolean", None, True,  "If this is enabled: when members are unbanned, their known alts are also unbanned from the server."),
-    "disallowAlts":          (None, "boolean", None, True,  "If this is enabled: when someone joins the server and already has a linked account in the server, kick then old alt out."),
+    "disallowAlts":          (None, "boolean", None, True,  "If this is enabled: when someone joins the server and already has a linked account in the server, kick the old alt out."),
     "disallowBanEvaders":    (None, "boolean", None, True,  "If this is enabled: when members join, and they have a banned account in the server, their new account will also be banned."),
     #"groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
     "whiteLabel":            (lambda g, gd: bool(gd.get("customBot")),  None, None, True,      "Modify the username and profile picture of __most__ Bloxlink responses."),
@@ -121,7 +142,7 @@ DEFAULTS = {
     "persistRoles": True,
     "trelloID": "No Trello Board",
     "allowReVerify": True,
-    "welcomeMessage": "Welcome to **{server-name}**, {roblox-name}! Use ``{prefix}verify add`` to change your account.",
+    "welcomeMessage": "Welcome to **{server-name}**, {roblox-name}! Visit <" + VERIFY_URL + "> to change your account.",
     "nicknameTemplate": "{roblox-name}",
     "unverifiedRoleName": "Unverified",
     "shorterNicknames": True,
@@ -163,7 +184,9 @@ TABLE_STRUCTURE = {
         "groupShouts",
         "gameVerification",
         "robloxAccounts",
-        "commands"
+        "commands",
+        "miscellaneous",
+        "restrictedUsers"
     ],
     "canary": [
         "guilds",
@@ -183,7 +206,7 @@ LIMITS = {
     "BACKUPS": 4
 }
 
-PLAYING_STATUS = "{prefix}help"
+PLAYING_STATUS = "Meet Bloxlink: {prefix}about"
 
 AVATARS = {
     "PRIDE": "https://cdn.discordapp.com/attachments/480614508633522176/730969660010266644/rainbow_resized.png"
@@ -200,3 +223,4 @@ TIP_CHANCES = {
     "PROMPT_ERROR": 30,
     "GETROLE_DONATE": 10
 }
+

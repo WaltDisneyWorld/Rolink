@@ -48,9 +48,6 @@ class Cache(Bloxlink.Module):
 
 
     async def clear(self, *exceptions):
-        if self.redis:
-            await self.redis.flushdb()
-
         if exceptions:
             cache = {}
 

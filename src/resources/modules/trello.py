@@ -1,24 +1,13 @@
 from aiotrello import Trello as TrelloClient
 from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import BadUsage
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import BadUsage # pylint: disable=import-error
 from time import time
 from os import environ as env
-from resources.constants import OPTIONS
+from resources.constants import OPTIONS # pylint: disable=import-error
+from resources.secrets import TRELLO as TRELLO_CONFIG # pylint: disable=import-error
 from re import compile
 import asyncio
-
-try:
-    from config import TRELLO as TRELLO_CONFIG
-except ImportError:
-    TRELLO_CONFIG = {
-        "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN"),
-	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "CARD_LIMIT": 100,
-        "LIST_LIMIT": 10
-    }
-
 
 
 OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
@@ -29,13 +18,15 @@ cache_get, cache_set = Bloxlink.get_module("cache", attrs=["get", "set"])
 @Bloxlink.module
 class Trello(Bloxlink.Module):
     def __init__(self):
-        #self.trello_boards = {}
+        self.trello_boards = {}
+
         self.trello = TrelloClient(
             key=TRELLO_CONFIG.get("KEY"),
             token=TRELLO_CONFIG.get("TOKEN"),
             cache_mode="none",
             session=None) # self.session)
         self.option_regex = compile("(.+):(.+)")
+
 
     async def get_board(self, guild_data, guild):
         trello_board = None

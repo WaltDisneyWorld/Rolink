@@ -113,8 +113,7 @@ class SwitchUserCommand(Bloxlink.Module):
                     member = await guild.fetch_member(author.id)
                 except (Forbidden, NotFound):
                     await verify_member(author, roblox_id, guild=guild, author_data=author_data, allow_reverify=allow_reverify, primary_account=parsed_args["primary"] == "yes")
-                    raise Message("You're not a member of the provided server, so I was only able to update your account internally.\nPlease allow "
-                                  "up to 10 minutes for the internal cache to clear.", type="success")
+                    raise Message("You're not a member of the provided server, so I was only able to update your account internally.", type="success")
 
                 try:
                     username = await verify_as(
@@ -159,9 +158,9 @@ class SwitchUserCommand(Bloxlink.Module):
 
                     except Blacklisted as b:
                         if str(b):
-                            raise Error(f"{author.mention} is **blacklisted** for: ``{b}``.")
+                            raise Error(f"{author.mention} has an active restriction for: ``{b}``.")
                         else:
-                            raise Error(f"{author.mention} is **blacklisted** from Bloxlink.")
+                            raise Error(f"{author.mention} has an active restriction from Bloxlink.")
                     else:
                         welcome_message = guild_data.get("welcomeMessage") or DEFAULTS.get("welcomeMessage")
 

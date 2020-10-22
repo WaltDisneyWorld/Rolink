@@ -1,11 +1,10 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import (Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, # pylint: disable=import-error
                                   RobloxNotFound, CancelCommand, Blacklisted, RobloxDown)
-from config import REACTIONS, VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
-from discord import Embed
+from config import VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
+from resources.constants import RELEASE # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
 import heapq
-import time
 import asyncio
 import math
 
@@ -56,47 +55,50 @@ class VerifyAllCommand(Bloxlink.Module):
             else:
                 await response.send(f"Your server is now being scanned.")
 
-        for member in guild.members:
-            if not member.bot:
-                try:
-                    added, removed, nickname, errors, roblox_user = await update_member(
-                        member,
-                        guild             = guild,
-                        guild_data        = guild_data,
-                        trello_board      = trello_board,
-                        trello_binds_list = trello_binds_list,
-                        roles             = roles,
-                        nickname          = nickname,
-                        author_data       = await self.r.db("bloxlink").table("users").get(str(member.id)).run())
+        redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
+        await self.cache.set(redis_cooldown_key, "scanning", expire_time=86400)
 
-                except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden, RobloxAPIError, CancelCommand, Blacklisted):
-                    pass
+        try:
+            for member in guild.members:
+                if not member.bot:
+                    try:
+                        added, removed, nickname, errors, roblox_user = await update_member(
+                            member,
+                            guild             = guild,
+                            guild_data        = guild_data,
+                            trello_board      = trello_board,
+                            trello_binds_list = trello_binds_list,
+                            roles             = roles,
+                            nickname          = nickname,
+                            author_data       = await self.r.db("bloxlink").table("users").get(str(member.id)).run())
 
-                except NotFound:
-                    await response.error("Please do not delete roles/channels while a scan is going on... This scan is now cancelled.")
-                    break
+                    except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden, RobloxAPIError, CancelCommand, Blacklisted):
+                        pass
 
-                except Error as e:
-                    await response.error(f"Encountered an error: ``{e}``. Scan cancelled.")
-                    break
-                except RobloxDown:
-                    await response.error("Roblox appears to be down, so this scan has been cancelled.")
-                    break
+                    except NotFound:
+                        await response.error("Please do not delete roles/channels while a scan is going on... This scan is now cancelled.")
+                        break
 
+                    except Error as e:
+                        await response.error(f"Encountered an error: ``{e}``. Scan cancelled.")
+                        break
+                    except RobloxDown:
+                        await response.error("Roblox appears to be down, so this scan has been cancelled.")
+                        break
 
-        len_members = len(guild.members)
+            await response.success("This server's scan has finished.")
 
-        cooldown_1 = (len_members / 1000) * 120
-        cooldown_2 = 120
+        finally:
+            len_members = len(guild.members)
 
-        cooldown = max(cooldown_1, cooldown_2)
+            cooldown_1 = (len_members / 1000) * 120
+            cooldown_2 = 120
 
-        redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(id=guild.id)
+            cooldown = max(cooldown_1, cooldown_2)
 
-        if self.cache:
-            await self.cache.set(redis_cooldown_key, True, expire_time=cooldown * 60)
-
-        await response.success("This server's scan has finished.")
+            if self.redis:
+                await self.redis.set(redis_cooldown_key, "done")
+                await self.redis.expire(redis_cooldown_key, cooldown * 60)
 
 
     async def start_queue(self):
@@ -139,20 +141,24 @@ class VerifyAllCommand(Bloxlink.Module):
         trello_board = CommandArgs.trello_board
         trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
-
-        if self.cache:
-            redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(id=guild.id)
+        if self.redis:
+            redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
             on_cooldown = await self.cache.get(redis_cooldown_key)
 
             if on_cooldown:
                 if on_cooldown == "processing":
                     raise Message(f"This server is still queued.")
+                elif on_cooldown == "scanning":
+                    raise Message("This server's scan is currently running.")
                 else:
-                    cooldown_time = await self.redis.ttl(redis_cooldown_key)
+                    cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
 
-                    raise Message(f"This server has an ongoing cooldown! You must wait **{math.ceil(cooldown_time/60)}** more minutes.")
+                    if not cooldown_time:
+                        await self.redis.delete(redis_cooldown_key)
+                    else:
+                        raise Message(f"This server has an ongoing cooldown! You must wait **{cooldown_time}** more minutes.")
 
-            await self.cache.set(redis_cooldown_key, "processing")
+            await self.cache.set(redis_cooldown_key, "processing", expire_time=86400)
 
             update_roles    = update_what in ("roles", "both")
             update_nickname = update_what in ("nickname", "both")

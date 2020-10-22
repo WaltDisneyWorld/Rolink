@@ -37,35 +37,35 @@ class ReverseSearchCommand(Bloxlink.Module):
         else:
             username = True
 
-        async with response.loading():
-            try:
-                account, _ = await get_user(username=username and target, roblox_id=ID and target)
-            except RobloxNotFound:
-                raise Error("This Roblox account doesn't exist.")
+        #async with response.loading():
+        try:
+            account, _ = await get_user(username=username and target, roblox_id=ID and target)
+        except RobloxNotFound:
+            raise Error("This Roblox account doesn't exist.")
+        else:
+            roblox_id = account.id
+
+            discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs")
+
+            results = []
+
+            if discord_ids:
+                for discord_id in discord_ids:
+                    try:
+                        user = await guild.fetch_member(int(discord_id))
+                    except NotFound:
+                        pass
+                    else:
+                        results.append(f"{user.mention} ({user.id})")
+
+
+            embed = Embed(title=f"Reverse Search for {account.username}")
+            embed.set_thumbnail(url=account.avatar)
+
+
+            if results:
+                embed.description = "\n".join(results)
             else:
-                roblox_id = account.id
+                embed.description = "No results found."
 
-                discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs")
-
-                results = []
-
-                if discord_ids:
-                    for discord_id in discord_ids:
-                        try:
-                            user = await guild.fetch_member(int(discord_id))
-                        except NotFound:
-                            pass
-                        else:
-                            results.append(f"{user.mention} ({user.id})")
-
-
-                embed = Embed(title=f"Reverse Search for {account.username}")
-                embed.set_thumbnail(url=account.avatar)
-
-
-                if results:
-                    embed.description = "\n".join(results)
-                else:
-                    embed.description = "No results found."
-
-                await response.send(embed=embed)
+            await response.send(embed=embed)

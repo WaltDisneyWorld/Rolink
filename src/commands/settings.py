@@ -1,21 +1,12 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error, CancelledPrompt, PermissionError # pylint: disable=import-error
 from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES, ORANGE_COLOR, GOLD_COLOR, BROWN_COLOR # pylint: disable=import-error
+from resources.secrets import TRELLO # pylint: disable=import-error
 from discord import Embed, Object
 from os import environ as env
 from discord.errors import Forbidden
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 
-try:
-    from config import TRELLO
-except ImportError:
-    TRELLO = {
-        "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN"),
-	    "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-	    "CARD_LIMIT": 100,
-        "LIST_LIMIT": 10
-    }
 
 get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])

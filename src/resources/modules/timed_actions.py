@@ -1,6 +1,6 @@
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import RobloxNotFound
-from ..constants import CACHE_CLEAR
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import RobloxNotFound # pylint: disable=import-error
+from ..constants import CACHE_CLEAR # pylint: disable=import-error
 import asyncio
 import dateutil
 from discord.errors import Forbidden, NotFound
@@ -11,6 +11,8 @@ get_group, get_user = Bloxlink.get_module("roblox", attrs=["get_group", "get_use
 cache_clear, cache_get = Bloxlink.get_module("cache", attrs=["clear", "get"])
 load_partners = Bloxlink.get_module("partners", attrs=["load_data"])
 load_blacklist = Bloxlink.get_module("blacklist", attrs=["load_blacklist"])
+load_boosters = Bloxlink.get_module("nitro_boosters", attrs=["load_boosters"], name_override="NitroBoosters")
+load_staff_members = Bloxlink.get_module("premium", attrs=["load_staff_members"])
 
 
 @Bloxlink.module
@@ -31,7 +33,9 @@ class TimedActions(Bloxlink.Module):
 
             try:
                 await load_partners()
-                await load_blacklist()
+                await load_blacklist() # redis
+                await load_boosters() # redis
+                await load_staff_members() # redis
             except Exception as e:
                 Bloxlink.error(e)
 

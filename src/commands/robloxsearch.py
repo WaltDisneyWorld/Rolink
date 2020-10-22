@@ -56,10 +56,10 @@ class RobloxSearchCommand(Bloxlink.Module):
         else:
             username = True
 
-        async with response.loading():
-            role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
+        #async with response.loading():
+        role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
 
-            try:
-                account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))
-            except RobloxNotFound:
-                raise Error("This Roblox account doesn't exist.")
+        try:
+            account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))
+        except RobloxNotFound:
+            raise Error("This Roblox account doesn't exist.")

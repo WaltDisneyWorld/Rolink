@@ -126,4 +126,5 @@ api/src/core/conf.py
 *tempCodeRunnerFile.py
 gateway/
 src/commands/topbots.py
+src/commands/stream.py
 src/resources/modules/site_services.py

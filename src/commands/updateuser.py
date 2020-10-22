@@ -1,8 +1,9 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, CancelCommand, PermissionError, Blacklisted # pylint: disable=import-error
 from config import REACTIONS # pylint: disable=no-name-in-module
-from resources.constants import CACHE_CLEAR # pylint: disable=import-error
-from discord import Embed, Object
+from resources.constants import CACHE_CLEAR, RELEASE # pylint: disable=import-error
+from discord import Embed, Object, Role
+import math
 
 update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
@@ -20,21 +21,22 @@ class UpdateUserCommand(Bloxlink.Module):
         self.aliases = ["update", "updateroles"]
         self.arguments = [
             {
-                "prompt": "Please specify user(s) to update. For example: ``@user1 @user2 @user3``",
-                "type": "user",
+                "prompt": "Please specify user(s) or role(s) to update. For example: ``@user1 @user2 @user3`` or ``@role``",
+                "type": ["user", "role"],
                 "name": "users",
                 "multiple": True,
-                "max": 10,
-                "optional": True
+                "optional": True,
+                "create_missing_role": False
             }
         ]
         self.category = "Administration"
         self.cooldown = 2
+        self.REDIS_COOLDOWN_KEY = "guild_scan:{id}"
 
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
-        users = CommandArgs.parsed_args["users"]
+        users_ = CommandArgs.parsed_args["users"]
         prefix = CommandArgs.prefix
 
         message = CommandArgs.message
@@ -43,30 +45,80 @@ class UpdateUserCommand(Bloxlink.Module):
 
         guild_data = CommandArgs.guild_data
 
+        users = []
 
-        if not users:
+        if not users_:
             message.content = f"{prefix}getrole"
             return await parse_message(message)
 
         if not CommandArgs.has_permission:
-            if users[0] == author:
+            if users_[0] == author:
                 message.content = f"{prefix}getrole"
                 return await parse_message(message)
             else:
-                raise PermissionError("You do not have permission to update arbitrary users!")
+                raise PermissionError("You do not have permission to update arbitrary users or roles!")
 
-        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
-        premium = donator_profile.features.get("premium")
+        if isinstance(users_[0], Role):
+            if not guild.chunked:
+                await guild.chunk()
 
-        if not premium:
-            donator_profile, _ = await get_features(author)
+            for role in users_:
+                users += role.members #
+
+            if not users:
+                raise Error("These role(s) have no members in it!")
+        else:
+            users = users_
+
+
+        len_users = len(users)
+
+        if self.redis:
+            redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
+            on_cooldown = await self.cache.get(redis_cooldown_key)
+
+            if len_users > 3:
+                if on_cooldown:
+                    if on_cooldown == "processing":
+                        raise Message(f"This server has a queued scan.")
+                    elif on_cooldown == "scanning":
+                        raise Message("This server's scan is currently running.")
+                    else:
+                        cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
+
+                        if not cooldown_time:
+                            await self.redis.delete(redis_cooldown_key)
+                        else:
+                            raise Message(f"This server has an ongoing cooldown! You must wait **{cooldown_time}** more minutes.")
+
+            donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
             premium = donator_profile.features.get("premium")
 
-        trello_board = CommandArgs.trello_board
-        trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+            if not premium:
+                donator_profile, _ = await get_features(author)
+                premium = donator_profile.features.get("premium")
 
-        async with response.loading():
-            if len(users) > 1:
+
+            cooldown = 0
+
+            if len_users > 10:
+                if not premium:
+                    raise Error("You need premium in order to update more than 10 members at a time! "
+                                f"Use ``{prefix}donate`` for instructions on donating.")
+
+                if len_users >= 100:
+                    cooldown = ((len_users / 1000) * 120) * 60
+                else:
+                    cooldown = 120
+
+                if self.redis:
+                    await self.cache.set(redis_cooldown_key, "processing")
+
+            trello_board = CommandArgs.trello_board
+            trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+
+            #async with response.loading():
+            if len_users > 1:
                 for user in users:
                     if not user.bot:
                         try:
@@ -81,15 +133,17 @@ class UpdateUserCommand(Bloxlink.Module):
                                 author_data       = await self.r.db("bloxlink").table("users").get(str(user.id)).run(),
                                 cache             = not premium)
                         except BloxlinkBypass:
-                            await response.info(f"{user.mention} **bypassed**")
+                            if len_users <= 10:
+                                await response.info(f"{user.mention} **bypassed**")
                         except UserNotVerified:
-                            await response.send(f"{REACTIONS['ERROR']} {user.mention} is **not linked to Bloxlink**")
+                            if len_users <= 10:
+                                await response.send(f"{REACTIONS['ERROR']} {user.mention} is **not linked to Bloxlink**")
                         except Blacklisted as b:
-                            await response.send(f"{REACTIONS['ERROR']} {user.mention} is **blacklisted**")
+                            if len_users <= 10:
+                                await response.send(f"{REACTIONS['ERROR']} {user.mention} has an active restriction.")
                         else:
-                            await response.send(f"{REACTIONS['DONE']} **Updated** {user.mention}")
-
-
+                            if len_users <= 10:
+                                await response.send(f"{REACTIONS['DONE']} **Updated** {user.mention}")
             else:
                 user = users[0]
 
@@ -126,16 +180,23 @@ class UpdateUserCommand(Bloxlink.Module):
 
                     embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
 
-                    await CommandArgs.response.send(embed=embed)
+                    await response.send(embed=embed)
 
                 except BloxlinkBypass:
                     raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
 
                 except Blacklisted as b:
                     if str(b):
-                        raise Error(f"{user.mention} is **blacklisted** for: ``{b}``.")
+                        raise Error(f"{user.mention} has an active restriction for: ``{b}``.")
                     else:
-                        raise Error(f"{user.mention} is **blacklisted** from Bloxlink.")
+                        raise Error(f"{user.mention} has an active restriction from Bloxlink.")
 
                 except UserNotVerified:
                     raise Error("This user is not linked to Bloxlink.")
+
+            if cooldown:
+                await self.cache.set(redis_cooldown_key, "done")
+                await self.redis.expire(redis_cooldown_key, cooldown)
+
+            if len_users > 10:
+                await response.success("All users updated.")

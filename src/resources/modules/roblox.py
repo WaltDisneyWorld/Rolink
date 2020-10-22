@@ -1,5 +1,5 @@
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error,
+from ..structures.Bloxlink import Bloxlink # pylint: disable=no-name-in-module, import-error
+from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error, # pylint: disable=no-name-in-module, import-error
                           CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass,
                           RobloxDown, Blacklisted)
 from typing import Tuple
@@ -9,26 +9,16 @@ from discord import Embed, Member, Object
 from datetime import datetime
 from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from os import environ as env
-from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR,
+from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW, TIP_CHANCES,
-                         SERVER_INVITE, PURPLE_COLOR, GREEN_COLOR, RED_COLOR)
+                         SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, GREEN_COLOR, RED_COLOR, ACCOUNT_SETTINGS_URL)
+from ..secrets import TRELLO # pylint: disable=no-name-in-module, import-error
 import json
 import random
 import re
 import asyncio
 import dateutil.parser as parser
 import math
-
-try:
-    from config import TRELLO
-except ImportError:
-    TRELLO = {
-        "KEY": env.get("TRELLO_KEY"),
-        "TOKEN": env.get("TRELLO_TOKEN"),
-        "TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-        "CARD_LIMIT": 100,
-        "LIST_LIMIT": 10
-    }
 
 
 nickname_template_regex = re.compile(r"\{(.*?)\}")
@@ -41,6 +31,7 @@ loop = asyncio.get_event_loop()
 
 fetch, post_event = Bloxlink.get_module("utils", attrs=["fetch", "post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
+is_booster = Bloxlink.get_module("nitro_boosters", attrs=["is_booster"], name_override="NitroBoosters")
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
 cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
 
@@ -176,6 +167,21 @@ class Roblox(Bloxlink.Module):
         bind_count += len(group_ids)
 
         return bind_count
+
+
+    @staticmethod
+    def extract_accounts(user_data):
+        roblox_ids = set()
+
+        primary_account = user_data.get("robloxID")
+        if primary_account:
+            roblox_ids.add(primary_account)
+
+        for roblox_id in user_data.get("robloxAccounts", {}).get("accounts", []):
+            roblox_ids.add(roblox_id)
+
+
+        return roblox_ids
 
 
     async def verify_member(self, author, roblox, guild=None, author_data=None, primary_account=False, allow_reverify=True):
@@ -482,11 +488,11 @@ class Roblox(Bloxlink.Module):
 
         if is_nickname:
             if clan_tag:
-                characters_left = 32 - len(template) + 8
+                characters_left = 31 - len(template) + 8
                 clan_tag = clan_tag[:characters_left]
                 template = template.replace("clan-tag", clan_tag)
 
-            return template[:32]
+            return template[:31]
         else:
             if clan_tag:
                 template = template.replace("clan-tag", clan_tag)
@@ -829,6 +835,16 @@ class Roblox(Bloxlink.Module):
             roblox_user, accounts = await self.get_user(author=member, everything=True, cache=cache)
         except (UserNotVerified, RobloxAPIError):
             pass
+        except RobloxAPIError:
+            if dm:
+                try:
+                    # TODO: show correct prefix
+                    await member.send("The Roblox API appears to be down, so unfortunately I was unable to "
+                                      "update you in the server. Please try again later.")
+                except Forbidden:
+                    pass
+                finally:
+                    return
 
         guild_data = guild_data or await cache_get("guild_data", guild.id)
 
@@ -986,11 +1002,13 @@ class Roblox(Bloxlink.Module):
             if age_limit:
                 if dm:
                     try:
-                        await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
-                                          f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}verify add`` command, then "
-                                          "check your DMs. If you're already linked, then likely "
-                                          f"you don't have a primary account set; in that case, use the ``{PREFIX}switchuser`` command and provide "
-                                          f"this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account.")
+                        if accounts:
+                            await member.send(f"_Bloxlink Server-Lock_\nYou have no primary account set! Please go to {ACCOUNT_SETTINGS_URL} and set a "
+                                               "primary account, then try rejoining this server.")
+                        else:
+                            await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
+                                              f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
+                                              f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
                     except Forbidden:
                         pass
 
@@ -1004,18 +1022,20 @@ class Roblox(Bloxlink.Module):
             if required_groups:
                 if dm:
                     try:
-                        await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
-                                          f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}verify add`` command, then "
-                                          "check your DMs. If you're already linked, then likely "
-                                          f"you don't have a primary account set; in that case, use the ``{PREFIX}switchuser`` command and provide "
-                                          f"this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account.")
+                        if accounts:
+                            await member.send(f"_Bloxlink Server-Lock_\nYou have no primary account set! Please go to {ACCOUNT_SETTINGS_URL} and set a "
+                                               "primary account, then try rejoining this server.")
+                        else:
+                            await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
+                                              f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
+                                              f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
                     except Forbidden:
                         pass
 
-                    try:
-                        await member.kick(reason="SERVER-LOCK: not linked to Bloxlink")
-                    except Forbidden:
-                        pass
+                try:
+                    await member.kick(reason="SERVER-LOCK: not linked to Bloxlink")
+                except Forbidden:
+                    pass
 
                 return
 
@@ -1032,6 +1052,9 @@ class Roblox(Bloxlink.Module):
 
         if blacklisted is not None:
             raise Blacklisted(blacklisted)
+
+        if not cache:
+            await cache_pop("discord_profiles", str(author.id))
 
         me = getattr(guild, "me", None)
         my_permissions = me and me.guild_permissions
@@ -1572,7 +1595,7 @@ class Roblox(Bloxlink.Module):
                     if guild.owner == author:
                         errors.append("Since you're the Server Owner, I cannot edit your nickname. You may ignore this message; verification will work for normal users.")
                     else:
-                        errors.append(f"I was unable to edit your nickname. Please ensure I have the ``Manage Roles`` permission, and drag my role above the other roles. See: {BIND_ROLE_BUG}")
+                        errors.append(f"I was unable to edit your nickname. Please ensure I have the ``Manage Nickname`` permission, and drag my role above the other roles. See: {BIND_ROLE_BUG}")
                 except NotFound:
                     raise CancelCommand
 
@@ -1831,10 +1854,10 @@ class Roblox(Bloxlink.Module):
 
 
     async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None, dm=True, cache=True) -> bool:
-        try:
-            if not (username or roblox_id):
-                raise BadUsage("Must supply either a username or roblox_id to verify_as.")
+        if not (username or roblox_id):
+            raise BadUsage("Must supply either a username or roblox_id to verify_as.")
 
+        try:
             guild = guild or author.guild
 
             author_id = str(author.id)
@@ -2023,7 +2046,7 @@ class Roblox(Bloxlink.Module):
 
 
     @staticmethod
-    async def apply_perks(roblox_user, embed, guild=None, groups=False, tags=False):
+    async def apply_perks(roblox_user, embed, guild=None, groups=False, author=None, boost=False, tags=False):
         if not embed:
             return
 
@@ -2072,6 +2095,13 @@ class Roblox(Bloxlink.Module):
             if cache_partner:
                 embed.description = f"{verified_reaction} This is an **official server** of [{cache_partner[2]}](https://www.roblox.com/groups/{cache_partner[1]}/-)"
                 embed.colour = PARTNERED_SERVER
+
+
+        if boost and author and await is_booster(author):
+            user_tags.append("Bloxlink Nitro Booster")
+
+            if not embed.colour:
+                embed.colour = PINK_COLOR
 
 
 
@@ -2639,7 +2669,7 @@ class RobloxUser(Bloxlink.Module):
                     if group_ranks:
                         embed[0].add_field(name="Group Ranks", value=("\n".join(group_ranks)[:1000]), inline=False)
 
-                _, notable_groups = await Roblox.apply_perks(roblox_user, groups=True, embed=embed and embed[0])
+                _, notable_groups = await Roblox.apply_perks(roblox_user, groups=True, author=author, embed=embed and embed[0])
                 notable_groups = notable_groups.difference(group_ranks)
 
                 if notable_groups:
@@ -2746,7 +2776,7 @@ class RobloxUser(Bloxlink.Module):
             embed[0].title = username
 
             if not args:
-                user_tags, _ = await Roblox.apply_perks(roblox_user, tags=True, guild=guild, embed=embed and embed[0])
+                user_tags, _ = await Roblox.apply_perks(roblox_user, author=author, tags=True, guild=guild, boost=True, embed=embed and embed[0])
 
                 if user_tags:
                     embed[0].add_field(name="User Tags", value="\n".join(user_tags))

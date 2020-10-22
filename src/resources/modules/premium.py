@@ -1,7 +1,9 @@
-from ..structures import Bloxlink, DonatorProfile
-from ..constants import TRANSFER_COOLDOWN
-from ..exceptions import Message
+from ..structures import Bloxlink, DonatorProfile # pylint: disable=import-error
+from ..constants import TRANSFER_COOLDOWN, RELEASE # pylint: disable=import-error
+from ..exceptions import Message # pylint: disable=import-error
+from config import BLOXLINK_GUILD # pylint: disable=import-error, no-name-in-module
 from discord import Object
+from discord.utils import find
 from time import time
 from math import ceil
 
@@ -12,6 +14,30 @@ cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "ge
 class Premium(Bloxlink.Module):
     def __init__(self):
         pass
+
+    async def load_staff_members(self):
+        if RELEASE == "CANARY":
+            await Bloxlink.wait_until_ready()
+
+            guild = Bloxlink.get_guild(BLOXLINK_GUILD)
+
+            if not guild:
+                guild = await Bloxlink.fetch_guild(BLOXLINK_GUILD)
+
+            if guild.unavailable:
+                return
+
+            await guild.chunk()
+
+            staff_role = find(lambda r: r.name == "Helpers", guild.roles)
+
+            if staff_role:
+                for member in staff_role.members:
+                    await cache_set("bloxlink_staff", member.id, "true")
+
+
+    async def is_staff(self, author):
+        return await cache_get("bloxlink_staff", author.id, primitives=True)
 
     async def add_features(self, user, features, *, days=-1, code=None, premium_anywhere=None, guild=None,):
         user_data = await self.r.db("bloxlink").table("users").get(str(user.id)).run() or {"id": str(user.id)}
@@ -203,6 +229,14 @@ class Premium(Bloxlink.Module):
 
             if data_selly["pro_access"]:
                 profile.add_features("pro")
+
+            if not profile.features.get("pro"):
+                if await self.is_staff(author):
+                    profile.add_features("premium", "pro")
+                    profile.days = 0
+                    profile.add_note("This user is a Bloxlink Staff member.")
+                    profile.add_note("This user can use premium in _any_ server.")
+                    profile.attributes["PREMIUM_ANYWHERE"] = True
 
         if guild and partner_check:
             partners_cache = await cache_get("partners", guild.id)

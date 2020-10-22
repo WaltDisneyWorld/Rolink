@@ -52,7 +52,6 @@ class ProfileCommand(Bloxlink.Module):
         except ValueError:
             return None, "Invalid date format, must be in a ``mm-dd-yy`` format."
 
-
         if time_now > time_delta:
             return None, "Return date cannot be in the past!"
 
@@ -125,21 +124,21 @@ class ProfileCommand(Bloxlink.Module):
 
         inactive_role = await get_inactive_role(guild, guild_data, trello_board)
 
-        async with response.loading():
-            try:
-                roblox_user, _ = await get_user(author=user, guild=guild)
-            except UserNotVerified:
-                if user == author:
-                    message = CommandArgs.message
-                    message.content = f"{CommandArgs.prefix}verify"
+        #async with response.loading():
+        try:
+            roblox_user, _ = await get_user(author=user, guild=guild)
+        except UserNotVerified:
+            if user == author:
+                message = CommandArgs.message
+                message.content = f"{CommandArgs.prefix}verify"
 
-                    return await parse_message(message)
-                else:
-                    raise Error(f"**{user}** is not linked to Bloxlink.")
+                return await parse_message(message)
             else:
-                embed = await get_profile(author=author, user=user, roblox_user=roblox_user, prefix=prefix, inactive_role=inactive_role, guild=guild, guild_data=guild_data)
+                raise Error(f"**{user}** is not linked to Bloxlink.")
+        else:
+            embed = await get_profile(author=author, user=user, roblox_user=roblox_user, prefix=prefix, inactive_role=inactive_role, guild=guild, guild_data=guild_data)
 
-                await response.send(embed=embed)
+            await response.send(embed=embed)
 
 
     @Bloxlink.subcommand()

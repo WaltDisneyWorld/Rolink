@@ -3,14 +3,15 @@ import traceback
 import time
 import math
 import asyncio
+import sentry_sdk
 from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from discord import Embed, Object, Member
-from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin
-from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response
-from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE # pylint: disable=import-error
+from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin, import-error
+from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response # pylint: disable=import-error
+from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE, SERVER_INVITE # pylint: disable=import-error
 
 
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
@@ -118,6 +119,18 @@ class Commands(Bloxlink.Module):
 
                 for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
+                        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+
+                        if blacklisted_discord is not None:
+                            blacklist_text = blacklisted_discord and f"has an active restriction for: ``{blacklisted_discord}``" or "has an active restriction from Bloxlink."
+
+                            try:
+                                await channel.send(f"{author.mention} {blacklist_text}")
+                            except (Forbidden, NotFound):
+                                pass
+                            finally:
+                                return
+
                         donator_profile = None
 
                         if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
@@ -142,7 +155,6 @@ class Commands(Bloxlink.Module):
 
                                 if not (author_perms.manage_guild or author_perms.administrator):
                                     return
-
 
                         if command.cooldown and self.cache:
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
@@ -322,6 +334,16 @@ class Commands(Bloxlink.Module):
                         except CancelledError:
                             pass
                         except Exception as e:
+                            """
+                            error_id = Bloxlink.error(e, command=command_name, user=(author.id, str(author)), guild=guild and f"id:{guild.id}")
+
+                            if error_id:
+                                await response.error("We've experienced an unexpected error. You may report this "
+                                                     f"error with ID ``{error_id}`` in our support server: {SERVER_INVITE}.")
+                            else:
+                                await response.error("An unexpected error occured.")
+                            """
+
                             await response.error(locale("errors.commandError"))
                             Bloxlink.error(traceback.format_exc(), title=f"Error source: {command_name}.py")
 

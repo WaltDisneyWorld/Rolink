@@ -2,31 +2,67 @@ from os import environ
 import asyncio
 import config
 import logging
+from resources.constants import RELEASE # pylint: disable=import-error
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.secrets import TOKEN, SENTRY_URL, VALID_SECRETS # pylint: disable=import-error
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=getattr("logging", environ.get("DEBUG_MODE", "WARNING"), "WARNING"))
 
 loop = asyncio.get_event_loop()
 
 
+
 async def register_modules():
-	get_files = Bloxlink.get_module("utils", attrs="get_files")
+    get_files = Bloxlink.get_module("utils", attrs="get_files")
 
-	for directory in config.MODULE_DIR: # pylint: disable=E1101
-		files = get_files(directory)
+    for directory in config.MODULE_DIR: # pylint: disable=E1101
+        files = get_files(directory)
 
-		for filename in [f.replace(".py", "") for f in files]:
-			Bloxlink.get_module(path=directory, dir_name=filename)
+        for filename in [f.replace(".py", "") for f in files]:
+            Bloxlink.get_module(path=directory, dir_name=filename)
 
+"""
+def load_sentry():
+    from resources.constants import RELEASE # pylint: disable=import-error
+
+    if RELEASE != "LOCAL":
+        try:
+            import sentry_sdk
+
+            sentry_sdk.set_tag("release", RELEASE)
+
+            def strip_sensitive_data(event, hint):
+                print(event, flush=True)
+
+                for i, value in enumerate(event.get("threads", {}).get("values", [])):
+                    for ii, frame in enumerate(value.get("stacktrace", {}).get("frames", [])):
+                        for env_var_name, _ in frame.get("environ", {}).items():
+                            if env_var_name in VALID_SECRETS:
+                                frame["environ"][env_var_name] = "REDACTED"
+
+                                event["threads"]["values"][i]["stacktrace"]["frames"][ii] = frame
+                                print("found a yikes", flush=True)
+
+
+                return event
+
+            sentry_sdk.init(
+                SENTRY_URL, traces_sample_rate=1.0, before_send=strip_sensitive_data
+            )
+
+        except:
+            print("sentry failed", flush=True)
+"""
 
 async def main():
-	await register_modules()
+    #load_sentry()
+    await register_modules()
+
+
 
 
 if __name__ == "__main__":
-	token = environ.get("TOKEN") or getattr(config, "TOKEN")
+    loop.create_task(main())
 
-	loop.create_task(main())
-
-	Bloxlink.run(token)
+    Bloxlink.run(TOKEN)

@@ -45,13 +45,14 @@ class GetinfoCommand(Bloxlink.Module):
 		if not all(f in valid_flags for f in flags.keys()):
 			raise Error(f"Invalid flag! Valid flags are: ``{', '.join(valid_flags)}``")
 
-		async with response.loading():
-			role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
+		#async with response.loading():
+		role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
 
-			try:
-				account, accounts = await get_user(*flags.keys(), author=target, guild=guild, group_ids=(group_ids, role_binds), send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
-			except UserNotVerified:
-				raise Error(f"**{target}** is not linked to Bloxlink.")
-			else:
-				if not account:
-					raise Message(f"You have no primary account set! Please use ``{prefix}switchuser`` and set one.", type="silly")
+		try:
+			account, accounts = await get_user(*flags.keys(), author=target, guild=guild, group_ids=(group_ids, role_binds), send_embed=True, response=response, everything=not bool(flags), basic_details=not bool(flags))
+		except UserNotVerified:
+			raise Error(f"**{target}** is not linked to Bloxlink.")
+		else:
+			if not account:
+				raise Message(f"You have no primary account set! Please use ``{prefix}switchuser`` and set one.", type="silly")
+
