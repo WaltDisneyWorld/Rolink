@@ -104,7 +104,8 @@ class VerifyCommand(Bloxlink.Module):
     async def add(self, CommandArgs):
         """link a new account to Bloxlink"""
 
-        await CommandArgs.response.reply(f"to verify with Bloxlink, please visit our website at <{VERIFY_URL}>. It won't take long!")
+        await CommandArgs.response.reply(f"to verify with Bloxlink, please visit our website at <{VERIFY_URL}>. It won't take long!\nStuck? "
+                                          "See this video: <https://www.youtube.com/watch?v=hq496NmQ9GU>")
 
 
     @Bloxlink.subcommand(permissions=Bloxlink.Permissions().build("BLOXLINK_MANAGER"))
