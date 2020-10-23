@@ -63,7 +63,7 @@ class UpdateUserCommand(Bloxlink.Module):
                 await guild.chunk()
 
             for role in users_:
-                users += role.members #
+                users += role.members
 
             if not users:
                 raise Error("These role(s) have no members in it!")
@@ -75,21 +75,24 @@ class UpdateUserCommand(Bloxlink.Module):
 
         if self.redis:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
-            on_cooldown = await self.cache.get(redis_cooldown_key)
+            on_cooldown = await self.redis.get(redis_cooldown_key)
 
-            if len_users > 3:
+            if len_users > 3 and on_cooldown:
+                cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
+
+                if not cooldown_time or cooldown_time == -1:
+                    await self.redis.delete(redis_cooldown_key)
+                    on_cooldown = None
+
                 if on_cooldown:
-                    if on_cooldown == "processing":
-                        raise Message(f"This server has a queued scan.")
-                    elif on_cooldown == "scanning":
+                    if on_cooldown == 1:
+                        raise Message(f"This server is still queued.")
+                    elif on_cooldown == 2:
                         raise Message("This server's scan is currently running.")
-                    else:
+                    elif on_cooldown == 3:
                         cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
 
-                        if not cooldown_time:
-                            await self.redis.delete(redis_cooldown_key)
-                        else:
-                            raise Message(f"This server has an ongoing cooldown! You must wait **{cooldown_time}** more minutes.")
+                        raise Message(f"This server has an ongoing cooldown! You must wait **{cooldown_time}** more minutes.")
 
             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
             premium = donator_profile.features.get("premium")
@@ -107,12 +110,12 @@ class UpdateUserCommand(Bloxlink.Module):
                                 f"Use ``{prefix}donate`` for instructions on donating.")
 
                 if len_users >= 100:
-                    cooldown = ((len_users / 1000) * 120) * 60
+                    cooldown = math.ceil(((len_users / 1000) * 120) * 60)
                 else:
                     cooldown = 120
 
                 if self.redis:
-                    await self.cache.set(redis_cooldown_key, "processing")
+                    await self.redis.set(redis_cooldown_key, 2, ex=86400)
 
             trello_board = CommandArgs.trello_board
             trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
@@ -195,8 +198,7 @@ class UpdateUserCommand(Bloxlink.Module):
                     raise Error("This user is not linked to Bloxlink.")
 
             if cooldown:
-                await self.cache.set(redis_cooldown_key, "done")
-                await self.redis.expire(redis_cooldown_key, cooldown)
+                await self.redis.set(redis_cooldown_key, 3, ex=cooldown)
 
             if len_users > 10:
                 await response.success("All users updated.")

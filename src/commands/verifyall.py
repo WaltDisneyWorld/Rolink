@@ -56,7 +56,7 @@ class VerifyAllCommand(Bloxlink.Module):
                 await response.send(f"Your server is now being scanned.")
 
         redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
-        await self.cache.set(redis_cooldown_key, "scanning", expire_time=86400)
+        await self.redis.set(redis_cooldown_key, 2, ex=86400)
 
         try:
             for member in guild.members:
@@ -91,14 +91,13 @@ class VerifyAllCommand(Bloxlink.Module):
         finally:
             len_members = len(guild.members)
 
-            cooldown_1 = (len_members / 1000) * 120
+            cooldown_1 = math.ceil((len_members / 1000) * 120)
             cooldown_2 = 120
 
             cooldown = max(cooldown_1, cooldown_2)
 
             if self.redis:
-                await self.redis.set(redis_cooldown_key, "done")
-                await self.redis.expire(redis_cooldown_key, cooldown * 60)
+                await self.redis.set(redis_cooldown_key, 3, ex=cooldown * 60)
 
 
     async def start_queue(self):
@@ -143,22 +142,26 @@ class VerifyAllCommand(Bloxlink.Module):
 
         if self.redis:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
-            on_cooldown = await self.cache.get(redis_cooldown_key)
+            on_cooldown = await self.redis.get(redis_cooldown_key)
 
             if on_cooldown:
-                if on_cooldown == "processing":
-                    raise Message(f"This server is still queued.")
-                elif on_cooldown == "scanning":
-                    raise Message("This server's scan is currently running.")
-                else:
-                    cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
+                cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
 
-                    if not cooldown_time:
-                        await self.redis.delete(redis_cooldown_key)
-                    else:
+                if not cooldown_time or cooldown_time == -1:
+                    await self.redis.delete(redis_cooldown_key)
+                    on_cooldown = None
+
+                if on_cooldown:
+                    if on_cooldown == 1:
+                        raise Message(f"This server is still queued.")
+                    elif on_cooldown == 2:
+                        raise Message("This server's scan is currently running.")
+                    elif on_cooldown == 3:
+                        cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)
+
                         raise Message(f"This server has an ongoing cooldown! You must wait **{cooldown_time}** more minutes.")
 
-            await self.cache.set(redis_cooldown_key, "processing", expire_time=86400)
+            await self.redis.set(redis_cooldown_key, 1, ex=86400)
 
             update_roles    = update_what in ("roles", "both")
             update_nickname = update_what in ("nickname", "both")

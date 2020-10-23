@@ -112,9 +112,7 @@ class Response(Bloxlink.Module):
             self.bot_name = self.bot_avatar = None
 
     def loading(self, text="Please wait until the operation completes."):
-        #return ResponseLoading(self, text)
-        pass
-
+        return ResponseLoading(self, text)
 
     def delete(self, *messages):
         for message in messages:
@@ -124,7 +122,6 @@ class Response(Bloxlink.Module):
     async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None, allowed_mentions=None):
         if dm and not IS_DOCKER:
             dm = False
-
 
         channel = channel_override or (dm and self.author or self.channel)
 

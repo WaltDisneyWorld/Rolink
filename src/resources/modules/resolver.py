@@ -203,38 +203,51 @@ class Resolver(Bloxlink.Module):
             content = message.content
 
         guild = message.guild
-
         roles = []
+        create_missing_role = arg.get("create_missing_role", True)
+        max = arg.get("max")
+        multiple = arg.get("multiple")
 
-        for role in message.role_mentions:
-            roles.append(role)
+        if message.role_mentions:
+            for role in message.role_mentions:
+                roles.append(role)
 
-            if not arg.get("multiple"):
-                break
+                if not multiple:
+                    break
+        else:
+            lookup_strings = content.split(",")
 
-        content = content.replace(" ", ",")
-        lookup_strings = content.split(",")
+            for lookup_string in lookup_strings:
+                if lookup_string:
+                    lookup_string = lookup_string.strip()
+                    role = None
 
-        for lookup_string in lookup_strings:
-            if lookup_string:
-                lookup_string = lookup_string.strip()
-                role = None
+                    if lookup_string.isdigit():
+                        role = guild.get_role(int(lookup_string))
+                    else:
+                        role = find(lambda r: r.name == lookup_string, guild.roles)
 
-                if lookup_string.isdigit():
-                    role = guild.get_role(int(lookup_string))
-                else:
-                    role = find(lambda r: r.name == lookup_string, guild.roles)
-
-                if role and role not in roles:
-                    roles.append(role)
+                    if not role:
+                        if create_missing_role:
+                            try:
+                                role = await guild.create_role(name=lookup_string)
+                            except Forbidden:
+                                return None, "I was unable to create the role. Please ensure I have the ``Manage Roles`` permission."
+                            else:
+                                roles.append(role)
+                        else:
+                            return None, "Invalid role(s)"
+                    else:
+                        if role != guild.default_role and role not in roles:
+                            roles.append(role)
 
         if not roles:
             return None, "Invalid role(s)"
 
-        if arg.get("max"):
-            return roles[:arg["max"]]
+        if max:
+            return roles[:max]
         else:
-            if arg.get("multiple"):
+            if multiple:
                 return roles, None
             else:
                 return roles[0], None

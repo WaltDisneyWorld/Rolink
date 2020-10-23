@@ -17,7 +17,6 @@ class AboutCommand(Bloxlink.Module):
     def __init__(self):
         self.aliases = ["bloxlink"]
 
-    @Bloxlink.flags
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
 
