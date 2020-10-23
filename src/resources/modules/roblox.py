@@ -169,19 +169,37 @@ class Roblox(Bloxlink.Module):
         return bind_count
 
 
-    @staticmethod
-    def extract_accounts(user_data):
-        roblox_ids = set()
+    async def extract_accounts(self, user_data, resolve_to_users=True, reverse_search=False):
+        roblox_ids = {}
 
         primary_account = user_data.get("robloxID")
         if primary_account:
-            roblox_ids.add(primary_account)
+            roblox_ids[primary_account] = True
 
         for roblox_id in user_data.get("robloxAccounts", {}).get("accounts", []):
-            roblox_ids.add(roblox_id)
+            roblox_ids[roblox_id] = True
 
+        if reverse_search:
+            for roblox_id in roblox_ids.keys():
+                discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs") or []
+                discord_accounts = []
 
-        return roblox_ids
+                if resolve_to_users:
+                    for discord_id in discord_ids:
+                        try:
+                            user = await Bloxlink.fetch_user(int(discord_id))
+                        except NotFound:
+                            pass
+                        else:
+                            discord_accounts.append(user)
+                else:
+                    discord_accounts = discord_ids
+
+                roblox_ids[roblox_id] = discord_accounts
+
+            return roblox_ids
+        else:
+            return list(roblox_ids.keys())
 
 
     async def verify_member(self, author, roblox, guild=None, author_data=None, primary_account=False, allow_reverify=True):
@@ -1592,7 +1610,7 @@ class Roblox(Bloxlink.Module):
                 try:
                     await author.edit(nick=nickname)
                 except Forbidden:
-                    if guild.owner == author:
+                    if guild.owner_id == author.id:
                         errors.append("Since you're the Server Owner, I cannot edit your nickname. You may ignore this message; verification will work for normal users.")
                     else:
                         errors.append(f"I was unable to edit your nickname. Please ensure I have the ``Manage Nickname`` permission, and drag my role above the other roles. See: {BIND_ROLE_BUG}")
