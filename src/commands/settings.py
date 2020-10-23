@@ -178,7 +178,8 @@ class SettingsCommand(Bloxlink.Module):
 
             if option_type == "boolean":
                 parsed_value = await CommandArgs.prompt([{
-                    "prompt": f"Would you like to **enable** or **disable** ``{choice}``?",
+                    "prompt": f"Would you like to **enable** or **disable** ``{choice}``?\n\n"
+                              f"**Option description:** ``{option_find[4]}``",
                     "name": "choice",
                     "type": "choice",
                     "footer": "Say **clear** to set as the default value.",
@@ -202,7 +203,8 @@ class SettingsCommand(Bloxlink.Module):
 
             elif option_type == "string":
                 parsed_value = (await CommandArgs.prompt([{
-                    "prompt": f"Please specify a new value for ``{choice}``.",
+                    "prompt": f"Please specify a new value for ``{choice}``.\n\n"
+                              f"**Option description:** ``{option_find[4]}``",
                     "name": "choice",
                     "type": "string",
                     "footer": "Say **clear** to set as the default value.",
@@ -222,7 +224,8 @@ class SettingsCommand(Bloxlink.Module):
 
             elif option_type == "role":
                 parsed_value = (await CommandArgs.prompt([{
-                    "prompt": f"Please specify a role for ``{choice}``.",
+                    "prompt": f"Please specify a role for ``{choice}``.\n\n"
+                              f"**Option description:** ``{option_find[4]}``",
                     "name": "role",
                     "type": "role",
                     "exceptions": ("clear",),
@@ -244,7 +247,8 @@ class SettingsCommand(Bloxlink.Module):
 
             elif option_type == "number":
                 parsed_value = (await CommandArgs.prompt([{
-                    "prompt": f"Please specify a new value for ``{choice}``.",
+                    "prompt": f"Please specify a new integer for ``{choice}``.\n\n"
+                              f"**Option description:** ``{option_find[4]}``",
                     "name": "choice",
                     "type": "number",
                     "footer": "Say **clear** to set as the default value.",
@@ -266,7 +270,8 @@ class SettingsCommand(Bloxlink.Module):
             elif option_type == "choice":
                 choices = ", ".join(option_find[2])
                 parsed_value = (await CommandArgs.prompt([{
-                    "prompt": f"Please pick a new value for ``{choice}``: ``{choices}``",
+                    "prompt": f"Please pick a new value for ``{choice}``: ``{choices}``\n\n"
+                              f"**Option description:** ``{option_find[4]}``",
                     "name": "choice",
                     "type": "choice",
                     "footer": "Say **clear** to set as the default value.",
