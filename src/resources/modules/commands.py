@@ -479,6 +479,7 @@ class Command:
 
     async def check_permissions(self, author, guild, locale, permissions=None, **kwargs):
         permissions = permissions or self.permissions
+        author_perms = author.guild_permissions
 
         if author.id == OWNER:
             return True
@@ -506,7 +507,6 @@ class Command:
 
             if permissions.bloxlink_role:
                 role_name = permissions.bloxlink_role
-                author_perms = author.guild_permissions
 
                 if find(lambda r: r.name == "Bloxlink Admin", author.roles):
                     return True

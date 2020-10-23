@@ -1,6 +1,6 @@
-from ..structures.Bloxlink import Bloxlink
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from config import PREFIX # pylint: disable=no-name-in-module
-from ..constants import PLAYING_STATUS
+from ..constants import PLAYING_STATUS # pylint: disable=import-error
 from discord import Status, Game
 
 
