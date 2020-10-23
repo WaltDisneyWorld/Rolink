@@ -1,12 +1,13 @@
 import math
-from resources.structures.Bloxlink import Bloxlink
+from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED, IS_DOCKER, RELEASE # pylint: disable=import-error
 from discord import Embed
 from time import time
-from resources.constants import VERSION, SHARD_RANGE, CLUSTER_ID, STARTED, IS_DOCKER, RELEASE
 from psutil import Process
 from os import getpid
 
 broadcast = Bloxlink.get_module("ipc", attrs="broadcast")
+
 
 
 
@@ -16,7 +17,12 @@ class StatsCommand(Bloxlink.Module):
     """view the current stats of Bloxlink"""
 
     def __init__(self):
-        pass
+        self.aliases = ["statistics", "nerdinfo"]
+
+        if len(SHARD_RANGE) > 1:
+            self.shard_range = f"[{SHARD_RANGE[0]}-{SHARD_RANGE[len(SHARD_RANGE)-1]}]"
+        else:
+            self.shard_range = SHARD_RANGE
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
@@ -74,7 +80,7 @@ class StatsCommand(Bloxlink.Module):
 
         embed.add_field(name="Version", value=VERSION)
         embed.add_field(name="Cluster", value=CLUSTER_ID)
-        embed.add_field(name="Shards", value=SHARD_RANGE)
+        embed.add_field(name="Shards", value=self.shard_range)
         embed.add_field(name="Servers", value=guilds)
         embed.add_field(name="Uptime", value=uptime)
         embed.add_field(name="Memory Usage", value=f"{mem} MB")
