@@ -29,9 +29,10 @@ class AddFeaturesCommand(Bloxlink.Module):
 
     @Bloxlink.flags
     async def __main__(self, CommandArgs):
-        message = CommandArgs.message
+        message  = CommandArgs.message
         response = CommandArgs.response
-        guild = message.guild
+        locale   = CommandArgs.locale
+        guild    = message.guild
 
         user = CommandArgs.parsed_args["recipient"]
         features = CommandArgs.parsed_args["features"].replace(" ", "").split(",")
@@ -61,4 +62,4 @@ class AddFeaturesCommand(Bloxlink.Module):
         for user in users:
             await add_features(user, features=features, days=days, premium_anywhere=premium_anywhere, guild=guild)
 
-        await response.success(f"Successfully added features to **{len(users)}** user{len(users) > 1 and 's' or ''}!")
+        await response.success(locale("commands.add-features.success", len=len(users)))

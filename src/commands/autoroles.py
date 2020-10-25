@@ -15,10 +15,10 @@ class AutoRolesCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
+        author   = CommandArgs.message.author
+        guild    = CommandArgs.message.guild
+        locale   = CommandArgs.locale
 
-        author = CommandArgs.message.author
-
-        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
         toggle = not guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
@@ -28,8 +28,8 @@ class AutoRolesCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         if toggle:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** ``autoRoles``.", BROWN_COLOR)
-            await response.success("Successfully **enabled** Auto-Roles!")
+            await post_event(guild, guild_data, "configuration", locale("commands.autoroles.events.enable", user=author), BROWN_COLOR)
+            await response.success(locale("commands.autoroles.enable"))
         else:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** ``autoRoles``.", BROWN_COLOR)
-            await response.success("Successfully **disabled** Auto-Roles!")
+            await post_event(guild, guild_data, "configuration", locale("commands.autoroles.events.disable", user=author), BROWN_COLOR)
+            await response.success(locale("commands.autoroles.disable"))

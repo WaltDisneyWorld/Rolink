@@ -14,10 +14,10 @@ class AutoVerifyCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
+        author   = CommandArgs.message.author
+        guild    = CommandArgs.message.guild
+        locale   = CommandArgs.locale
 
-        author = CommandArgs.message.author
-
-        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
         toggle = not guild_data.get("autoVerification", DEFAULTS.get("autoVerification"))
@@ -27,8 +27,8 @@ class AutoVerifyCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         if toggle:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** ``autoVerification``.", BROWN_COLOR)
-            await response.success("Successfully **enabled** Auto-Verification!")
+            await post_event(guild, guild_data, "configuration", locale("commands.autoverify.events.enable", user=author), BROWN_COLOR)
+            await response.success(locale("commands.autoverify.enable"))
         else:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** ``autoVerification``.", BROWN_COLOR)
-            await response.success("Successfully **disabled** Auto-Verification!")
+            await post_event(guild, guild_data, "configuration", locale("commands.autoverify.events.disable", user=author), BROWN_COLOR)
+            await response.success(locale("commands.autoverify.disable"))

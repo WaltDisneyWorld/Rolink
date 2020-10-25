@@ -3,13 +3,6 @@ from resources.constants import ARROW, LIMITS, RED_COLOR # pylint: disable=impor
 from discord import Embed
 
 
-DESC = "\n".join([
-    "**Looking for a list of a commands?",
-    "Use ``{PREFIX}commands`` instead.**",
-    "\n"
-])
-
-
 @Bloxlink.command
 class AboutCommand(Bloxlink.Module):
     """learn about Bloxlink!"""
@@ -19,21 +12,17 @@ class AboutCommand(Bloxlink.Module):
 
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
+        locale   = CommandArgs.locale
+        prefix   = CommandArgs.prefix
 
-        embed = Embed(title="Meet Bloxlink")
+        embed = Embed(title=locale("commands.about.title"))
 
-        description = DESC.format(PREFIX=CommandArgs.prefix)
-
-        embed.add_field(name="What is Bloxlink?", value=f"{description}Bloxlink is a Roblox integration for Discord. "
-                                                        "We add the ability to bring over Roblox to your Discord server by "
-                                                        "syncing Group roles to Server roles, linking Roblox accounts to Discord "
-                                                        "accounts, and more. [READ MORE](https://blox.link)\n\nWe're on a mission "
-                                                        "to simplify integrating Roblox into Discord so players and groups can spend "
-                                                        "more time connecting with their friends and communities.", inline=False)
+        embed.add_field(name=locale("commands.about.embed.title"), value=f"**{locale('commands.about.embed.field_1.line_1', prefix=prefix)}**\n{locale('commands.about.embed.field_1.line_2')}"
+                                                                         f"\n\n{locale('commands.about.embed.field_1.line_3')}", inline=False)
 
 
-        embed.add_field(name="**Join our community!**", value="[Join us in bringing The Roblox players together through Discord.](https://blox.link/support)",
-                       inline=False)
+        embed.add_field(name=locale("commands.about.embed.field_2.title"), value=f"[{locale('commands.about.embed.field_2.line_1')}](https://blox.link/support)",
+                        inline=False)
 
         embed.set_thumbnail(url=Bloxlink.user.avatar_url)
 

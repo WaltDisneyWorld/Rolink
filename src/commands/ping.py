@@ -14,11 +14,12 @@ class PingCommand(Bloxlink.Module):
     async def __main__(self, CommandArgs):
         message = CommandArgs.message
         response = CommandArgs.response
+        locale = CommandArgs.locale
 
         t_1 = time.perf_counter()
 
         if response.webhook_only:
-            m = await response.send("Pinging...")
+            m = await response.send(locale("commands.ping.pinging"))
         else:
             try:
                 await message.channel.trigger_typing()
@@ -34,9 +35,8 @@ class PingCommand(Bloxlink.Module):
             except NotFound:
                 pass
             except Forbidden:
-                raise PermissionError("Please make sure I have the ``Manage Messages`` "
-                                      "permission.")
+                raise PermissionError(locale("permissions.oneError", permission="Manage Messages"))
             else:
-                await response.send(f"Pong! ``{time_delta}ms``")
+                await response.send(locale("commands.ping.pong", time_delta=time_delta))
         else:
-            await response.send(f"Pong! ``{time_delta}ms``")
+            await response.send(locale("commands.ping.pong", time_delta=time_delta))
