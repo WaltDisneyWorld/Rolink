@@ -2,6 +2,7 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from discord.errors import Forbidden, NotFound
 from discord import Embed, Object
 from os import environ as env
+from time import time
 from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted # pylint: disable=import-error
 from resources.constants import (DEFAULTS, NICKNAME_TEMPLATES, CACHE_CLEAR, TIP_CHANCES, GREEN_COLOR, ORANGE_COLOR, # pylint: disable=import-error
                                 BROWN_COLOR, ARROW, VERIFY_URL, ACCOUNT_SETTINGS_URL) # pylint: disable=import-error
@@ -24,7 +25,7 @@ class VerifyCommand(Bloxlink.Module):
         self.category = "Account"
         self.cooldown = 5
         self.aliases = ["getrole", "getroles"]
-
+        self.dm_allowed = True
 
     @staticmethod
     async def validate_username(message, content):
@@ -43,6 +44,9 @@ class VerifyCommand(Bloxlink.Module):
         author = CommandArgs.message.author
         response = CommandArgs.response
         prefix = CommandArgs.prefix
+
+        if not guild:
+            return await self.add(CommandArgs)
 
         if CommandArgs.flags.get("add") or CommandArgs.flags.get("verify") or CommandArgs.flags.get("force"):
             await CommandArgs.response.error(f"``{CommandArgs.prefix}verify --force`` is deprecated and will be removed in a future version of Bloxlink. "
@@ -104,8 +108,23 @@ class VerifyCommand(Bloxlink.Module):
     async def add(self, CommandArgs):
         """link a new account to Bloxlink"""
 
-        await CommandArgs.response.reply(f"to verify with Bloxlink, please visit our website at <{VERIFY_URL}>. It won't take long!\nStuck? "
-                                          "See this video: <https://www.youtube.com/watch?v=hq496NmQ9GU>")
+        author = CommandArgs.message.author
+
+        if CommandArgs.message.guild:
+            guild_data = CommandArgs.guild_data
+
+            if not guild_data.get("hasBot"):
+                guild_data["hasBot"] = True
+
+                await self.r.table("guilds").insert(guild_data, conflict="update").run()
+
+            response_text = f"{author.mention}, to verify with Bloxlink, please visit our website at " \
+                            f"<{VERIFY_URL}>. It won't take long!\nStuck? See this video: <https://www.youtube.com/watch?v=hq496NmQ9GU>"
+        else:
+            response_text = "To verify with Bloxlink, please visit our website at " \
+                            f"<{VERIFY_URL}>. It won't take long!\nStuck? See this video: <https://www.youtube.com/watch?v=hq496NmQ9GU>"
+
+        await CommandArgs.response.send(response_text)
 
 
     @Bloxlink.subcommand(permissions=Bloxlink.Permissions().build("BLOXLINK_MANAGER"))

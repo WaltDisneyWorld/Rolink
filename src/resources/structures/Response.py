@@ -123,6 +123,8 @@ class Response(Bloxlink.Module):
         if dm and not IS_DOCKER:
             dm = False
 
+        actually_dm = not self.guild
+
         channel = channel_override or (dm and self.author or self.channel)
 
         verified_webhook = False
@@ -188,7 +190,7 @@ class Response(Bloxlink.Module):
                     except asyncio.TimeoutError:
                         return None
 
-                if dm and not no_dm_post:
+                if dm and not no_dm_post and not actually_dm:
                     if verified_webhook:
                         try:
                             await verified_webhook.send(content=self.author.mention + ", **check your DMs!**",

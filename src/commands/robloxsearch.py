@@ -27,6 +27,7 @@ class RobloxSearchCommand(Bloxlink.Module):
             "569422833 --username"
         ]
         self.cooldown = 5
+        self.dm_allowed = True
 
     @Bloxlink.flags
     async def __main__(self, CommandArgs):
@@ -57,7 +58,10 @@ class RobloxSearchCommand(Bloxlink.Module):
             username = True
 
         #async with response.loading():
-        role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
+        if guild:
+            role_binds, group_ids, _ = await get_binds(guild_data=CommandArgs.guild_data, trello_board=CommandArgs.trello_board)
+        else:
+            role_binds, group_ids = {}, {}
 
         try:
             account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))

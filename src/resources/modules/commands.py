@@ -20,8 +20,6 @@ get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
 cache_get, cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["get", "set", "pop"])
 
-merge = Bloxlink.get_module("merge", attrs=["merge"])
-
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
 
@@ -98,8 +96,6 @@ class Commands(Bloxlink.Module):
         trello_options = {}
         trello_options_checked = True
 
-        if guild and RELEASE != "CANARY":
-            await merge(guild, guild_data)
 
         if check:
             after = content[len(check):].strip()
@@ -132,6 +128,7 @@ class Commands(Bloxlink.Module):
                                 return
 
                         donator_profile = None
+                        actually_dm = command.dm_allowed and not guild
 
                         if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
                             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
@@ -191,7 +188,6 @@ class Commands(Bloxlink.Module):
 
                                 await self.cache.set(redis_cooldown_key, True, expire_time=command.cooldown)
 
-
                         if not (command.dm_allowed or guild):
                             try:
                                 await channel.send("This command does not support DM; please run it in a server.")
@@ -237,7 +233,7 @@ class Commands(Bloxlink.Module):
                         CommandArgs.add(locale=locale, response=response, trello_board=trello_board)
 
                         try:
-                            await command.check_permissions(author, guild, locale, **subcommand_attrs)
+                            await command.check_permissions(author, guild, locale, dm=actually_dm, **subcommand_attrs)
                         except PermissionError as e:
                             if subcommand_attrs.get("allow_bypass"):
                                 CommandArgs.has_permission = False
@@ -368,7 +364,7 @@ class Commands(Bloxlink.Module):
                                     guild_data.update(trello_options)
                                     trello_options_checked = True
 
-                                if guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):
+                                if not actually_dm and guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):#
                                     for message in arguments.messages + response.delete_message_queue:
                                         try:
                                             await message.delete()
@@ -477,9 +473,8 @@ class Command:
     def __repr__(self):
         return str(self)
 
-    async def check_permissions(self, author, guild, locale, permissions=None, **kwargs):
+    async def check_permissions(self, author, guild, locale, dm=False, permissions=None, **kwargs):
         permissions = permissions or self.permissions
-        author_perms = author.guild_permissions
 
         if author.id == OWNER:
             return True
@@ -501,56 +496,59 @@ class Command:
                                   "command.\nYou may subscribe to Bloxlink Premium on Patreon: https://patreon.com/bloxlink", type="silly")
 
         try:
-            for role_exception in permissions.exceptions["roles"]:
-                if find(lambda r: r.name == role_exception, author.roles):
-                    return True
+            if not dm:
+                author_perms = author.guild_permissions
 
-            if permissions.bloxlink_role:
-                role_name = permissions.bloxlink_role
+                for role_exception in permissions.exceptions["roles"]:
+                    if find(lambda r: r.name == role_exception, author.roles):
+                        return True
 
-                if find(lambda r: r.name == "Bloxlink Admin", author.roles):
-                    return True
-                else:
-                    if role_name == "Bloxlink Manager":
-                        if author_perms.manage_guild or author_perms.administrator:
-                            pass
-                        else:
-                            raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+                if permissions.bloxlink_role:
+                    role_name = permissions.bloxlink_role
 
-                    elif role_name == "Bloxlink Moderator":
-                        if author_perms.kick_members or author_perms.ban_members or author_perms.administrator:
-                            pass
-                        else:
-                            raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
-
-                    elif role_name == "Bloxlink Updater":
-                        if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
-                            pass
-                        else:
-                            raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
-                                                  "role permission, or the ``Manage Server`` role permission.")
-
-                    elif role_name == "Bloxlink Admin":
-                        if author_perms.administrator:
-                            pass
-                        else:
-                            raise PermissionError("You need the ``Administrator`` role permission to run this command.")
-
-            if permissions.allowed.get("discord_perms"):
-                for perm in permissions.allowed["discord_perms"]:
-                    if perm == "Manage Server":
-                        if author_perms.manage_guild or author_perms.administrator:
-                            pass
-                        else:
-                            raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+                    if find(lambda r: r.name == "Bloxlink Admin", author.roles):
+                        return True
                     else:
-                        if not getattr(author_perms, perm, False) and not perm.administrator:
-                            raise PermissionError(f"You need the ``{perm}`` permission to run this command.")
+                        if role_name == "Bloxlink Manager":
+                            if author_perms.manage_guild or author_perms.administrator:
+                                pass
+                            else:
+                                raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+
+                        elif role_name == "Bloxlink Moderator":
+                            if author_perms.kick_members or author_perms.ban_members or author_perms.administrator:
+                                pass
+                            else:
+                                raise PermissionError("You need the ``Kick`` or ``Ban`` permission to run this command.")
+
+                        elif role_name == "Bloxlink Updater":
+                            if author_perms.manage_guild or author_perms.administrator or author_perms.manage_roles or find(lambda r: r.name == "Bloxlink Updater", author.roles):
+                                pass
+                            else:
+                                raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
+                                                    "role permission, or the ``Manage Server`` role permission.")
+
+                        elif role_name == "Bloxlink Admin":
+                            if author_perms.administrator:
+                                pass
+                            else:
+                                raise PermissionError("You need the ``Administrator`` role permission to run this command.")
+
+                if permissions.allowed.get("discord_perms"):
+                    for perm in permissions.allowed["discord_perms"]:
+                        if perm == "Manage Server":
+                            if author_perms.manage_guild or author_perms.administrator:
+                                pass
+                            else:
+                                raise PermissionError("You need the ``Manage Server`` permission to run this command.")
+                        else:
+                            if not getattr(author_perms, perm, False) and not perm.administrator:
+                                raise PermissionError(f"You need the ``{perm}`` permission to run this command.")
 
 
-            for role in permissions.allowed["roles"]:
-                if not find(lambda r: r.name == role, author.roles):
-                    raise PermissionError(f"Missing role: ``{role}``")
+                for role in permissions.allowed["roles"]:
+                    if not find(lambda r: r.name == role, author.roles):
+                        raise PermissionError(f"Missing role: ``{role}``")
 
             if permissions.allowed.get("functions"):
                 for function in permissions.allowed["functions"]:

@@ -9,7 +9,7 @@ class PingCommand(Bloxlink.Module):
     """measure the latency between the bot and Discord"""
 
     def __init__(self):
-        pass
+        self.dm_allowed = True
 
     async def __main__(self, CommandArgs):
         message = CommandArgs.message
