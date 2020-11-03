@@ -78,7 +78,7 @@ class BloxlinkStructure(AutoShardedClient):
         loop.create_task(self._error(str(text), title=title))
 
     async def _error (self, text, title=None):
-        if not text:
+        if (not text) or text == "Unclosed connection":
             return
 
         webhook_data = {
