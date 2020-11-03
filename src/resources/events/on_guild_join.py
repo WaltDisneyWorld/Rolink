@@ -1,4 +1,4 @@
-from ..structures.Bloxlink import Bloxlink
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.constants import RELEASE, SERVER_INVITE # pylint: disable=import-error
 from discord.errors import NotFound, Forbidden
 from discord import Object
@@ -46,10 +46,12 @@ class GuildJoinEvent(Bloxlink.Module):
                     chosen_channel = channel
                     break
 
-
             guild_data = await self.r.table("guilds").get(guild_id).run() or {"id": guild_id}
             trello_board = await get_board(guild_data=guild_data, guild=guild)
             prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
+
+            guild_data["hasBot"] = True
+            await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
             if RELEASE == "PRO":
                 profile, _ = await get_features(Object(id=guild.owner_id), guild=guild, cache=False)
