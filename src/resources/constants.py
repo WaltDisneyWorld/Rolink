@@ -105,7 +105,7 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "allowOldRoles":         (None, "boolean", None, False, "Bloxlink will NOT remove roles if this is enabled."),
     "autoRoles":             (None, "boolean", None, False, "Bloxlink will give all matching/corresponding roles to people who join the server. Set eligible roles with ``{prefix}bind``. Note that this being enabled will override 'autoVerification'."),
     "autoVerification":      (None, "boolean", None, False, "Bloxlink will give the Verified role to people who join the server and are linked to Bloxlink.\nNote that 'autoRoles' being enabled overrides this setting."),
-    "dmVerifications":       (None, "boolean", None, False, "Set whether verifications default to DMs."),
+    #"dmVerifications":       (None, "boolean", None, False, "Set whether verifications default to DMs."),
     "dynamicRoles":          (None, "boolean", None, False, "Bloxlink will make missing group roles from your Linked Groups as people need them."),
     "welcomeMessage":        (None, "string", 1500,  False, "The welcome message is used on ``{prefix}verify`` responses. Note that you can use these templates: ```{templates}```"),
     "joinDM":                (lambda g, gd: bool(gd.get("verifiedDM", True)) or bool(gd.get("unverifiedDM")), None, None, False, "Customize the join DM messages of people who join the server."),
@@ -137,7 +137,7 @@ DEFAULTS = {
     "allowOldRoles": False,
     "autoRoles": True,
     "autoVerification": True,
-    "dmVerifications": True,
+    #"dmVerifications": True,
     "dynamicRoles": True,
     "persistRoles": True,
     "trelloID": "No Trello Board",
@@ -200,8 +200,8 @@ TABLE_STRUCTURE = {
 
 LIMITS = {
     "BINDS": {
-        "FREE": 30,
-        "PREMIUM": 100
+        "FREE": 60,
+        "PREMIUM": 200
     },
     "BACKUPS": 4
 }
