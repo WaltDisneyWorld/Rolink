@@ -190,7 +190,7 @@ class UpdateUserCommand(Bloxlink.Module):
 
                 except Blacklisted as b:
                     if str(b):
-                        raise Error(f"{user.mention} has an active restriction for: ``{b}``.")
+                        raise Error(f"{user.mention} has an active restriction for: ``{b}``")
                     else:
                         raise Error(f"{user.mention} has an active restriction from Bloxlink.")
 
