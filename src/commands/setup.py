@@ -187,14 +187,15 @@ class SetupCommand(Bloxlink.Module):
                 parsed_args_2["merge_replace"] = "skip"
 
             nickname = parsed_args_2["nickname"]
+            nickname_lower = nickname.lower()
 
-            if nickname == "skip":
+            if nickname_lower == "skip":
                 if group.group_id in group_ids:
                     nickname = group_ids[group.group_id]["nickname"]
                 else:
                     nickname = NICKNAME_DEFAULT
 
-            elif nickname == "disable":
+            elif nickname_lower == "disable":
                 nickname = None
 
             group_ids[group.group_id] = {"nickname": nickname, "groupName": group.name}
