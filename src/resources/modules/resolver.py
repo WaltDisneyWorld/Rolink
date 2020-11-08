@@ -2,14 +2,17 @@ from discord.utils import find
 from discord.errors import Forbidden, NotFound
 from re import compile
 
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import PermissionError
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import PermissionError # pylint: disable=import-error
+
+import string
 
 @Bloxlink.module
 class Resolver(Bloxlink.Module):
     def __init__(self):
         self.user_pattern = compile(r"<@!?([0-9]+)>")
         self.role_pattern = compile(r"<@&([0-9]+)>")
+        self.translator = str.maketrans("", "", string.punctuation)
 
     async def string_resolver(self, message, arg, content=None):
         if not content:
@@ -54,6 +57,7 @@ class Resolver(Bloxlink.Module):
             content = message.content
 
         content = content.lower()
+        content = content.translate(self.translator)
 
         for choice in arg["choices"]:
             choice_lower = choice.lower()
