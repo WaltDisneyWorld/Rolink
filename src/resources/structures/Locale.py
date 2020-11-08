@@ -1,6 +1,6 @@
 import json
 from jsonpath_ng import parse
-from ..structures.Bloxlink import Bloxlink
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 
 
 get_files = Bloxlink.get_module("utils", attrs="get_files")
@@ -30,4 +30,7 @@ class Locale:
 			except IndexError:
 				return locale_path
 
-		return match.format(*args, **kwargs)
+		if isinstance(match, str):
+			return match.format(*args, **kwargs)
+		else:
+			return match

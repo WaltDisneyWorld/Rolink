@@ -128,7 +128,7 @@ class BanEvadersCommand(Bloxlink.Module):
                 await response.send(f"{locale('commands.banevaders.noMatch')} :tada:")
 
         finally:
-            cooldown = 120
+            cooldown = 120 * 60
 
             if self.redis:
                 await self.redis.set(redis_cooldown_key, 3, ex=cooldown)

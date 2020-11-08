@@ -115,18 +115,6 @@ class Commands(Bloxlink.Module):
 
                 for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
-                        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
-
-                        if blacklisted_discord is not None:
-                            blacklist_text = blacklisted_discord and f"has an active restriction for: ``{blacklisted_discord}``" or "has an active restriction from Bloxlink."
-
-                            try:
-                                await channel.send(f"{author.mention} {blacklist_text}")
-                            except (Forbidden, NotFound):
-                                pass
-                            finally:
-                                return
-
                         donator_profile = None
                         actually_dm = command.dm_allowed and not guild
 
@@ -152,6 +140,18 @@ class Commands(Bloxlink.Module):
 
                                 if not (author_perms.manage_guild or author_perms.administrator):
                                     return
+
+                        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+
+                        if blacklisted_discord is not None:
+                            blacklist_text = blacklisted_discord and f"has an active restriction for: ``{blacklisted_discord}``" or "has an active restriction from Bloxlink."
+
+                            try:
+                                await channel.send(f"{author.mention} {blacklist_text}")
+                            except (Forbidden, NotFound):
+                                pass
+                            finally:
+                                return
 
                         if command.cooldown and self.cache:
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
