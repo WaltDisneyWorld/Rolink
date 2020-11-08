@@ -56,7 +56,7 @@ class LogChannelCommand(Bloxlink.Module):
                                                             "to your channel\n"
                           "``configurations`` "   + ARROW + " any Bloxlink setting alteration will be "
                                                             "logged to your channel\n"
-                         "``inactivity notices`` _(premium)_ " + ARROW + " user-set inactivity notices will "
+                         "``inactivity notices`` _(premium)_ " + ARROW + " user-set inactivity notices "
                                                                          "from ``" + prefix + "profie`` will "
                                                                          "be logged to your channel\n"
                         "``binds`` "              + ARROW +   " bind insertions/deletions will be logged to your channel\n"
