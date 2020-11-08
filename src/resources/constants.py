@@ -1,5 +1,4 @@
 from os import environ as env
-from ast import literal_eval
 from time import time
 from re import search
 from discord import Game
@@ -51,6 +50,7 @@ DEV_COLOR               = 0x4DD3CC
 STAFF_COLOR             = 0x3ca770
 COMMUNITY_MANAGER_COLOR = 0xc4306f
 VIP_MEMBER_COLOR        = 0x3271c2
+PARTNERS_COLOR          = 0xda43d1
 
 PARTNERED_SERVER        = 0x4f91a0
 
