@@ -141,6 +141,8 @@ class VerifyCommand(Bloxlink.Module):
         guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 
+        if not guild:
+            return await response.send("This sub-command can only be used in a server!")
 
         choice = (await CommandArgs.prompt([{
             "prompt": "Which option would you like to change?\nOptions: ``(welcomeMessage)``",
@@ -250,4 +252,7 @@ class VerifyCommand(Bloxlink.Module):
     async def unlink(CommandArgs):
         """unlink an account from Bloxlink"""
 
-        await CommandArgs.response.reply(f"to manage your accounts, please visit our website: <{ACCOUNT_SETTINGS_URL}>")
+        if CommandArgs.message.guild:
+            await CommandArgs.response.reply(f"to manage your accounts, please visit our website: <{ACCOUNT_SETTINGS_URL}>")
+        else:
+            await CommandArgs.response.send(f"To manage your accounts, please visit our website: <{ACCOUNT_SETTINGS_URL}>")

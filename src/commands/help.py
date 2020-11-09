@@ -18,6 +18,7 @@ class HelpCommand(Bloxlink.Module):
                 "name": "command_name"
             }
         ]
+        self.dm_allowed = True
 
     async def __main__(self, CommandArgs):
         command_name = CommandArgs.parsed_args.get("command_name")
