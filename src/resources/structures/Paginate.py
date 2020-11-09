@@ -1,7 +1,7 @@
 from discord.errors import Forbidden, NotFound
-from ..exceptions import CancelCommand, Error
-from ..structures import Bloxlink
-from ..constants import SERVER_INVITE
+from ..exceptions import CancelCommand, Error # pylint: disable=import-error
+from ..structures import Bloxlink # pylint: disable=import-error
+from ..constants import SERVER_INVITE # pylint: disable=import-error
 from asyncio import TimeoutError
 
 class Paginate:
