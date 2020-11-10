@@ -20,6 +20,7 @@ class StatusCommand(Bloxlink.Module):
         }]
         self.category = "Premium"
         self.free_to_use = True
+        self.dm_allowed = True
 
     async def __main__(self, CommandArgs):
         user = CommandArgs.parsed_args.get("user") or CommandArgs.message.author
@@ -29,7 +30,7 @@ class StatusCommand(Bloxlink.Module):
         embed = Embed()
         embed.set_author(name=user, icon_url=user.avatar_url)
 
-        partner_check = user.id == guild.owner_id
+        partner_check = guild and user.id == guild.owner_id
         profile, transfer_to = await get_features(user, partner_check=partner_check)
 
         attributes, features = profile.attributes, profile.features

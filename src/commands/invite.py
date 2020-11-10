@@ -7,7 +7,7 @@ class InviteCommand(Bloxlink.Module):
     """invite the bot to your server"""
 
     def __init__(self):
-        pass
+        self.dm_allowed = True
 
     @Bloxlink.flags
     async def __main__(self, CommandArgs):

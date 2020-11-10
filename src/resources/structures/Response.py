@@ -123,7 +123,7 @@ class Response(Bloxlink.Module):
         if dm and not IS_DOCKER:
             dm = False
 
-        actually_dm = not self.guild
+        actually_dm = not self.guild # used to send the "check your DMs!" messages
 
         channel = channel_override or (dm and self.author or self.channel)
 
@@ -260,7 +260,7 @@ class Response(Bloxlink.Module):
                         else:
                             raise HTTPException
         if paginate:
-            paginator = Paginate(self.message, channel, embed, self, field_limit=paginate_field_limit, original_channel=self.channel, pages=pages, dm=dm)
+            paginator = Paginate(self.message, channel, embed, self, field_limit=paginate_field_limit, original_channel=self.channel, pages=pages, dm=not actually_dm and dm)
 
             return await paginator()
 

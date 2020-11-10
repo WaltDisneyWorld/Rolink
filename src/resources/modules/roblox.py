@@ -11,7 +11,8 @@ from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from os import environ as env
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW, TIP_CHANCES,
-                         SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, GREEN_COLOR, RED_COLOR, ACCOUNT_SETTINGS_URL)
+                         SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, PARTNERS_COLOR, GREEN_COLOR,
+                         RED_COLOR, ACCOUNT_SETTINGS_URL)
 from ..secrets import TRELLO # pylint: disable=no-name-in-module, import-error
 import json
 import random
@@ -32,6 +33,7 @@ loop = asyncio.get_event_loop()
 fetch, post_event = Bloxlink.get_module("utils", attrs=["fetch", "post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 is_booster = Bloxlink.get_module("nitro_boosters", attrs=["is_booster"], name_override="NitroBoosters")
+is_partner = Bloxlink.get_module("partners", attrs=["is_partner"])
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
 cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
 
@@ -1088,6 +1090,7 @@ class Roblox(Bloxlink.Module):
 
         add_roles, remove_roles = set(), set()
         possible_nicknames = []
+        possible_bind_nicknames = []
         errors = []
         unverified = False
         top_role_nickname = None
@@ -2064,7 +2067,7 @@ class Roblox(Bloxlink.Module):
 
 
     @staticmethod
-    async def apply_perks(roblox_user, embed, guild=None, groups=False, author=None, boost=False, tags=False):
+    async def apply_perks(roblox_user, embed, guild=None, groups=False, author=None, tags=False):
         if not embed:
             return
 
@@ -2096,7 +2099,7 @@ class Roblox(Bloxlink.Module):
                     embed.colour = VIP_MEMBER_COLOR
 
             if groups:
-                partners = await cache_get("partners")
+                partners = await cache_get("partners:guilds")
                 notable_groups = set()
 
                 for partner_server_id, partner_group in partners.items():
@@ -2107,21 +2110,21 @@ class Roblox(Bloxlink.Module):
                             notable_groups.add(f"[{partner.name}]({partner.url}) {ARROW} {partner.user_rank_name}")
 
         if guild and embed:
-            cache_partner = await cache_get("partners", guild.id)
+            cache_partner = await cache_get("partners:guilds", guild.id)
             verified_reaction = guild.default_role.permissions.external_emojis and REACTIONS["VERIFIED"] or ":white_check_mark:"
 
             if cache_partner:
                 embed.description = f"{verified_reaction} This is an **official server** of [{cache_partner[2]}](https://www.roblox.com/groups/{cache_partner[1]}/-)"
                 embed.colour = PARTNERED_SERVER
 
-
-        if boost and author and await is_booster(author):
-            user_tags.append("Bloxlink Nitro Booster")
-
-            if not embed.colour:
+        if tags and author:
+            if await is_booster(author):
+                user_tags.append("Bloxlink Nitro Booster")
                 embed.colour = PINK_COLOR
 
-
+            if await is_partner(author):
+                user_tags.append("Bloxlink Partner")
+                embed.colour = PARTNERS_COLOR
 
         return user_tags, notable_groups
 
@@ -2794,7 +2797,7 @@ class RobloxUser(Bloxlink.Module):
             embed[0].title = username
 
             if not args:
-                user_tags, _ = await Roblox.apply_perks(roblox_user, author=author, tags=True, guild=guild, boost=True, embed=embed and embed[0])
+                user_tags, _ = await Roblox.apply_perks(roblox_user, author=author, tags=True, guild=guild, embed=embed and embed[0])
 
                 if user_tags:
                     embed[0].add_field(name="User Tags", value="\n".join(user_tags))

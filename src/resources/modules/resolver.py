@@ -2,14 +2,17 @@ from discord.utils import find
 from discord.errors import Forbidden, NotFound
 from re import compile
 
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import PermissionError
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import PermissionError # pylint: disable=import-error
+
+import string
 
 @Bloxlink.module
 class Resolver(Bloxlink.Module):
     def __init__(self):
         self.user_pattern = compile(r"<@!?([0-9]+)>")
         self.role_pattern = compile(r"<@&([0-9]+)>")
+        self.translator = str.maketrans("", "", string.punctuation)
 
     async def string_resolver(self, message, arg, content=None):
         if not content:
@@ -54,6 +57,7 @@ class Resolver(Bloxlink.Module):
             content = message.content
 
         content = content.lower()
+        content = content.translate(self.translator)
 
         for choice in arg["choices"]:
             choice_lower = choice.lower()
@@ -99,21 +103,23 @@ class Resolver(Bloxlink.Module):
                 pass
 
             if is_id:
-                user = guild.get_member(is_int)
+                user = guild and guild.get_member(is_int)
 
                 if user:
                     return user, None
                 else:
                     try:
                         user = await self.client.fetch_user(int(is_int))
+
                         return user, None
+
                     except NotFound:
                         return False, "A user with this discord ID does not exist"
             else:
-                member = guild.get_member(content)
+                member = guild and guild.get_member(content)
 
                 if not member:
-                    member = await guild.query_members(content, limit=1)
+                    member = guild and await guild.query_members(content, limit=1)
 
                     if member:
                         return member[0], None
@@ -148,14 +154,14 @@ class Resolver(Bloxlink.Module):
 
                     if lookup_string.isdigit():
                         try:
-                            member = await guild.fetch_member(int(lookup_string))
+                            member = guild and await guild.fetch_member(int(lookup_string))
                         except NotFound:
                             pass
                         else:
                             users.append(member)
 
                     else:
-                        member = await guild.query_members(lookup_string, limit=1)
+                        member = guild and await guild.query_members(lookup_string, limit=1)
 
                         if member:
                             users.append(member[0])
