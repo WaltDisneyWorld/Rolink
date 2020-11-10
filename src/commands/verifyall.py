@@ -58,8 +58,14 @@ class VerifyAllCommand(Bloxlink.Module):
         redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
         await self.redis.set(redis_cooldown_key, 2, ex=86400)
 
+        failed_attempts = 0
+
         try:
             for member in guild.members:
+                if failed_attempts == 5:
+                    await response.error("Roblox appears to be down, so this scan has been cancelled. retries=5")
+                    break
+
                 if not member.bot:
                     try:
                         added, removed, nickname, errors, roblox_user = await update_member(
@@ -82,9 +88,9 @@ class VerifyAllCommand(Bloxlink.Module):
                     except Error as e:
                         await response.error(f"Encountered an error: ``{e}``. Scan cancelled.")
                         break
+
                     except RobloxDown:
-                        await response.error("Roblox appears to be down, so this scan has been cancelled.")
-                        break
+                        failed_attempts += 1
 
             await response.success("This server's scan has finished.")
 

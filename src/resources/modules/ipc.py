@@ -7,7 +7,7 @@ from discord.errors import NotFound, Forbidden
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER, PLAYING_STATUS, RELEASE, GREEN_COLOR # pylint: disable=import-error
 from ..exceptions import (BloxlinkBypass, Blacklisted, UserNotVerified, Blacklisted, PermissionError, # pylint: disable=import-error
-                         RobloxAPIError, CancelCommand) # pylint: disable=import-error
+                         RobloxAPIError, CancelCommand, RobloxDown) # pylint: disable=import-error
 from config import PROMPT, PREFIX # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
@@ -111,6 +111,12 @@ class IPC(Bloxlink.Module):
                         except RobloxAPIError:
                             try:
                                 await member.send("An unknown Roblox API error occured, so I was unable to update you in the server. Please try again later.")
+                            except Forbidden:
+                                pass
+
+                        except RobloxDown:
+                            try:
+                                await member.send("Roblox appears to be down, so I was unable to retrieve your Roblox information. Please try again later.")
                             except Forbidden:
                                 pass
 

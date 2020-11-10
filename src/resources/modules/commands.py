@@ -96,7 +96,6 @@ class Commands(Bloxlink.Module):
         trello_options = {}
         trello_options_checked = True
 
-
         if check:
             after = content[len(check):].strip()
             args = after.split(" ")
@@ -152,6 +151,12 @@ class Commands(Bloxlink.Module):
                                 pass
                             finally:
                                 return
+
+                        if not isinstance(author, Member) and not guild:
+                            try:
+                                author = await guild.fetch_member(author.id)
+                            except NotFound:
+                                raise CancelCommand
 
                         if command.cooldown and self.cache:
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
