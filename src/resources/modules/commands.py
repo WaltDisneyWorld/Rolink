@@ -152,7 +152,7 @@ class Commands(Bloxlink.Module):
                             finally:
                                 return
 
-                        if not isinstance(author, Member) and not guild:
+                        if guild and not isinstance(author, Member):
                             try:
                                 author = await guild.fetch_member(author.id)
                             except NotFound:
