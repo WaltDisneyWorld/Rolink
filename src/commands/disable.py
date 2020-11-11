@@ -26,9 +26,10 @@ class DisableCommand(Bloxlink.Module):
             {
                 "prompt": "Should this command be enabled/disabled **globally** or **for a channel?**\n"
                           "You may either say ``globally`` or mention a ``channel``.",
-                "type": ["channel", "string"],
+                "type": ["channel", "choice"],
                 "create_missing_channel": False,
-                "name": "disable_type"
+                "name": "disable_type",
+                "choices": ["globally", "global"]
             }
         ]
 
@@ -63,7 +64,7 @@ class DisableCommand(Bloxlink.Module):
                 disabled_commands["channels"][channel_id] = command_name
                 enable = "disabled"
 
-        elif disable_type.lower() in ("globally", "global"):
+        else:
             disabled_commands["global"] = disabled_commands.get("global", [])
 
             disable_where = "**globally**"
@@ -74,8 +75,6 @@ class DisableCommand(Bloxlink.Module):
             else:
                 disabled_commands["global"].append(command_name)
                 enable = "disabled"
-        else:
-            raise Error('Invalid type: you must either specify a channel or say "globally."')
 
         guild_data["disabledCommands"] = disabled_commands
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
