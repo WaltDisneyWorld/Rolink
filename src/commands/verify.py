@@ -101,7 +101,7 @@ class VerifyCommand(Bloxlink.Module):
 
             await response.send(content=welcome_message, embed=embed)
 
-            await post_event(guild, guild_data, "verification", f"{author.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+            await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
 
 
     @Bloxlink.subcommand()
@@ -196,7 +196,7 @@ class VerifyCommand(Bloxlink.Module):
                 "welcomeMessage": welcome_message
             }, conflict="update").run()
 
-        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``{choice}``.", BROWN_COLOR)
+        await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``{choice}``.", BROWN_COLOR)
 
         raise Message(f"Successfully saved your new ``{choice}``!", type="success")
 

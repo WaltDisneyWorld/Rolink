@@ -200,7 +200,7 @@ class ProfileCommand(Bloxlink.Module):
             if isinstance(date_of_return, str) and date_of_return.lower() == "clear":
                 profile_data.pop("activityNotice", None)
 
-                await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **back** from their leave of absence.", PURPLE_COLOR)
+                await post_event(guild, guild_data, "inactivity notice", f"{author.mention} ({author.id}) is now **back** from their leave of absence.", PURPLE_COLOR)
 
                 await handle_inactive_role(inactive_role, author, False)
             else:
@@ -218,9 +218,9 @@ class ProfileCommand(Bloxlink.Module):
                 }
 
                 if reason.lower() != "skip":
-                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **away** for: ``{reason}``.", PURPLE_COLOR)
+                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} ({author.id}) is now **away** for: ``{reason}``.", PURPLE_COLOR)
                 else:
-                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} is now **away**.", PURPLE_COLOR)
+                    await post_event(guild, guild_data, "inactivity notice", f"{author.mention} ({author.id}) is now **away**.", PURPLE_COLOR)
 
                 await handle_inactive_role(inactive_role, author, True)
 

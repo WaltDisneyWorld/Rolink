@@ -52,6 +52,7 @@ class LogChannelCommand(Bloxlink.Module):
         parsed_args = await CommandArgs.prompt([
             {
                 "prompt": "Please select an **event** to add/delete:\n"
+                          "``all`` "              + ARROW + " all events will be sent to your channel\n"
                           "``verifications`` "    + ARROW + " user verifications will be logged "
                                                             "to your channel\n"
                           "``configurations`` "   + ARROW + " any Bloxlink setting alteration will be "
@@ -65,7 +66,7 @@ class LogChannelCommand(Bloxlink.Module):
 
                 "name": "log_type",
                 "type": "choice",
-                "choices": ["verifications", "configurations", "inactivity notices", "binds", "moderation"]
+                "choices": ["all", "verifications", "configurations", "inactivity notices", "binds", "moderation"]
             },
             {
                 "prompt": "Please either **mention a channel**, or say a **channel name.**\n"
@@ -109,7 +110,7 @@ class LogChannelCommand(Bloxlink.Module):
 
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-        await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``log channels``.", BROWN_COLOR)
+        await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``log channels``.", BROWN_COLOR)
 
         await response.success(f"Successfully **{action}** your log channel!")
 

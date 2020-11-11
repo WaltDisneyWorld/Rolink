@@ -104,7 +104,7 @@ class GroupLockCommand(Bloxlink.Module):
                 "groupLock": groups
             }, conflict="update").run()
 
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **added** a group to the ``server-lock``.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **added** a group to the ``server-lock``.", BROWN_COLOR)
 
             await response.success(f"Successfully added group **{group.name}** to your Server-Lock!")
 
@@ -131,7 +131,7 @@ class GroupLockCommand(Bloxlink.Module):
 
                 await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **deleted** a group from the ``server-lock``.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **deleted** a group from the ``server-lock``.", BROWN_COLOR)
 
             await response.success("Successfully **deleted** your group from the Server-Lock!")
 

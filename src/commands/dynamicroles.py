@@ -27,8 +27,8 @@ class DynamicRolesCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         if toggle:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** ``dynamicRoles``.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **enabled** ``dynamicRoles``.", BROWN_COLOR)
             await response.success("Successfully **enabled** Dynamic Roles!")
         else:
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** ``dynamicRoles``.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **disabled** ``dynamicRoles``.", BROWN_COLOR)
             await response.success("Successfully **disabled** Dynamic Roles!")

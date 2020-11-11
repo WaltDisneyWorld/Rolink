@@ -166,7 +166,7 @@ class SwitchUserCommand(Bloxlink.Module):
 
                         welcome_message = await get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False)
 
-                        await post_event(guild, guild_data, "verification", f"{author.mention} has **switched their user** to ``{username}``.", GREEN_COLOR)
+                        await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **switched their user** to ``{username}``.", GREEN_COLOR)
 
                         await CommandArgs.response.send(welcome_message)
 
