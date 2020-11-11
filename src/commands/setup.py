@@ -303,7 +303,7 @@ class SetupCommand(Bloxlink.Module):
 
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-        await post_event(guild, guild_data, "configuration", f"{author.mention} has **set-up** the server.", BROWN_COLOR)
+        await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **set-up** the server.", BROWN_COLOR)
 
         await response.success("Your server is now **configured** with Bloxlink!", dm=True, no_dm_post=True)
 

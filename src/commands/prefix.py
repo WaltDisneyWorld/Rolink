@@ -74,7 +74,7 @@ class PrefixCommand(Bloxlink.Module):
                     else:
                         await trello_board.sync(card_limit=TRELLO["CARD_LIMIT"], list_limit=TRELLO["LIST_LIMIT"])
 
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``prefix`` option.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``prefix`` option.", BROWN_COLOR)
 
             await response.success("Your prefix was successfully changed!")
 

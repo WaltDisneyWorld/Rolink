@@ -51,7 +51,7 @@ class NicknameCommand(Bloxlink.Module):
 
             await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
-            await post_event(guild, guild_data, "configuration", f"{author.mention} has **changed** the ``nicknameTemplate`` option.", BROWN_COLOR)
+            await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``nicknameTemplate`` option.", BROWN_COLOR)
 
             await response.success("Successfully saved your new **Global Nickname!**")
         else:

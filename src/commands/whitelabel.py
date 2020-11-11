@@ -90,7 +90,7 @@ class WhiteLabelCommand(Bloxlink.Module):
         }
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
-        await post_event(guild, guild_data, "configuration", f"{author.mention} has **enabled** the ``white-label`` configuration.", BROWN_COLOR)
+        await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **enabled** the ``white-label`` configuration.", BROWN_COLOR)
 
         await response.success("Successfully saved your new **white-label** configuration!")
 
@@ -112,6 +112,6 @@ class WhiteLabelCommand(Bloxlink.Module):
         guild_data.pop("customBot", None)
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
-        await post_event(guild, guild_data, "configuration", f"{author.mention} has **disabled** the ``white-label`` configuration.", BROWN_COLOR)
+        await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **disabled** the ``white-label`` configuration.", BROWN_COLOR)
 
         await response.success("Successfully disabled your **white-label** configuration!")
