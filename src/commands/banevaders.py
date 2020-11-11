@@ -1,5 +1,5 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import RELEASE # pylint: disable=import-error
+from resources.constants import RELEASE, RED_COLOR # pylint: disable=import-error
 from resources.exceptions import Error, Message # pylint: disable=import-error
 from io import StringIO
 from discord.errors import Forbidden, NotFound
@@ -12,6 +12,7 @@ loop = asyncio.get_event_loop()
 
 
 extract_accounts = Bloxlink.get_module("roblox", attrs=["extract_accounts"])
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 
 @Bloxlink.command
@@ -33,7 +34,7 @@ class BanEvadersCommand(Bloxlink.Module):
         self.REDIS_COOLDOWN_KEY = "guild_scan:{id}"
         self.aliases = ["bansearch"]
 
-    async def process_guild(self, guild, author, action, response, locale):
+    async def process_guild(self, guild_data, guild, author, action, response, locale, prefix):
         if not guild.chunked:
             try:
                 await guild.chunk()
@@ -41,6 +42,11 @@ class BanEvadersCommand(Bloxlink.Module):
                 pass
 
         await response.send(locale("scans.starting"))
+
+        if action in ("kick", "ban"):
+            await post_event(guild, guild_data, "moderation", f"{author.mention} ({author.id}) has ran the ``{prefix}banevaders`` command and chose to **{action}** ban-evaders.", RED_COLOR)
+        else:
+            await post_event(guild, guild_data, "moderation", f"{author.mention} ({author.id}) has ran the ``{prefix}banevaders`` command.", RED_COLOR)
 
         try:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
@@ -135,11 +141,13 @@ class BanEvadersCommand(Bloxlink.Module):
 
 
     async def __main__(self, CommandArgs):
-        response = CommandArgs.response
-        action   = CommandArgs.parsed_args["action"]
-        guild    = CommandArgs.message.guild
-        author   = CommandArgs.message.author
-        locale   = CommandArgs.locale
+        response   = CommandArgs.response
+        action     = CommandArgs.parsed_args["action"]
+        guild      = CommandArgs.message.guild
+        author     = CommandArgs.message.author
+        locale     = CommandArgs.locale
+        guild_data = CommandArgs.guild_data
+        prefix     = CommandArgs.prefix
 
         if self.redis:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
@@ -163,4 +171,4 @@ class BanEvadersCommand(Bloxlink.Module):
                         raise Message(locale("scans.cooldown", cooldown=cooldown_time))
 
             await self.redis.set(redis_cooldown_key, 1, ex=86400)
-            await self.process_guild(guild, author, action, response, locale)
+            await self.process_guild(guild_data, guild, author, action, response, locale, prefix)
