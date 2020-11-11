@@ -117,27 +117,72 @@ class Commands(Bloxlink.Module):
                         donator_profile = None
                         actually_dm = command.dm_allowed and not guild
 
+                        fn = command.fn
+                        subcommand_attrs = {}
+                        subcommand = False
+
+                        if args:
+                            # subcommand checking
+                            subcommand = command.subcommands.get(args[0])
+                            if subcommand:
+                                fn = subcommand
+                                subcommand_attrs = getattr(fn, "__subcommandattrs__", None)
+                                del args[0]
+
+                        after = args and " ".join(args) or ""
+
+                        CommandArgs = Args(
+                            command_name = index,
+                            real_command_name = command_name,
+                            message = message,
+                            guild_data = guild_data,
+                            flags = {},
+                            prefix = prefix,
+                            has_permission = False,
+                        )
+
+                        if getattr(fn, "__flags__", False):
+                            flags, flags_str = command.parse_flags(after)
+                            content = content.replace(flags_str, "")
+                            message.content = content
+                            after = after.replace(flags_str, "")
+                            CommandArgs.flags = flags
+
+                        locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
+                        response = Response(CommandArgs)
+
                         if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
                             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                             if not donator_profile.features.get("pro"):
-                                try:
-                                    await channel.send(f"Server not authorized to use Pro. Please use the ``{prefix}donate`` command to see information on "
-                                                        "how to get Bloxlink Pro.")
+                                await response.error(f"Server not authorized to use Pro. Please use the ``{prefix}donate`` command to see information on "
+                                                     "how to get Bloxlink Pro.")
 
-                                except (Forbidden, NotFound):
-                                    pass
+                                return
 
-                                finally:
+                        if guild:
+                            ignored_channels = guild_data.get("ignoredChannels", {})
+                            disabled_commands = guild_data.get("disabledCommands", {})
+
+                            author_perms = author.guild_permissions
+
+                            if guild.owner != author and not (find(lambda r: r.name in MAGIC_ROLES, author.roles) or author_perms.manage_guild or author_perms.administrator):
+                                if ignored_channels.get(channel_id):
+                                    await response.send(f"The server admins have **disabled** all commands for channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 
-                        ignored_channels = guild_data.get("ignoredChannels", {})
+                                if command_name in disabled_commands.get("global", []):
+                                    await response.send(f"The server admins have **disabled** the command ``{command_name}`` globally.", dm=True, strict_post=True, no_dm_post=True)
+                                    return
 
-                        if ignored_channels.get(channel_id):
-                            if guild.owner != author and not find(lambda r: r.name in MAGIC_ROLES, author.roles):
-                                author_perms = author.guild_permissions
+                                elif disabled_commands.get("channels", {}).get(channel_id):
+                                    await response.send(f"The server admins have **disabled** the command ``{command_name}`` for channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
+                                    return
 
-                                if not (author_perms.manage_guild or author_perms.administrator):
+                            if not isinstance(author, Member):
+                                try:
+                                    author = await guild.fetch_member(author.id)
+                                except NotFound:
                                     return
 
                         blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
@@ -145,18 +190,8 @@ class Commands(Bloxlink.Module):
                         if blacklisted_discord is not None:
                             blacklist_text = blacklisted_discord and f"has an active restriction for: ``{blacklisted_discord}``" or "has an active restriction from Bloxlink."
 
-                            try:
-                                await channel.send(f"{author.mention} {blacklist_text}")
-                            except (Forbidden, NotFound):
-                                pass
-                            finally:
-                                return
-
-                        if not isinstance(author, Member) and not guild:
-                            try:
-                                author = await guild.fetch_member(author.id)
-                            except NotFound:
-                                raise CancelCommand
+                            await response.send(f"{author.mention} {blacklist_text}")
+                            return
 
                         if command.cooldown and self.cache:
                             redis_cooldown_key = f"cooldown_cache:{index}:{author.id}"
@@ -200,40 +235,6 @@ class Commands(Bloxlink.Module):
                                 pass
                             finally:
                                 return
-
-                        fn = command.fn
-                        subcommand_attrs = {}
-                        subcommand = False
-
-                        if args:
-                            # subcommand checking
-                            subcommand = command.subcommands.get(args[0])
-                            if subcommand:
-                                fn = subcommand
-                                subcommand_attrs = getattr(fn, "__subcommandattrs__", None)
-                                del args[0]
-
-                        after = args and " ".join(args) or ""
-
-                        CommandArgs = Args(
-                            command_name = index,
-                            real_command_name = command_name,
-                            message = message,
-                            guild_data = guild_data,
-                            flags = {},
-                            prefix = prefix,
-                            has_permission = False,
-                        )
-
-                        if getattr(fn, "__flags__", False):
-                            flags, flags_str = command.parse_flags(after)
-                            content = content.replace(flags_str, "")
-                            message.content = content
-                            after = after.replace(flags_str, "")
-                            CommandArgs.flags = flags
-
-                        locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
-                        response = Response(CommandArgs)
 
                         CommandArgs.add(locale=locale, response=response, trello_board=trello_board)
 
