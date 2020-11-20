@@ -168,7 +168,7 @@ class Commands(Bloxlink.Module):
 
                             if guild.owner != author and not (find(lambda r: r.name in MAGIC_ROLES, author.roles) or author_perms.manage_guild or author_perms.administrator):
                                 if ignored_channels.get(channel_id):
-                                    await response.send(f"The server admins have **disabled** all commands for channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
+                                    await response.send(f"The server admins have **disabled** all commands in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 
                                 if command_name in disabled_commands.get("global", []):
@@ -176,7 +176,7 @@ class Commands(Bloxlink.Module):
                                     return
 
                                 elif disabled_commands.get("channels", {}).get(channel_id):
-                                    await response.send(f"The server admins have **disabled** the command ``{command_name}`` for channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
+                                    await response.send(f"The server admins have **disabled** the command ``{command_name}`` in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 
                             if not isinstance(author, Member):
@@ -370,12 +370,11 @@ class Commands(Bloxlink.Module):
                                     guild_data.update(trello_options)
                                     trello_options_checked = True
 
-                                if not actually_dm and guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):#
-                                    for message in arguments.messages + response.delete_message_queue:
-                                        try:
-                                            await message.delete()
-                                        except (Forbidden, NotFound):
-                                            pass
+                                if not actually_dm and guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):
+                                    try:
+                                        await channel.purge(limit=50, check=lambda m: m.id in (*arguments.messages, *response.delete_message_queue))
+                                    except (Forbidden, HTTPException):
+                                        pass
 
                         break
 
