@@ -1020,24 +1020,28 @@ class Roblox(Bloxlink.Module):
 
         else:
             if age_limit:
-                if dm:
+                if not donator_profile:
+                    donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
+
+                if donator_profile.features.get("premium"):
+                    if dm:
+                        try:
+                            if accounts:
+                                await member.send(f"_Bloxlink Server-Lock_\nYou have no primary account set! Please go to {ACCOUNT_SETTINGS_URL} and set a "
+                                                "primary account, then try rejoining this server.")
+                            else:
+                                await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
+                                                f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
+                                                f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
+                        except Forbidden:
+                            pass
+
                     try:
-                        if accounts:
-                            await member.send(f"_Bloxlink Server-Lock_\nYou have no primary account set! Please go to {ACCOUNT_SETTINGS_URL} and set a "
-                                               "primary account, then try rejoining this server.")
-                        else:
-                            await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
-                                              f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
-                                              f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
+                        await member.kick(reason=f"AGE-LIMIT: user not linked to Bloxlink")
                     except Forbidden:
                         pass
 
-                try:
-                    await member.kick(reason=f"AGE-LIMIT: user not linked to Bloxlink")
-                except Forbidden:
-                    pass
-
-                return
+                    return
 
             if required_groups:
                 if dm:
