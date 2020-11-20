@@ -239,7 +239,7 @@ class Premium(Bloxlink.Module):
                     profile.attributes["PREMIUM_ANYWHERE"] = True
 
         if guild and partner_check:
-            partners_cache = await cache_get("partners", guild.id)
+            partners_cache = await cache_get("partners:guilds", guild.id)
 
             if partners_cache:
                 profile.add_features("premium")
