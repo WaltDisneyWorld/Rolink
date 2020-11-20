@@ -895,51 +895,51 @@ class Roblox(Bloxlink.Module):
             if not donator_profile:
                 donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
-                if donator_profile.features.get("premium"):
-                    accounts = set(accounts)
+            if donator_profile.features.get("premium"):
+                accounts = set(accounts)
 
-                    if roblox_user: #FIXME: temp until primary accounts are saved to the accounts array
-                        accounts.add(roblox_user.id)
+                if roblox_user: #FIXME: temp until primary accounts are saved to the accounts array
+                    accounts.add(roblox_user.id)
 
-                    if accounts and (disallow_alts or disallow_ban_evaders):
-                        for roblox_id in accounts:
-                            discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs") or []
+                if accounts and (disallow_alts or disallow_ban_evaders):
+                    for roblox_id in accounts:
+                        discord_ids = (await self.r.db("bloxlink").table("robloxAccounts").get(roblox_id).run() or {}).get("discordIDs") or []
 
-                            for discord_id in discord_ids:
-                                discord_id = int(discord_id)
+                        for discord_id in discord_ids:
+                            discord_id = int(discord_id)
 
-                                if discord_id != member.id:
-                                    if disallow_alts:
-                                        # check the server
+                            if discord_id != member.id:
+                                if disallow_alts:
+                                    # check the server
 
+                                    try:
+                                        user_find = await guild.fetch_member(discord_id)
+                                    except NotFound:
+                                        pass
+                                    else:
                                         try:
-                                            user_find = await guild.fetch_member(discord_id)
-                                        except NotFound:
+                                            await user_find.kick(reason=f"disallowAlts is enabled - alt of {member} ({member.id})")
+                                        except Forbidden:
                                             pass
                                         else:
-                                            try:
-                                                await user_find.kick(reason=f"disallowAlts is enabled - alt of {member} ({member.id})")
-                                            except Forbidden:
-                                                pass
-                                            else:
-                                                await post_event(guild, guild_data, "moderation", f"{user_find.mention} is an alt of {member.mention} and has been ``kicked``.", RED_COLOR)
+                                            await post_event(guild, guild_data, "moderation", f"{user_find.mention} is an alt of {member.mention} and has been ``kicked``.", RED_COLOR)
 
-                                    if disallow_ban_evaders:
-                                        # check the bans
+                                if disallow_ban_evaders:
+                                    # check the bans
 
+                                    try:
+                                        ban_entry = await guild.fetch_ban(Object(discord_id))
+                                    except (NotFound, Forbidden):
+                                        pass
+                                    else:
                                         try:
-                                            ban_entry = await guild.fetch_ban(Object(discord_id))
-                                        except (NotFound, Forbidden):
+                                            await guild.ban(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})")
+                                        except (Forbidden, HTTPException):
                                             pass
                                         else:
-                                            try:
-                                                await guild.ban(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})")
-                                            except (Forbidden, HTTPException):
-                                                pass
-                                            else:
-                                                await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``banned``.", RED_COLOR)
-                                            finally:
-                                                return
+                                            await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``banned``.", RED_COLOR)
+                                        finally:
+                                            return
 
 
         if auto_verification or group_roles:
