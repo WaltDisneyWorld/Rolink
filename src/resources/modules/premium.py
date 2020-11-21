@@ -27,7 +27,10 @@ class Premium(Bloxlink.Module):
             if guild.unavailable:
                 return
 
-            await guild.chunk()
+            try:
+                await guild.chunk()
+            except KeyError: # FIXME: temporarily fix discord.py bug
+                pass
 
             staff_role = find(lambda r: r.name == "Helpers", guild.roles)
 

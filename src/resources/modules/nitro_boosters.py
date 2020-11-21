@@ -26,7 +26,10 @@ class NitroBoosters(Bloxlink.Module):
             if guild.unavailable:
                 return
 
-            await guild.chunk()
+            try:
+                await guild.chunk()
+            except KeyError: # FIXME: temporarily fix discord.py bug
+                pass
 
             booster_role = find(lambda r: r.name == "Nitro Booster", guild.roles)
 
