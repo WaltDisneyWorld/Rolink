@@ -27,7 +27,10 @@ class Premium(Bloxlink.Module):
             if guild.unavailable:
                 return
 
-            await guild.chunk()
+            try:
+                await guild.chunk()
+            except KeyError: # FIXME: temporarily fix discord.py bug
+                pass
 
             staff_role = find(lambda r: r.name == "Helpers", guild.roles)
 
@@ -239,7 +242,7 @@ class Premium(Bloxlink.Module):
                     profile.attributes["PREMIUM_ANYWHERE"] = True
 
         if guild and partner_check:
-            partners_cache = await cache_get("partners", guild.id)
+            partners_cache = await cache_get("partners:guilds", guild.id)
 
             if partners_cache:
                 profile.add_features("premium")

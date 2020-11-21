@@ -1,11 +1,11 @@
 from asyncio import TimeoutError
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord import Embed
-from ..structures.Bloxlink import Bloxlink
-from ..exceptions import CancelledPrompt, CancelCommand, Error
-from ..constants import RED_COLOR, INVISIBLE_COLOR
+from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
+from ..exceptions import CancelledPrompt, CancelCommand, Error # pylint: disable=import-error
+from ..constants import RED_COLOR, INVISIBLE_COLOR # pylint: disable=import-error
 from config import PROMPT, RELEASE # pylint: disable=no-name-in-module
-from ..constants import IS_DOCKER, TIP_CHANCES, SERVER_INVITE
+from ..constants import IS_DOCKER, TIP_CHANCES, SERVER_INVITE # pylint: disable=import-error
 import random
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
@@ -75,7 +75,7 @@ class Arguments:
 			return await self.response.send(text, dm=dm, no_dm_post=True)
 
 		if msg and not dm:
-			self.messages.append(msg)
+			self.messages.append(msg.id)
 
 		return msg
 
@@ -152,7 +152,7 @@ class Arguments:
 								my_arg = message.content
 
 								if prompt.get("delete_original", True):
-									self.messages.append(message)
+									self.messages.append(message.id)
 
 							if my_arg == "cluster timeout":
 								my_arg = "cancel (timeout)"
@@ -163,7 +163,7 @@ class Arguments:
 							my_arg = message.content
 
 							if prompt.get("delete_original", True):
-								self.messages.append(message)
+								self.messages.append(message.id)
 
 						my_arg_lower = my_arg.lower()
 						if my_arg_lower == "cancel":

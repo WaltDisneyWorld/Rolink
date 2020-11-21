@@ -15,7 +15,6 @@ cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "ge
 class Partners(Bloxlink.Module):
     def __init__(self):
         self.option_regex = re.compile("(.+):(.+)")
-
         self.trello_board = None
 
     async def __setup__(self):
@@ -47,7 +46,8 @@ class Partners(Bloxlink.Module):
             await self.parse_data(partners_list, "partner")
             await self.parse_data(notable_groups_list, "notable_group")
 
-        if RELEASE == "CANARY":
+
+        if RELEASE in ("CANARY", "LOCAL"):
             await Bloxlink.wait_until_ready()
 
             guild = Bloxlink.get_guild(BLOXLINK_GUILD)
@@ -58,7 +58,10 @@ class Partners(Bloxlink.Module):
             if guild.unavailable:
                 return
 
-            await guild.chunk()
+            try:
+                await guild.chunk()
+            except KeyError: # FIXME: temporarily fix discord.py bug
+                pass
 
             partners_role = find(lambda r: r.name == "Partners", guild.roles)
 
