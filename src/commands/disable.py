@@ -46,7 +46,7 @@ class DisableCommand(Bloxlink.Module):
         disable_type = CommandArgs.parsed_args["disable_type"]
         command_name = CommandArgs.parsed_args["command_name"]
 
-        if command_name in ("disable", "enable", "eval"):
+        if command_name in ("disable", "enable") or commands[command_name].developer_only:
             raise Error("You can't disable this command!")
 
         enable = disable_where = ""

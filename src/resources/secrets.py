@@ -55,7 +55,7 @@ except ImportError:
 TOKEN = env.get("TOKEN") or getattr(config, "TOKEN")
 env["TOKEN"] = "REDACTED"
 
-SENTRY_URL = env.get("SENTRY_URL") or getattr(config, "SENTRY_URL")
+SENTRY_URL = env.get("SENTRY_URL") or getattr(config, "SENTRY_URL", "")
 env["SENTRY_URL"] = "REDACTED"
 
 TOPGG_KEY = env.get("TOPGG_KEY") or getattr(config, "TOPGG_KEY", "")

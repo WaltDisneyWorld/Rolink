@@ -39,7 +39,7 @@ class Blacklist(Bloxlink.Module):
         if RELEASE in ("CANARY", "LOCAL"):
             try:
                 self.trello_board = await trello.get_board("https://trello.com/b/jkvnyaJo/blacklist")
-            except (TrelloNotFound, TrelloUnauthorized, ConnectionResetError, ClientOSError, ServerDisconnectedError):
+            except:
                 pass
             else:
                 roblox_ids = await self.trello_board.get_list(lambda l: l.name == "Roblox Accounts")

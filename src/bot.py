@@ -4,7 +4,7 @@ import config
 import logging
 from resources.constants import RELEASE # pylint: disable=import-error
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.secrets import TOKEN, SENTRY_URL, VALID_SECRETS # pylint: disable=import-error
+from resources.secrets import TOKEN # , SENTRY_URL, VALID_SECRETS # pylint: disable=import-error
 
 logger = logging.getLogger()
 logging.basicConfig(level=getattr("logging", environ.get("DEBUG_MODE", "WARNING"), "WARNING"))

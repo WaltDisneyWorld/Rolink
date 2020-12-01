@@ -837,6 +837,9 @@ class Roblox(Bloxlink.Module):
 
 
     async def guild_obligations(self, member, guild, guild_data=None, cache=True, dm=False, event=False):
+        if member.bot:
+            return
+
         roblox_user = None
         accounts = []
         donator_profile = None
