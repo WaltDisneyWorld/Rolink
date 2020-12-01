@@ -887,6 +887,7 @@ class Roblox(Bloxlink.Module):
         verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
         unverified_dm = guild_data.get("unverifiedDM")
         age_limit     = guild_data.get("ageLimit")
+        age_limit     = age_limit and age_limit.isdigit() and int(age_limit) # FIXME: remove this when ageLimit are fully converted to integers
 
         disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
         disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
@@ -970,7 +971,7 @@ class Roblox(Bloxlink.Module):
                 await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
 
             if age_limit:
-                if int(age_limit) > roblox_user.age:
+                if age_limit > roblox_user.age:
                     if dm:
                         try:
                             await member.send(f"_Bloxlink Age-Limit_\nYou were kicked from **{guild.name}** for not being at least "
