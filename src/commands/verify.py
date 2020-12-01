@@ -10,7 +10,7 @@ from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRe
 from resources.secrets import TRELLO # pylint: disable=import-error
 import random
 
-verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed"])
+verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed, guild_obligations = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed", "guild_obligations"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
@@ -70,20 +70,22 @@ class VerifyCommand(Bloxlink.Module):
             trello_options, _ = await get_options(trello_board)
             guild_data.update(trello_options)
 
-        #async with response.loading():
         try:
-            added, removed, nickname, errors, roblox_user = await update_member(
+            old_nickname = author.display_name
+
+            added, removed, nickname, errors, roblox_user = await guild_obligations(
                 CommandArgs.message.author,
                 guild                = guild,
                 guild_data           = guild_data,
                 roles                = True,
                 nickname             = True,
                 trello_board         = CommandArgs.trello_board,
-                author_data          = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
                 given_trello_options = True,
                 cache                = not premium,
                 response             = response,
-                dm                   = False)
+                dm                   = False,
+                exceptions           = ("BloxlinkBypass", "Blacklisted", "UserNotVerified")
+            )
 
         except BloxlinkBypass:
             raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
@@ -97,11 +99,18 @@ class VerifyCommand(Bloxlink.Module):
         except UserNotVerified:
             await self.add(CommandArgs)
         else:
-            welcome_message, embed = await format_update_embed(roblox_user, prefix, added, removed, errors, author, guild_data, premium)
+            welcome_message, embed = await format_update_embed(roblox_user, author, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != author.display_name else None, prefix=prefix, guild_data=guild_data, premium=premium)
+
+            if embed:
+                await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+            else:
+                if premium:
+                    embed = Embed(description="This user is all up-to-date; no changes were done.")
+                else:
+                    embed = Embed(description="This user is all up-to-date; no changes were done.\n**Disclaimer:** it may take up to "
+                                              "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
 
             await response.send(content=welcome_message, embed=embed)
-
-            await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
 
 
     @Bloxlink.subcommand()

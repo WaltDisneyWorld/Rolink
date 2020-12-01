@@ -17,7 +17,7 @@ import async_timeout
 
 eval = Bloxlink.get_module("evalm", attrs="__call__")
 post_event = Bloxlink.get_module("utils", attrs="post_event")
-update_member, get_user = Bloxlink.get_module("roblox", attrs=["update_member", "get_user"])
+guild_obligations, get_user = Bloxlink.get_module("roblox", attrs=["guild_obligations", "get_user"])
 
 
 @Bloxlink.module
@@ -63,7 +63,7 @@ class IPC(Bloxlink.Module):
             discord_id = int(data["discordID"])
             guild_id = int(data["guildID"])
             roblox_id = data["robloxID"]
-            roblox_accounts = data["robloxAccounts"]
+            #roblox_accounts = data["robloxAccounts"]
 
             guild = Bloxlink.get_guild(guild_id)
 
@@ -79,15 +79,15 @@ class IPC(Bloxlink.Module):
                 roblox_user, _ = await get_user(roblox_id=roblox_id)
 
                 try:
-                    added, removed, nickname, errors, roblox_user = await update_member(
+                    added, removed, nickname, errors, roblox_user = await guild_obligations(
                         member,
                         guild                = guild,
                         roles                = True,
                         nickname             = True,
                         roblox_user          = roblox_user,
-                        author_data          = await self.r.db("bloxlink").table("users").get(str(member.id)).run(),
                         cache                = False,
-                        dm                   = False)
+                        dm                   = False,
+                        exceptions           = ("Blacklisted", "BloxlinkBypass", "RobloxAPIError", "RobloxDown", "PermissionError"))
 
                 except Blacklisted as b:
                     blacklist_text = ""
@@ -135,7 +135,7 @@ class IPC(Bloxlink.Module):
                     except Forbidden:
                         pass
 
-                    guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
+                    guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {} # FIXME: use cache
 
                     await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
 
