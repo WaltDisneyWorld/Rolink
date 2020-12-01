@@ -15,7 +15,7 @@ class NitroBoosters(Bloxlink.Module):
         return await cache_get("nitro_boosters", author.id, primitives=True)
 
     async def load_boosters(self):
-        if RELEASE == "CANARY":
+        if RELEASE in ("CANARY", "LOCAL"):
             await Bloxlink.wait_until_ready()
 
             guild = Bloxlink.get_guild(BLOXLINK_GUILD)

@@ -36,7 +36,7 @@ class Blacklist(Bloxlink.Module):
 
 
     async def load_blacklist(self):
-        if RELEASE == "CANARY":
+        if RELEASE in ("CANARY", "LOCAL"):
             try:
                 self.trello_board = await trello.get_board("https://trello.com/b/jkvnyaJo/blacklist")
             except (TrelloNotFound, TrelloUnauthorized, ConnectionResetError, ClientOSError, ServerDisconnectedError):
