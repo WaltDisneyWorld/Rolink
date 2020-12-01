@@ -74,70 +74,70 @@ class IPC(Bloxlink.Module):
                     try:
                         member = await guild.fetch_member(discord_id)
                     except NotFound:
-                        pass
+                        return
+
+                roblox_user, _ = await get_user(roblox_id=roblox_id)
+
+                try:
+                    added, removed, nickname, errors, roblox_user = await update_member(
+                        member,
+                        guild                = guild,
+                        roles                = True,
+                        nickname             = True,
+                        roblox_user          = roblox_user,
+                        author_data          = await self.r.db("bloxlink").table("users").get(str(member.id)).run(),
+                        cache                = False,
+                        dm                   = False)
+
+                except Blacklisted as b:
+                    blacklist_text = ""
+
+                    if str(b):
+                        blacklist_text = f"You have an active restriction for: ``{b}``"
                     else:
-                        roblox_user, _ = await get_user(roblox_id=roblox_id)
+                        blacklist_text = f"You have an active restriction from Bloxlink."
 
-                        try:
-                            added, removed, nickname, errors, roblox_user = await update_member(
-                                member,
-                                guild                = guild,
-                                roles                = True,
-                                nickname             = True,
-                                roblox_user          = roblox_user,
-                                author_data          = await self.r.db("bloxlink").table("users").get(str(member.id)).run(),
-                                cache                = False,
-                                dm                   = False)
+                    try:
+                        await member.send(f"Failed to update you in the server: ``{blacklist_text}``")
+                    except Forbidden:
+                        pass
 
-                        except Blacklisted as b:
-                            blacklist_text = ""
+                except BloxlinkBypass:
+                    try:
+                        await member.send(f"You have the ``Bloxlink Bypass`` role, so I am unable to update you in the server.")
+                    except Forbidden:
+                        pass
 
-                            if str(b):
-                                blacklist_text = f"You have an active restriction for: ``{b}``"
-                            else:
-                                blacklist_text = f"You have an active restriction from Bloxlink."
+                except RobloxAPIError:
+                    try:
+                        await member.send("An unknown Roblox API error occured, so I was unable to update you in the server. Please try again later.")
+                    except Forbidden:
+                        pass
 
-                            try:
-                                await member.send(f"Failed to update you in the server: ``{blacklist_text}``")
-                            except Forbidden:
-                                pass
+                except RobloxDown:
+                    try:
+                        await member.send("Roblox appears to be down, so I was unable to retrieve your Roblox information. Please try again later.")
+                    except Forbidden:
+                        pass
 
-                        except BloxlinkBypass:
-                            try:
-                                await member.send(f"You have the ``Bloxlink Bypass`` role, so I am unable to update you in the server.")
-                            except Forbidden:
-                                pass
+                except PermissionError as e:
+                    try:
+                        await member.send(f"A permission error occured, so I was unable to update you in the server: ``{e}``")
+                    except Forbidden:
+                        pass
 
-                        except RobloxAPIError:
-                            try:
-                                await member.send("An unknown Roblox API error occured, so I was unable to update you in the server. Please try again later.")
-                            except Forbidden:
-                                pass
+                except CancelCommand:
+                    pass
 
-                        except RobloxDown:
-                            try:
-                                await member.send("Roblox appears to be down, so I was unable to retrieve your Roblox information. Please try again later.")
-                            except Forbidden:
-                                pass
+                else:
+                    try:
+                        await member.send(f"Your account was successfully updated to **{roblox_user.username}** in the server **{guild.name}.**")
+                    except Forbidden:
+                        pass
 
-                        except PermissionError as e:
-                            try:
-                                await member.send(f"A permission error occured, so I was unable to update you in the server: ``{e}``")
-                            except Forbidden:
-                                pass
+                    guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
 
-                        except CancelCommand:
-                            pass
-
-                        else:
-                            try:
-                                await member.send(f"Your account was successfully updated to **{roblox_user.username}** in the server **{guild.name}.**")
-                            except Forbidden:
-                                pass
-
-                            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {}
-
-                            await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+                    await post_event(guild, guild_data, "verification", f"{member.mention} has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
 
 
         elif type == "EVAL":
