@@ -372,7 +372,7 @@ class Commands(Bloxlink.Module):
 
                                 if not actually_dm and guild_data.get("promptDelete", DEFAULTS.get("promptDelete")):
                                     try:
-                                        await channel.purge(limit=50, check=lambda m: m.id in (*arguments.messages, *response.delete_message_queue))
+                                        await channel.purge(limit=100, check=lambda m: m.id in (*arguments.messages, *response.delete_message_queue))
                                     except (Forbidden, HTTPException):
                                         pass
 
