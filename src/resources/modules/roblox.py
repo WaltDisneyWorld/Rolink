@@ -364,16 +364,18 @@ class Roblox(Bloxlink.Module):
 
         return clan_tag
 
-    async def format_update_embed(self, roblox_user, prefix, added, removed, errors, author, guild_data, premium=False):
+    async def format_update_embed(self, roblox_user, author, added, removed, errors, *, nickname, prefix, guild_data, premium=False):
         welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
         welcome_message = await self.get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False, prefix=prefix)
 
         embed = None
 
-        if added or removed or errors:
+        if added or removed or errors or nickname:
             embed = Embed(title=f"Discord Profile for {roblox_user.username}")
             embed.set_author(name=str(author), icon_url=author.avatar_url, url=roblox_user.profile_link)
 
+            if nickname:
+                embed.add_field(name="Nickname", value=nickname)
             if added:
                 embed.add_field(name="Added Roles", value=", ".join(added))
             if removed:
@@ -381,6 +383,10 @@ class Roblox(Bloxlink.Module):
             if errors:
                 embed.add_field(name="Errors", value=", ".join(errors))
 
+            if not premium:
+                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
+
+        """
         if not premium:
             show_donate_tip = random.randint(1, 100)
 
@@ -396,6 +402,7 @@ class Roblox(Bloxlink.Module):
                 else:
                     welcome_message = f"{welcome_message}\nPlease note that it may take up to **10 minutes** for Bloxlink to recognize a recent rank change " \
                                       "due to caching."
+        """
 
         return welcome_message, embed
 
@@ -836,19 +843,21 @@ class Roblox(Bloxlink.Module):
         return role_binds, group_ids, trello_binds_list
 
 
-    async def guild_obligations(self, member, guild, guild_data=None, cache=True, dm=False, event=False):
+    async def guild_obligations(self, member, guild, guild_data=None, cache=True, dm=False, event=False, response=None, exceptions=False, roles=True, nickname=True, trello_board=None, roblox_user=None, given_trello_options=False):
         if member.bot:
-            return
+            raise CancelCommand
 
         roblox_user = None
         accounts = []
         donator_profile = None
+        exceptions = exceptions or ()
+        added, removed, errored, chosen_nickname = [], [], [], None
 
         if RELEASE == "PRO":
             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not donator_profile.features.get("pro"):
-                return
+                raise CancelCommand
 
             PREFIX = "!"
         else:
@@ -856,41 +865,39 @@ class Roblox(Bloxlink.Module):
 
         try:
             roblox_user, accounts = await self.get_user(author=member, everything=True, cache=cache)
-        except (UserNotVerified, RobloxAPIError):
-            pass
-        except RobloxAPIError:
-            if dm:
-                try:
-                    # TODO: show correct prefix
-                    await member.send("The Roblox API appears to be down, so unfortunately I was unable to "
-                                      "update you in the server. Please try again later.")
-                except Forbidden:
-                    pass
-                finally:
-                    return
+        except (UserNotVerified, RobloxAPIError) as e:
+            if "UserNotVerified" in exceptions:
+                raise UserNotVerified from e
+            elif "RobloxAPIError" in exceptions:
+                raise RobloxAPIError from e
+
+            return added, removed, chosen_nickname, errored, roblox_user
+
+        if not (roblox_user and accounts) and "UserNotVerified" in exceptions:
+            raise UserNotVerified
 
         guild_data = guild_data or await cache_get("guild_data", guild.id)
 
         if not guild_data:
             guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
 
-            trello_board = await get_board(guild=guild, guild_data=guild_data)
+            trello_board = trello_board or await get_board(guild=guild, guild_data=guild_data)
             trello_options = {}
 
-            if trello_board:
+            if not given_trello_options and trello_board:
                 trello_options, _ = await get_options(trello_board)
                 guild_data.update(trello_options)
 
             await cache_set("guild_data", guild.id, guild_data)
 
-        group_roles       = guild_data.get("autoRoles", DEFAULTS.get("autoRoles"))
-        verify_enabled    = guild_data.get("verifiedRoleEnabled", DEFAULTS.get("verifiedRoleEnabled"))
-        auto_verification = guild_data.get("autoVerification", verify_enabled)
-
         verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
         unverified_dm = guild_data.get("unverifiedDM")
         age_limit     = guild_data.get("ageLimit")
-        age_limit     = age_limit and age_limit.isdigit() and int(age_limit) # FIXME: remove this when ageLimit are fully converted to integers
+
+        try:
+            age_limit = int(age_limit) #FIXME
+        except TypeError:
+            age_limit = None
 
         disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
         disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
@@ -928,6 +935,8 @@ class Roblox(Bloxlink.Module):
                                         else:
                                             await post_event(guild, guild_data, "moderation", f"{user_find.mention} is an alt of {member.mention} and has been ``kicked``.", RED_COLOR)
 
+                                            raise CancelCommand
+
                                 if disallow_ban_evaders:
                                     # check the bans
 
@@ -936,35 +945,51 @@ class Roblox(Bloxlink.Module):
                                     except (NotFound, Forbidden):
                                         pass
                                     else:
+                                        action = disallow_ban_evaders == "kick" and "kick" or "ban"
+                                        action_participle = action == "kick" and "kicked" or "banned"
+
                                         try:
-                                            await guild.ban(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})")
+                                            await ((getattr(guild, action))(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})"))
                                         except (Forbidden, HTTPException):
                                             pass
                                         else:
-                                            await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``banned``.", RED_COLOR)
-                                        finally:
-                                            return
+                                            await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``{action_participle}``.", RED_COLOR)
 
+                                            raise CancelCommand
 
-        if auto_verification or group_roles:
-            try:
-                added, removed, nickname, errors, _ = await self.update_member(
-                    member,
-                    guild                   = guild,
-                    guild_data              = guild_data,
-                    group_roles             = group_roles,
-                    roles                   = True,
-                    nickname                = True,
-                    roblox_user             = roblox_user,
-                    given_trello_options    = True,
-                    cache                   = cache,
-                    dm                      = dm)
+                                        return added, removed, chosen_nickname, errored, roblox_user
+        try:
+            added, removed, chosen_nickname, errored, _ = await self.update_member(
+                member,
+                guild                   = guild,
+                guild_data              = guild_data,
+                roles                   = roles,
+                trello_board            = trello_board,
+                nickname                = nickname,
+                roblox_user             = roblox_user,
+                given_trello_options    = True,
+                cache                   = cache,
+                dm                      = dm,
+                response                = response)
 
-            except (NotFound, RobloxAPIError, Error, CancelCommand, RobloxDown, Blacklisted):
-                return
+        except (NotFound, RobloxAPIError, Error, CancelCommand, RobloxDown, Blacklisted) as e:
+            if "NotFound" in exceptions:
+                raise NotFound from e
+            elif "RobloxAPIError" in exceptions:
+                raise RobloxAPIError from e
+            elif "Error" in exceptions:
+                raise Error from e
+            elif "CancelCommand" in exceptions:
+                raise CancelCommand from e
+            elif "RobloxDown" in exceptions:
+                raise RobloxDown from e
+            elif "Blacklisted" in exceptions:
+                raise Blacklisted from e
 
-            except (PermissionError, NotFound, RobloxAPIError, UserNotVerified, BloxlinkBypass, HTTPException):
-                pass
+            return added, removed, chosen_nickname, errored, roblox_user
+
+        except (PermissionError, UserNotVerified, BloxlinkBypass, HTTPException):
+            pass
 
 
         required_groups = guild_data.get("groupLock") # TODO: integrate with Trello
@@ -988,8 +1013,10 @@ class Roblox(Bloxlink.Module):
                         await member.kick(reason=f"AGE-LIMIT: user age {roblox_user.age} < {age_limit}")
                     except Forbidden:
                         pass
+                    else:
+                        raise CancelCommand
 
-                    return
+                    return added, removed, chosen_nickname, errored, roblox_user
 
             if required_groups:
                 for group_id, group_data in required_groups.items():
@@ -1011,8 +1038,10 @@ class Roblox(Bloxlink.Module):
                             await member.kick(reason=f"SERVER-LOCK: not in group {group_id}")
                         except Forbidden:
                             pass
+                        else:
+                            raise CancelCommand
 
-                        return
+                        return added, removed, chosen_nickname, errored, roblox_user
 
             if dm and verified_dm:
                 verified_dm = await self.get_nickname(member, verified_dm, guild_data=guild_data, roblox_user=roblox_user, dm=dm, is_nickname=False)
@@ -1032,11 +1061,11 @@ class Roblox(Bloxlink.Module):
                         try:
                             if accounts:
                                 await member.send(f"_Bloxlink Server-Lock_\nYou have no primary account set! Please go to {ACCOUNT_SETTINGS_URL} and set a "
-                                                "primary account, then try rejoining this server.")
+                                                   "primary account, then try rejoining this server.")
                             else:
                                 await member.send(f"_Bloxlink Server-Lock_\nYou were kicked from **{guild.name}** for not being linked to Bloxlink.\n"
-                                                f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
-                                                f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
+                                                  f"You may link your account by joining {SERVER_INVITE} and running the ``{PREFIX}switchuser`` command "
+                                                  f"and provide this ID to the command: ``{guild.id}``, or run ``{PREFIX}verify add`` and set a primary account for any server.")
                         except Forbidden:
                             pass
 
@@ -1044,8 +1073,10 @@ class Roblox(Bloxlink.Module):
                         await member.kick(reason=f"AGE-LIMIT: user not linked to Bloxlink")
                     except Forbidden:
                         pass
+                    else:
+                        raise CancelCommand
 
-                    return
+                    return added, removed, chosen_nickname, errored, roblox_user
 
             if required_groups:
                 if dm:
@@ -1064,8 +1095,10 @@ class Roblox(Bloxlink.Module):
                     await member.kick(reason="SERVER-LOCK: not linked to Bloxlink")
                 except Forbidden:
                     pass
+                else:
+                    raise CancelCommand
 
-                return
+                return added, removed, chosen_nickname, errored, roblox_user
 
             if dm and unverified_dm:
                 unverified_dm = await self.get_nickname(member, unverified_dm, guild_data=guild_data, skip_roblox_check=True, dm=dm, is_nickname=False)
@@ -1075,7 +1108,10 @@ class Roblox(Bloxlink.Module):
                 except (Forbidden, HTTPException):
                     pass
 
-    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False, response=None, dm=False, cache=True):
+        return added, removed, chosen_nickname, errored, roblox_user
+
+
+    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, given_trello_options=False, response=None, dm=False, cache=True):
         blacklisted = await cache_get("blacklist:discord_ids", author.id, primitives=True)
 
         if blacklisted is not None:
@@ -1098,7 +1134,6 @@ class Roblox(Bloxlink.Module):
 
         add_roles, remove_roles = set(), set()
         possible_nicknames = []
-        possible_bind_nicknames = []
         errors = []
         unverified = False
         top_role_nickname = None

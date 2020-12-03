@@ -39,6 +39,8 @@ class LogChannelCommand(Bloxlink.Module):
 
     @Bloxlink.subcommand()
     async def change(self, CommandArgs):
+        """add/delete a log channel"""
+
         prefix = CommandArgs.prefix
         response = CommandArgs.response
         guild_data = CommandArgs.guild_data
@@ -117,6 +119,8 @@ class LogChannelCommand(Bloxlink.Module):
 
     @Bloxlink.subcommand()
     async def view(self, CommandArgs):
+        """view your log channels"""
+
         guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
 

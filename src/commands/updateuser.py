@@ -1,13 +1,14 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Error, UserNotVerified, Message, BloxlinkBypass, CancelCommand, PermissionError, Blacklisted # pylint: disable=import-error
 from config import REACTIONS # pylint: disable=no-name-in-module
-from resources.constants import CACHE_CLEAR, RELEASE # pylint: disable=import-error
+from resources.constants import CACHE_CLEAR, RELEASE, GREEN_COLOR # pylint: disable=import-error
 from discord import Embed, Object, Role
 import math
 
-update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
+guild_obligations, format_update_embed = Bloxlink.get_module("roblox", attrs=["guild_obligations", "format_update_embed"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 get_features = Bloxlink.get_module("premium", attrs="get_features")
+post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 @Bloxlink.command
 class UpdateUserCommand(Bloxlink.Module):
@@ -118,22 +119,22 @@ class UpdateUserCommand(Bloxlink.Module):
                     await self.redis.set(redis_cooldown_key, 2, ex=86400)
 
             trello_board = CommandArgs.trello_board
-            trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
+            #trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
             #async with response.loading():
             if len_users > 1:
                 for user in users:
                     if not user.bot:
                         try:
-                            added, removed, nickname, errors, roblox_user = await update_member(
+                            added, removed, nickname, errors, roblox_user = await guild_obligations(
                                 user,
                                 guild             = guild,
                                 guild_data        = guild_data,
                                 trello_board      = trello_board,
-                                trello_binds_list = trello_binds_list,
                                 roles             = True,
                                 nickname          = True,
-                                author_data       = await self.r.db("bloxlink").table("users").get(str(user.id)).run(),
+                                dm                = False,
+                                exceptions        = ("BloxlinkBypass", "UserNotVerified", "Blacklisted"),
                                 cache             = not premium)
                         except BloxlinkBypass:
                             if len_users <= 10:
@@ -153,37 +154,31 @@ class UpdateUserCommand(Bloxlink.Module):
                 if user.bot:
                     raise Message("Bots can't have Roblox accounts!", type="silly")
 
+                old_nickname = user.display_name
+
                 try:
-                    added, removed, nickname, errors, roblox_user = await update_member(
+                    added, removed, nickname, errors, roblox_user = await guild_obligations(
                         user,
                         guild             = guild,
                         guild_data        = guild_data,
                         trello_board      = trello_board,
-                        trello_binds_list = trello_binds_list,
                         roles             = True,
                         nickname          = True,
-                        author_data       = await self.r.db("bloxlink").table("users").get(str(user.id)).run(),
-                        cache             = not premium)
+                        cache             = not premium,
+                        dm                = False,
+                        exceptions        = ("BloxlinkBypass", "Blacklisted", "CancelCommand", "UserNotVerified"))
 
-                    embed = Embed(title=f"Discord Profile for {user}", description=f"Changed someone’s group rank? Please wait {CACHE_CLEAR} minutes for Bloxlink to catch up!")
-                    embed.set_author(name=str(user), icon_url=user.avatar_url, url=roblox_user.profile_link)
+                    _, embed = await format_update_embed(roblox_user, user, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != user.display_name else None, prefix=prefix, guild_data=guild_data, premium=premium)
 
-                    if not (added or removed):
-                        raise Message(f"All caught up! There are no roles to add or remove. Please note that you may need to wait {CACHE_CLEAR} minutes for the "
-                                       "Bloxlink cache to clear if this user was recently promoted/demoted.", type="success")
-
-                    if added:
-                        embed.add_field(name="Added Roles", value=", ".join(added))
-                    if removed:
-                        embed.add_field(name="Removed Roles", value=", ".join(removed))
-                    if nickname:
-                        embed.description = f"**Nickname:** ``{nickname}``\nChanged someone’s group rank? Please wait 10 minutes for Bloxlink to catch up!"
-                    if errors:
-                        embed.add_field(name="Errors", value=", ".join(errors))
-
-                    embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
-
-                    await response.send(embed=embed)
+                    if embed:
+                        await response.send(embed=embed)
+                        await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
+                    else:
+                        if premium:
+                            await response.success("This user is all up-to-date; no changes were done.")
+                        else:
+                            await response.success("This user is all up-to-date; no changes were done.\n**Disclaimer:** it may take up to "
+                                                   "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
 
                 except BloxlinkBypass:
                     raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")
@@ -193,6 +188,9 @@ class UpdateUserCommand(Bloxlink.Module):
                         raise Error(f"{user.mention} has an active restriction for: ``{b}``")
                     else:
                         raise Error(f"{user.mention} has an active restriction from Bloxlink.")
+
+                except CancelCommand:
+                    pass
 
                 except UserNotVerified:
                     raise Error("This user is not linked to Bloxlink.")

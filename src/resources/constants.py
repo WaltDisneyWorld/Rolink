@@ -4,7 +4,7 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.13"
+VERSION = "v3.14"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
@@ -120,11 +120,10 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "banRelatedAccounts":    (None, "boolean", None, True,  "If this is enabled: when members are banned, their known alts are also banned from the server."),
     "unbanRelatedAccounts":  (None, "boolean", None, True,  "If this is enabled: when members are unbanned, their known alts are also unbanned from the server."),
     "disallowAlts":          (None, "boolean", None, True,  "If this is enabled: when someone joins the server and already has a linked account in the server, kick the old alt out."),
-    "disallowBanEvaders":    (None, "boolean", None, True,  "If this is enabled: when members join, and they have a banned account in the server, their new account will also be banned."),
+    "disallowBanEvaders":    (None, "choice", ("ban", "kick"), True,  "If this is enabled: when members join, and they have a banned account in the server, their new account will also be actioned."),
     #"groupShoutChannel":     (lambda g, gd: g.get_channel(int(gd.get("groupShoutChannel", "0"))),  None, None, True, "Group shouts will be sent to your Discord channel."),
     "whiteLabel":            (lambda g, gd: bool(gd.get("customBot")),  None, None, True,      "Modify the username and profile picture of __most__ Bloxlink responses."),
     "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."),
-    #"groupRequired":         (None, "boolean", None, False, "Toggle whether ``{prefix}getrole`` should require at least one role bind to work."),
     "trelloBindMode":        (None, "choice", ("merge", "replace"), False, "Choose 'replace' if trello binds should replace the server binds, or 'merge' if trello binds should be merged with the server binds. Default = merge."),
 }
 

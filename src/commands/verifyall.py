@@ -10,7 +10,7 @@ import math
 
 loop = asyncio.get_event_loop()
 
-update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
+guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 
 
 class Comparable:
@@ -42,7 +42,7 @@ class VerifyAllCommand(Bloxlink.Module):
         self.queue_loop_running = False
         self.REDIS_COOLDOWN_KEY = "guild_scan:{id}"
 
-    async def process_guild(self, guild, author=None, roles=True, nickname=True, guild_data=None, trello_board=None, trello_binds_list=None, response=None):
+    async def process_guild(self, guild, author=None, roles=True, nickname=True, guild_data=None, trello_board=None, response=None):
         if not guild.chunked:
             try:
                 await guild.chunk()
@@ -68,15 +68,17 @@ class VerifyAllCommand(Bloxlink.Module):
 
                 if not member.bot:
                     try:
-                        added, removed, nickname, errors, roblox_user = await update_member(
+                        added, removed, nickname, errors, roblox_user = await guild_obligations(
                             member,
                             guild             = guild,
                             guild_data        = guild_data,
                             trello_board      = trello_board,
-                            trello_binds_list = trello_binds_list,
                             roles             = roles,
                             nickname          = nickname,
-                            author_data       = await self.r.db("bloxlink").table("users").get(str(member.id)).run())
+                            dm                = False,
+                            exceptions        = ("BloxlinkBypass", "UserNotVerified", "PermissionError", "RobloxNotFound",
+                                                "Forbidden", "RobloxAPIError", "CancelCommand", "Blacklisted", "NotFound", "Error", "RobloxDown")
+                        )
 
                     except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden, RobloxAPIError, CancelCommand, Blacklisted):
                         pass
@@ -121,14 +123,13 @@ class VerifyAllCommand(Bloxlink.Module):
                     guild = data[2]
                     author = data[3]
                     response = data[4]
-                    trello_binds_list = data[5]
-                    trello_board = data[6]
-                    update_roles = data[7]
-                    update_nickname = data[8]
-                    guild_data = data[9]
+                    trello_board = data[5]
+                    update_roles = data[6]
+                    update_nickname = data[7]
+                    guild_data = data[8]
 
                     if guild:
-                        tasks.append(self.process_guild(guild, author=author, roles=update_roles, nickname=update_nickname, guild_data=guild_data, trello_board=trello_board, trello_binds_list=trello_binds_list, response=response))
+                        tasks.append(self.process_guild(guild, author=author, roles=update_roles, nickname=update_nickname, guild_data=guild_data, trello_board=trello_board, response=response))
 
             await asyncio.wait(tasks)
 
@@ -144,7 +145,6 @@ class VerifyAllCommand(Bloxlink.Module):
         author = CommandArgs.message.author
 
         trello_board = CommandArgs.trello_board
-        trello_binds_list = trello_board and await trello_board.get_list(lambda l: l.name.lower() == "bloxlink binds")
 
         if self.redis:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
@@ -172,7 +172,7 @@ class VerifyAllCommand(Bloxlink.Module):
             update_roles    = update_what in ("roles", "both")
             update_nickname = update_what in ("nickname", "both")
 
-            t = (len(guild.members), Comparable(guild.id), guild, author, response, trello_binds_list, trello_board, update_roles, update_nickname, guild_data)
+            t = (len(guild.members), Comparable(guild.id), guild, author, response, trello_board, update_roles, update_nickname, guild_data)
 
             heapq.heappush(self.queue, t)
 
