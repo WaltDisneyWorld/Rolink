@@ -893,7 +893,11 @@ class Roblox(Bloxlink.Module):
         verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
         unverified_dm = guild_data.get("unverifiedDM")
         age_limit     = guild_data.get("ageLimit")
-        age_limit     = age_limit and age_limit.isdigit() and int(age_limit) # FIXME: remove this when ageLimit are fully converted to integers
+
+        try:
+            age_limit = int(age_limit) #FIXME
+        except TypeError:
+            age_limit = None
 
         disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
         disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
@@ -941,12 +945,15 @@ class Roblox(Bloxlink.Module):
                                     except (NotFound, Forbidden):
                                         pass
                                     else:
+                                        action = disallow_ban_evaders == "kick" and "kick" or "ban"
+                                        action_participle = action == "kick" and "kicked" or "banned"
+
                                         try:
-                                            await guild.ban(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})")
+                                            await ((getattr(guild, action))(member, reason=f"disallowBanEvaders is enabled - alt of {ban_entry.user} ({ban_entry.user.id})"))
                                         except (Forbidden, HTTPException):
                                             pass
                                         else:
-                                            await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``banned``.", RED_COLOR)
+                                            await post_event(guild, guild_data, "moderation", f"{member.mention} is an alt of {ban_entry.user.mention} and has been ``{action_participle}``.", RED_COLOR)
 
                                             raise CancelCommand
 
@@ -957,6 +964,7 @@ class Roblox(Bloxlink.Module):
                 guild                   = guild,
                 guild_data              = guild_data,
                 roles                   = roles,
+                trello_board            = trello_board,
                 nickname                = nickname,
                 roblox_user             = roblox_user,
                 given_trello_options    = True,
@@ -1103,7 +1111,7 @@ class Roblox(Bloxlink.Module):
         return added, removed, chosen_nickname, errored, roblox_user
 
 
-    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, trello_binds_list=None, given_trello_options=False, response=None, dm=False, cache=True):
+    async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, given_trello_options=False, response=None, dm=False, cache=True):
         blacklisted = await cache_get("blacklist:discord_ids", author.id, primitives=True)
 
         if blacklisted is not None:
@@ -1165,9 +1173,6 @@ class Roblox(Bloxlink.Module):
         verified_role_name = guild_data.get("verifiedRoleName", DEFAULTS.get("verifiedRoleName"))
 
         allow_old_roles = guild_data.get("allowOldRoles", DEFAULTS.get("allowOldRoles"))
-
-        disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
-        disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
 
         if unverify_role:
             unverified_role = find(lambda r: r.name == unverified_role_name and not r.managed, guild.roles)
