@@ -1,16 +1,12 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from discord.errors import Forbidden, NotFound
 from discord import Embed, Object
-from os import environ as env
-from time import time
 from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted # pylint: disable=import-error
-from resources.constants import (DEFAULTS, NICKNAME_TEMPLATES, CACHE_CLEAR, TIP_CHANCES, GREEN_COLOR, ORANGE_COLOR, # pylint: disable=import-error
+from resources.constants import (NICKNAME_TEMPLATES, CACHE_CLEAR, TIP_CHANCES, GREEN_COLOR, ORANGE_COLOR, # pylint: disable=import-error
                                 BROWN_COLOR, ARROW, VERIFY_URL, ACCOUNT_SETTINGS_URL) # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 from resources.secrets import TRELLO # pylint: disable=import-error
-import random
 
-verify_as, update_member, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed, guild_obligations = Bloxlink.get_module("roblox", attrs=["verify_as", "update_member", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed", "guild_obligations"])
+verify_as, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed, guild_obligations = Bloxlink.get_module("roblox", attrs=["verify_as", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed", "guild_obligations"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
