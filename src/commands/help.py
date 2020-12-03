@@ -110,6 +110,9 @@ class HelpCommand(Bloxlink.Module):
 
                 category = categories.get(command.category, [])
 
+
+                subcommands = "" # FIXME: bring back subcommands when the new paginator is implemented
+                """
                 if command.subcommands:
                     subcommands = [""]
 
@@ -120,6 +123,7 @@ class HelpCommand(Bloxlink.Module):
                     subcommands = "\n".join(subcommands)
                 else:
                     subcommands = ""
+                """
 
                 category.append(f"``{prefix}{command.name}`` {ARROW} {command.description}{subcommands}")
                 categories[command.category] = category
