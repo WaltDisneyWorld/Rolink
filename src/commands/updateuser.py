@@ -175,9 +175,9 @@ class UpdateUserCommand(Bloxlink.Module):
                         await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
                     else:
                         if premium:
-                            await response.success("This user is all up-to-date; no changes were done.")
+                            await response.success("This user is all up-to-date; no changes were made.")
                         else:
-                            await response.success("This user is all up-to-date; no changes were done.\n**Disclaimer:** it may take up to "
+                            await response.success("This user is all up-to-date; no changes were made.\n**Disclaimer:** it may take up to "
                                                    "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
 
                 except BloxlinkBypass:
