@@ -32,6 +32,7 @@ class EvalM(Bloxlink.Module):
 			"message": message,
 			"r": self.r,
 			"redis": self.redis,
+			"cache": self.cache,
 			"_": self._last_result
 		}
 

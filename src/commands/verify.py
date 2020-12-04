@@ -101,9 +101,9 @@ class VerifyCommand(Bloxlink.Module):
                 await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
             else:
                 if premium:
-                    embed = Embed(description="This user is all up-to-date; no changes were done.")
+                    embed = Embed(description="This user is all up-to-date; no changes were made.")
                 else:
-                    embed = Embed(description="This user is all up-to-date; no changes were done.\n**Disclaimer:** it may take up to "
+                    embed = Embed(description="This user is all up-to-date; no changes were made.\n**Disclaimer:** it may take up to "
                                               "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
 
             await response.send(content=welcome_message, embed=embed)

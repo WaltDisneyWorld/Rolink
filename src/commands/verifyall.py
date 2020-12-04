@@ -148,7 +148,7 @@ class VerifyAllCommand(Bloxlink.Module):
 
         if self.redis:
             redis_cooldown_key = self.REDIS_COOLDOWN_KEY.format(release=RELEASE, id=guild.id)
-            on_cooldown = await self.redis.get(redis_cooldown_key)
+            on_cooldown = await self.cache.get(redis_cooldown_key)
 
             if on_cooldown:
                 cooldown_time = math.ceil(await self.redis.ttl(redis_cooldown_key)/60)

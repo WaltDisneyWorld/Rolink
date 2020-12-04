@@ -850,6 +850,7 @@ class Roblox(Bloxlink.Module):
         roblox_user = None
         accounts = []
         donator_profile = None
+        unverified = False
         exceptions = exceptions or ()
         added, removed, errored, chosen_nickname = [], [], [], None
 
@@ -865,16 +866,14 @@ class Roblox(Bloxlink.Module):
 
         try:
             roblox_user, accounts = await self.get_user(author=member, everything=True, cache=cache)
-        except (UserNotVerified, RobloxAPIError) as e:
-            if "UserNotVerified" in exceptions:
-                raise UserNotVerified from e
-            elif "RobloxAPIError" in exceptions:
+        except UserNotVerified:
+            unverified = True
+        except RobloxAPIError as e:
+            if "RobloxAPIError" in exceptions:
                 raise RobloxAPIError from e
 
             return added, removed, chosen_nickname, errored, roblox_user
 
-        if not (roblox_user and accounts) and "UserNotVerified" in exceptions:
-            raise UserNotVerified
 
         guild_data = guild_data or await cache_get("guild_data", guild.id)
 
@@ -889,10 +888,20 @@ class Roblox(Bloxlink.Module):
                 guild_data.update(trello_options)
 
             await cache_set("guild_data", guild.id, guild_data)
+            await cache_set("verifiedDM", guild.id, guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage")))
+            await cache_set("unverifiedDM", guild.id, guild_data.get("unverifiedDM"))
+            await cache_set("ageLimit", guild.id, guild_data.get("ageLimit"))
 
-        verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
-        unverified_dm = guild_data.get("unverifiedDM")
-        age_limit     = guild_data.get("ageLimit")
+        #verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
+        #unverified_dm = guild_data.get("unverifiedDM")
+        #age_limit     = guild_data.get("ageLimit")
+        verified_dm   = await cache_get("verifiedDM", guild.id, primitives=True)
+        unverified_dm = await cache_get("unverifiedDM", guild.id, primitives=True)
+        age_limit     = await cache_get("ageLimit", guild.id, primitives=True)
+
+        verified_dm = verified_dm if verified_dm is not None else guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
+        unverified_dm = unverified_dm if unverified_dm is not None else guild_data.get("unverifiedDM")
+        age_limit = age_limit if age_limit is not None else guild_data.get("ageLimit")
 
         try:
             age_limit = int(age_limit) #FIXME
@@ -990,7 +999,6 @@ class Roblox(Bloxlink.Module):
 
         except (PermissionError, UserNotVerified, BloxlinkBypass, HTTPException):
             pass
-
 
         required_groups = guild_data.get("groupLock") # TODO: integrate with Trello
 
@@ -1108,7 +1116,11 @@ class Roblox(Bloxlink.Module):
                 except (Forbidden, HTTPException):
                     pass
 
-        return added, removed, chosen_nickname, errored, roblox_user
+        if not unverified:
+            return added, removed, chosen_nickname, errored, roblox_user
+        else:
+            if "UserNotVerified" in exceptions:
+                raise UserNotVerified
 
 
     async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, given_trello_options=False, response=None, dm=False, cache=True):
