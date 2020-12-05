@@ -874,6 +874,8 @@ class Roblox(Bloxlink.Module):
 
             return added, removed, chosen_nickname, errored, roblox_user
 
+        if not roblox_user:
+            unverified = True
 
         guild_data = guild_data or await cache_get("guild_data", guild.id)
 
