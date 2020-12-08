@@ -76,3 +76,5 @@ class RobloxSearchCommand(Bloxlink.Module):
                 else:
                     message.content = f"{prefix}getinfo {target}"
                     return await parse_message(message)
+            else:
+                raise Error("This Roblox account doesn't exist.")
