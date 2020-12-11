@@ -1,10 +1,9 @@
-from io import StringIO
 from discord.errors import Forbidden, HTTPException, DiscordException, NotFound
 from discord import Object
-from ..exceptions import PermissionError, Message
-from ..structures import Bloxlink, Paginate
-from config import PREFIX, REACTIONS # pylint: disable=E0611
-from ..constants import IS_DOCKER, EMBED_COLOR
+from ..exceptions import PermissionError, Message # pylint: disable=no-name-in-module, import-error
+from ..structures import Bloxlink, Paginate # pylint: disable=no-name-in-module, import-error
+from config import REACTIONS # pylint: disable=no-name-in-module
+from ..constants import IS_DOCKER, EMBED_COLOR # pylint: disable=no-name-in-module, import-error
 import asyncio
 
 loop = asyncio.get_event_loop()

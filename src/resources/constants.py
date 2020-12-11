@@ -180,7 +180,6 @@ TABLE_STRUCTURE = {
     "bloxlink": [
         "users",
         "guilds",
-        "groupShouts",
         "gameVerification",
         "robloxAccounts",
         "commands",
@@ -189,7 +188,6 @@ TABLE_STRUCTURE = {
     ],
     "canary": [
         "guilds",
-        "groupShouts"
     ],
     "patreon": [
         "refreshTokens",
@@ -223,3 +221,8 @@ TIP_CHANCES = {
     "GETROLE_DONATE": 10
 }
 
+TRELLO = {
+	"CARD_LIMIT": 100,
+	"LIST_LIMIT": 10,
+    "TRELLO_BOARD_CACHE_EXPIRATION": 10 * 60
+}

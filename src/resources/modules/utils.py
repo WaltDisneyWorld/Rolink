@@ -1,15 +1,12 @@
 from os import listdir
 from re import compile
-from ..structures import Bloxlink, DonatorProfile
-from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, Message, CancelCommand
-from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=E0611
-from ..constants import RELEASE, TRANSFER_COOLDOWN
+from ..structures import Bloxlink # pylint: disable=import-error, no-name-in-module
+from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, CancelCommand # pylint: disable=import-error, no-name-in-module
+from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=import-error, no-name-in-module
+from ..constants import RELEASE # pylint: disable=import-error, no-name-in-module
 from discord.errors import NotFound, Forbidden
-from discord.utils import find
-from discord import Object, Embed
+from discord import Embed
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
-from time import time
-from math import ceil
 import asyncio
 import aiohttp
 

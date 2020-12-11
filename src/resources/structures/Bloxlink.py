@@ -1,11 +1,10 @@
 from importlib import import_module
 from os import environ as env
-from discord import AutoShardedClient, AllowedMentions, Intents, MemberCacheFlags
+from discord import AutoShardedClient, AllowedMentions, Intents
 from config import WEBHOOKS # pylint: disable=E0611
 from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE # pylint: disable=import-error
-from ..secrets import REDIS, RETHINKDB # pylint: disable=import-error
-from . import Args, Permissions # pylint: disable=import-error
-from ast import literal_eval
+from ..secrets import REDIS_PASSWORD, REDIS_PORT, REDIS_HOST, RETHINKDB_HOST, RETHINKDB_DB, RETHINKDB_PASSWORD, RETHINKDB_PORT # pylint: disable=import-error
+from . import Permissions # pylint: disable=import-error
 from async_timeout import timeout
 import functools
 import traceback
@@ -283,10 +282,10 @@ class BloxlinkStructure(AutoShardedClient):
                 return conn
 
         while True:
-            for host in [RETHINKDB["HOST"], "rethinkdb", "localhost"]:
+            for host in [RETHINKDB_HOST, "rethinkdb", "localhost"]:
                 try:
                     async with timeout(5):
-                        conn = await connect(host, RETHINKDB["PASSWORD"], RETHINKDB["DB"], RETHINKDB["PORT"])
+                        conn = await connect(host, RETHINKDB_PASSWORD, RETHINKDB_DB, RETHINKDB_PORT)
 
                         if conn:
                             # check for missing databases/tables
@@ -354,7 +353,7 @@ def load_redis():
     if IS_DOCKER:
         while not redis:
             try:
-                redis = aredis.StrictRedis(host=REDIS["HOST"], port=REDIS["PORT"], password=REDIS["PASSWORD"])
+                redis = aredis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
             except aredis.exceptions.ConnectionError:
                 pass
             else:

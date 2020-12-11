@@ -1,6 +1,4 @@
 from ..structures import Bloxlink # pylint: disable=import-error
-from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized
-from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 from config import BLOXLINK_GUILD # pylint: disable=import-error, no-name-in-module
 from ..constants import RELEASE # pylint: disable=import-error
 from discord.utils import find
