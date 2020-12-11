@@ -9,7 +9,4 @@ VALID_SECRETS = ("TRELLO_KEY", "TRELLO_TOKEN", "RETHINKDB_HOST", "RETHINKDB_PASS
 
 
 for secret in VALID_SECRETS:
-    if env.get(secret):
-        globals()[secret] = env.get(secret) or getattr(config, secret, None)
-        env[secret] = ""
-        # config[secret] = None
+    globals()[secret] = env.get(secret) or getattr(config, secret, "")
