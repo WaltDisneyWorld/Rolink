@@ -1,7 +1,7 @@
 from resources.constants import RELEASE, IS_DOCKER # pylint: disable=import-error
 
 
-MODULE_DIR = [
+MODULE_DIR = [ # load these modules
 	"src/resources/modules",
 	"src/resources/events",
 	"src/commands"
@@ -61,27 +61,15 @@ REACTIONS = { # discord emote mention strings
 VERIFYALL_MAX_SCAN = 5 # max concurrent !verifyall scans
 
 if RELEASE == "LOCAL" and not IS_DOCKER: # needed for easy local tests without spawning Docker
-	RETHINKDB = {
-		"HOST": "rethinkdb",
-		"PASSWORD": "1",
-		"PORT": 28015,
-		"DB": "bloxlink"
-	}
+	RETHINKDB_HOST = "rethinkdb"
+	RETHINKDB_PASSWORD = None
+	RETHINKDB_PORT = 28015
+	RETHINKDB_DB = "bloxlink"
 
-	REDIS = {
-		"HOST": "1",
-		"PORT": 1,
-		"PASSWORD": "1",
-	}
+	REDIS_HOST = "redis"
+	REDIS_PORT = 6379
+	REDIS_PASSWORD = None
 
-	TRELLO = {
-		"KEY": "1",
-		"TOKEN": "1",
-		"TRELLO_BOARD_CACHE_EXPIRATION": 5 * 60,
-		"CARD_LIMIT": 100,
-		"LIST_LIMIT": 10
-	}
+	TOKEN = None
 
-	TOKEN = "1"
-
-BLOXLINK_GUILD = RELEASE == "LOCAL" and 439265180988211211 or 372036754078826496
+BLOXLINK_GUILD = None # your guild ID, used to load nitro boosters and other data
