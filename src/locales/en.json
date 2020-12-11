@@ -10,7 +10,10 @@
 		},
 		"resolvers": {
 
-		}
+		},
+		"skip": "skip",
+		"next": "next",
+		"done": "done"
 	},
 	"permissions": {
 		"genericError": "Bloxlink is missing permissions for this command. Please give me the appropriate permissions.",
@@ -52,16 +55,16 @@
 			"enable": "Successfully **enabled** Auto-Roles!",
 			"disable": "Successfully **disabled** Auto-Roles!",
 			"events": {
-				"enable": "{user.mention} has **enabled** ``autoRoles``.",
-				"disable": "{user.mention} has **disabled** ``autoRoles``."
+				"enable": "{user.mention} ({user.id}) has **enabled** ``autoRoles``.",
+				"disable": "{user.mention} ({user.id}) has **disabled** ``autoRoles``."
 			}
 		},
 		"autoverify": {
 			"enable": "Successfully **enabled** Auto-Verification!",
 			"disable": "Successfully **disabled** Auto-Verification!",
 			"events": {
-				"enable": "{user.mention} has **enabled** ``autoVerification``.",
-				"disable": "{user.mention} has **disabled** ``autoVerification``."
+				"enable": "{user.mention} ({user.id}) has **enabled** ``autoVerification``.",
+				"disable": "{user.mention} ({user.id}) has **disabled** ``autoVerification``."
 			}
 		},
 		"banevaders": {
@@ -76,6 +79,40 @@
 			"success": "These members were successfully actioned.",
 			"failed": "These members failed to be actioned.",
 			"noMatch": "There are no ban evaders in your server!"
+		},
+		"bind": {
+			"badge": "badge",
+			"group": "group",
+			"entireGroup": "entire group",
+			"errors": {
+				"noPremiumBindLimitExceeded": "You've exceeded the free bind limit of **{free_bind_count}.** Please delete some with ``{prefix}delbind`` before adding any more.\nPremium users may bind up to **{prem_bind_count}** binds! See ``{prefix}donate`` for instructions on receiving premium.",
+				"premiumBindLimitExceeded": "You've exceeded the premium bind limit of **{prem_bind_count}.** Please delete some with ``{prefix}delbind`` before adding any more.",
+				"trelloError": "In order for me to create Trello binds, please add ``@bloxlink`` to your Trello board."
+			},
+			"prompts": {
+				"bindTypePrompt": {
+					"line_1": "A bind is a link between a Roblox entity and a Discord role. Please select a bind type:",
+					"line_2": "``group`` {arrow} bind a Roblox group rank to a Discord role",
+					"line_3": "``asset`` {arrow} bind a Roblox catalog asset to a Discord role",
+					"line_4": "``badge`` {arrow} bind a Roblox badge to a Discord role",
+					"line_5": "``gamepass`` {arrow} bind a Roblox gamepass to a Discord role",
+					"choices": ["group", "asset", "badge", "gamepass"]
+				},
+				"nicknamePrompt": {
+					"line": "Should these members be given a nickname different from the server-wide ``{prefix}nickname``? Please specify a nickname, or say ``skip`` to skip this option and default to the server-wide nickname ``{prefix}nickname`` template.\n\nYou may use these templates: ```{nickname_templates}```",
+					"footer": "Say **skip** to skip this option."
+				},
+				"groupPrompt": {
+					"line": "Please specify the **Group ID** to integrate with. The group ID is the rightmost numbers on your Group URL."
+				},
+				"groupBindMode": {
+					"line_1": "Please select a group bind integration mode:",
+					"line_2": "``entire group`` {arrow} the entire group will be linked; members will get roles which correspond to their group roleset name. The Discord roles __MUST ALWAYS MATCH__ with the roleset names.",
+					"line_3": "``select ranks`` {arrow} you can choose which specific roleset to bind with specific Discord roles. The Discord roles can be renamed and can be different from the roleset names.",
+					"choices": ["entire group", "select ranks"]
+				}
+			}
+
 		}
 	}
 }
