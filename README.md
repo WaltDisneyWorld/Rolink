@@ -12,6 +12,8 @@ Roblox Verification made easy! Features everything you need to integrate your Di
   Save your environmental variables in [docker-compose.yml](https://github.com/bloxlink/Bloxlink/blob/master/docker-compose.yml) if you choose not to save the secrets in the config file.
   Valid secrets which can be saved as environmental variables are found in the [secrets.py](https://github.com/bloxlink/Bloxlink/blob/master/src/resources/secrets.py) file.
 
+  Environmental variables have priority over the config file!
+
   ### Constants
   Some options which aren't required to be changed are in the [constants.py](https://github.com/bloxlink/Bloxlink/blob/master/src/resources/constants.py) file.
 
