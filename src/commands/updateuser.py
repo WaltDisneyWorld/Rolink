@@ -8,7 +8,6 @@ import math
 guild_obligations, format_update_embed = Bloxlink.get_module("roblox", attrs=["guild_obligations", "format_update_embed"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 get_features = Bloxlink.get_module("premium", attrs="get_features")
-post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 @Bloxlink.command
 class UpdateUserCommand(Bloxlink.Module):
@@ -166,13 +165,13 @@ class UpdateUserCommand(Bloxlink.Module):
                         nickname          = True,
                         cache             = not premium,
                         dm                = False,
+                        event             = True,
                         exceptions        = ("BloxlinkBypass", "Blacklisted", "CancelCommand", "UserNotVerified"))
 
                     _, embed = await format_update_embed(roblox_user, user, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != user.display_name else None, prefix=prefix, guild_data=guild_data, premium=premium)
 
                     if embed:
                         await response.send(embed=embed)
-                        await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
                     else:
                         if premium:
                             await response.success("This user is all up-to-date; no changes were made.")
