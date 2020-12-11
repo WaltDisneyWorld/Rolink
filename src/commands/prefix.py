@@ -1,7 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import PermissionError # pylint: disable=import-error
-from resources.constants import BROWN_COLOR, RELEASE # pylint: disable=import-error
-from resources.secrets import TRELLO # pylint: disable=import-error
+from resources.constants import BROWN_COLOR, RELEASE, TRELLO # pylint: disable=import-error
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 from os import environ as env
 

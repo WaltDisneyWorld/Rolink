@@ -10,7 +10,7 @@ import math
 
 loop = asyncio.get_event_loop()
 
-guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
+update_member = Bloxlink.get_module("roblox", attrs=["update_member"])
 
 
 class Comparable:
@@ -68,16 +68,13 @@ class VerifyAllCommand(Bloxlink.Module):
 
                 if not member.bot:
                     try:
-                        added, removed, nickname, errors, roblox_user = await guild_obligations(
+                        added, removed, nickname, errors, roblox_user = await update_member(
                             member,
                             guild             = guild,
                             guild_data        = guild_data,
                             trello_board      = trello_board,
                             roles             = roles,
                             nickname          = nickname,
-                            dm                = False,
-                            exceptions        = ("BloxlinkBypass", "UserNotVerified", "PermissionError", "RobloxNotFound",
-                                                "Forbidden", "RobloxAPIError", "CancelCommand", "Blacklisted", "NotFound", "Error", "RobloxDown")
                         )
 
                     except (BloxlinkBypass, UserNotVerified, PermissionError, RobloxNotFound, Forbidden, RobloxAPIError, CancelCommand, Blacklisted):

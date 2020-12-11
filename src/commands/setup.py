@@ -1,13 +1,10 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.constants import ARROW, BROWN_COLOR, NICKNAME_TEMPLATES, RELEASE # pylint: disable=import-error
+from resources.constants import ARROW, BROWN_COLOR, NICKNAME_TEMPLATES, TRELLO # pylint: disable=import-error
 from resources.exceptions import Error, RobloxNotFound, CancelCommand # pylint: disable=import-error
-from resources.secrets import TRELLO # pylint: disable=import-error
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
 from discord.errors import Forbidden, HTTPException
 from discord import Embed
 from discord.utils import find
-from os import environ as env
-import asyncio
 import re
 
 NICKNAME_DEFAULT = "{roblox-name}"
@@ -267,7 +264,7 @@ class SetupCommand(Bloxlink.Module):
 
                 for roleset in sorted_rolesets:
                     roleset_name = roleset.get("name")
-                    roleset_rank = roleset.get("rank")
+                    # roleset_rank = roleset.get("rank")
 
                     if not find(lambda r: r.name == roleset_name, guild.roles):
                         try:

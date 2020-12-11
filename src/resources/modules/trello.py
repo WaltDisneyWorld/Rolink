@@ -1,11 +1,10 @@
 from aiotrello import Trello as TrelloClient
 from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from ..exceptions import BadUsage # pylint: disable=import-error
+from ..constants import OPTIONS # pylint: disable=import-error
+from ..constants import TRELLO as TRELLO_ # pylint: disable=import-error
+from ..secrets import TRELLO_KEY, TRELLO_TOKEN # pylint: disable=import-error
 from time import time
-from os import environ as env
-from resources.constants import OPTIONS # pylint: disable=import-error
-from resources.secrets import TRELLO as TRELLO_CONFIG # pylint: disable=import-error
 from re import compile
 import asyncio
 
@@ -21,8 +20,8 @@ class Trello(Bloxlink.Module):
         self.trello_boards = {}
 
         self.trello = TrelloClient(
-            key=TRELLO_CONFIG.get("KEY"),
-            token=TRELLO_CONFIG.get("TOKEN"),
+            key=TRELLO_KEY,
+            token=TRELLO_TOKEN,
             cache_mode="none",
             session=None) # self.session)
         self.option_regex = compile("(.+):(.+)")
@@ -39,7 +38,7 @@ class Trello(Bloxlink.Module):
 
                 try:
                     if not trello_board:
-                        trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
+                        trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
                         await cache_set("trello_boards", guild.id, trello_board)
 
                     if trello_board:
@@ -47,11 +46,11 @@ class Trello(Bloxlink.Module):
 
                         if hasattr(trello_board, "expiration"):
                             if t_now > trello_board.expiration:
-                                await trello_board.sync(card_limit=TRELLO_CONFIG["CARD_LIMIT"], list_limit=TRELLO_CONFIG["LIST_LIMIT"])
-                                trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
+                                await trello_board.sync(card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
+                                trello_board.expiration = t_now + TRELLO_["TRELLO_BOARD_CACHE_EXPIRATION"]
 
                         else:
-                            trello_board.expiration = t_now + TRELLO_CONFIG["TRELLO_BOARD_CACHE_EXPIRATION"]
+                            trello_board.expiration = t_now + TRELLO_["TRELLO_BOARD_CACHE_EXPIRATION"]
 
                 except (TrelloUnauthorized, ConnectionResetError):
                     pass

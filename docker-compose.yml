@@ -2,41 +2,46 @@ version: "3.5"
 
 services:
   rethinkdb:
-    image: rethinkdb
+    image: rethinkdb:2.3.6
     container_name: rethinkdb
     restart: always
     ports:
       - "28015:28015"
       - "29015:29015"
-    networks:
-      - default
-      - bloxlink-network
-    command: rethinkdb --bind all --initial-password ${RETHINKDB_PW}
+      - "8080:8080"
+    command: rethinkdb --bind all --initial-password 1
 
-  rewrite:
-    image: rewrite:latest
-    container_name: master
+  redis:
+    image: redis
+    container_name: redis
     restart: always
+    volumes:
+      - redis-data:/data
+
+  bot:
+    build: .
+    restart: always
+    container_name: bot
     environment:
       - RELEASE=LOCAL
       - SHARDS_PER_CLUSTER=1
-      - CLUSTER_IMAGE=rewrite:latest
-      - LABEL=rewrite
+      - SHARD_COUNT=1
+      - HOSTNAME=bot-0
+      - TOKEN=abc123
+      - RETHINKDB_PASSWORD=1
+      - RETHINKDB_HOST=rethinkdb
+      - RETHINKDB_PORT=28015
+      - RETHINKDB_DB=bloxlink
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=1
+      - TRELLO_KEY=1
+      - TRELLO_TOKEN=1
     volumes:
       - /usr/src/rewrite
-      - /var/run/docker.sock:/var/run/docker.sock
-    privileged: true
-    networks:
-      - default
-      - bloxlink-network
-    entrypoint: ["python3", "gateway/master.py"]
-    ports:
-      - "8000:8000"
-      - "8765:8765"
     depends_on:
       - rethinkdb
+      - redis
 
-networks:
-  bloxlink-network:
-    name: bloxlink-network
-
+volumes:
+  redis-data:

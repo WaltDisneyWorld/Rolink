@@ -1,19 +1,16 @@
 from ..structures.Bloxlink import Bloxlink # pylint: disable=no-name-in-module, import-error
-from ..exceptions import (BadUsage, RobloxAPIError, CancelledPrompt, Message, Error, # pylint: disable=no-name-in-module, import-error
-                          CancelCommand, UserNotVerified, RobloxNotFound, PermissionError, BloxlinkBypass,
-                          RobloxDown, Blacklisted)
+from ..exceptions import (BadUsage, RobloxAPIError, Error, CancelCommand, UserNotVerified,# pylint: disable=no-name-in-module, import-error
+                           RobloxNotFound, PermissionError, BloxlinkBypass, RobloxDown, Blacklisted)
 from typing import Tuple
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from discord import Embed, Member, Object
 from datetime import datetime
 from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
-from os import environ as env
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
-                         VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW, TIP_CHANCES,
+                         VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW,
                          SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, PARTNERS_COLOR, GREEN_COLOR,
-                         RED_COLOR, ACCOUNT_SETTINGS_URL)
-from ..secrets import TRELLO # pylint: disable=no-name-in-module, import-error
+                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO)
 import json
 import random
 import re
@@ -874,6 +871,8 @@ class Roblox(Bloxlink.Module):
 
             return added, removed, chosen_nickname, errored, roblox_user
 
+        if not roblox_user:
+            unverified = True
 
         guild_data = guild_data or await cache_get("guild_data", guild.id)
 

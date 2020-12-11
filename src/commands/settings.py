@@ -1,7 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import Message, Error, CancelledPrompt, PermissionError # pylint: disable=import-error
-from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES, ORANGE_COLOR, GOLD_COLOR, BROWN_COLOR # pylint: disable=import-error
-from resources.secrets import TRELLO # pylint: disable=import-error
+from resources.constants import ARROW, OPTIONS, DEFAULTS, NICKNAME_TEMPLATES, ORANGE_COLOR, GOLD_COLOR, BROWN_COLOR, TRELLO # pylint: disable=import-error
 from discord import Embed, Object
 from os import environ as env
 from discord.errors import Forbidden

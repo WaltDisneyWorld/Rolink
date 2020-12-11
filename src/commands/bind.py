@@ -60,6 +60,7 @@ class BindCommand(Bloxlink.Module):
         trello_board = CommandArgs.trello_board
         prefix = CommandArgs.prefix
         author = CommandArgs.message.author
+        locale = CommandArgs.locale
 
         role_binds_trello, group_ids_trello, trello_binds_list = await get_binds(guild=guild, trello_board=trello_board)
 
@@ -69,36 +70,29 @@ class BindCommand(Bloxlink.Module):
             profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
             if not profile.features.get("premium"):
-                raise Error(f"You've exceeded the free bind limit of **{FREE_BIND_COUNT}.** Please delete some with "
-                            f"``{prefix}delbind`` before adding any more.\nPremium users may bind up to **{PREM_BIND_COUNT}** binds! "
-                            f"See ``{prefix}donate`` for instructions on receiving premium.")
+                raise Error(locale("commands.bind.errors.noPremiumBindLimitExceeded", prefix=prefix, free_bind_count=FREE_BIND_COUNT, prem_bind_count=PREM_BIND_COUNT))
 
             if bind_count >= PREM_BIND_COUNT:
-                raise Error(f"You've exceeded the premium bind limit of **{PREM_BIND_COUNT}.** Please delete some with "
-                            f"``{prefix}delbind`` before adding any more.")
-
+                raise Error(locale("commands.bind.errors.premiumBindLimitExceeded", prefix=prefix, prem_bind_count=PREM_BIND_COUNT))
 
         parsed_args = await CommandArgs.prompt([
             {
-                "prompt": "A bind is a link between a Roblox entity and a Discord role. Please select a "
-                          "bind type:\n"
-                          f"``group`` {ARROW} bind a Roblox group rank to a Discord role\n"
-                          f"``asset`` {ARROW} bind a Roblox catalog asset to a Discord role\n"
-                          f"``badge`` {ARROW} bind a Roblox badge to a Discord role\n"
-                          f"``gamepass`` {ARROW} bind a Roblox gamepass to a Discord role",
+                "prompt": f"{locale('commands.bind.prompts.bindTypePrompt.line_1', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.bindTypePrompt.line_2', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.bindTypePrompt.line_3', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.bindTypePrompt.line_4', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.bindTypePrompt.line_5', arrow=ARROW)}",
                 "name": "bind_choice",
                 "type": "choice",
-                "choices": ["group", "asset", "badge", "gamepass"],
+                "choices": locale("commands.bind.prompts.bindTypePrompt.choices"),
                 "formatting": False
             },
             {
-                "prompt": f"Should these members be given a nickname different from the server-wide ``{prefix}nickname``? Please specify a nickname, or "
-                          f"say ``skip`` to skip this option and default to the server-wide nickname ``{prefix}nickname`` template.\n\nYou may use these templates:"
-                          f"```{NICKNAME_TEMPLATES}```",
+                "prompt": locale("commands.bind.prompts.nicknamePrompt.line", prefix=prefix, nickname_templates=NICKNAME_TEMPLATES),
                 "name": "nickname",
                 "max": 100,
                 "type": "string",
-                "footer": "Say **skip** to skip this option.",
+                "footer": locale("commands.bind.prompts.nicknamePrompt.footer"),
                 "formatting": False
             }
         ])
@@ -113,8 +107,7 @@ class BindCommand(Bloxlink.Module):
                 try:
                     trello_binds_list = await trello_board.create_list(name="Bloxlink Binds")
                 except TrelloUnauthorized:
-                        await response.error("In order for me to create Trello binds, please add ``@bloxlink`` to your "
-                                             "Trello board.")
+                        await response.error(locale("commands.bind.errors.trelloError"))
                 except (TrelloNotFound, TrelloBadRequest):
                     pass
 
@@ -132,29 +125,26 @@ class BindCommand(Bloxlink.Module):
                 "gamePasses": {}
             }
 
-        if nickname.lower() in ("skip", "done", "next"):
+        if nickname.lower() in (locale("prompt.skip"), locale("prompt.done"), locale("prompt.next")):
             nickname = None
             nickname_lower = None
         else:
             nickname_lower = nickname.lower()
 
-        if bind_choice == "group":
+        if bind_choice == locale("commands.bind.group"):
             parsed_args_group = await CommandArgs.prompt([
                 {
-                    "prompt": "Please specify the **Group ID** to integrate with. The group ID is the rightmost numbers on your Group URL.",
+                    "prompt": locale("commands.bind.prompts.groupPrompt.line"),
                     "name": "group",
                     "validation": self.validate_group
                 },
                 {
-                    "prompt": f"Please select a group bind integration mode:\n"
-                              f"``entire group`` {ARROW} the entire group will be linked; members will get "
-                                "roles which correspond to their group roleset name. The Discord roles __MUST ALWAYS MATCH__ "
-                                "with the roleset names.\n"
-                              f"``select ranks`` {ARROW} you can choose which specific roleset to bind with specific Discord roles. "
-                                "The Discord roles can be renamed and can be different from the roleset names.",
+                "prompt": f"{locale('commands.bind.prompts.groupBindMode.line_1', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.groupBindMode.line_2', arrow=ARROW)}\n"
+                          f"{locale('commands.bind.prompts.groupBindMode.line_3', arrow=ARROW)}",
                     "name": "type",
                     "type": "choice",
-                    "choices": ["entire group", "select ranks"]
+                    "choices": locale("commands.bind.prompts.groupBindMode.choices")
                 }
             ])
 
@@ -166,7 +156,7 @@ class BindCommand(Bloxlink.Module):
 
             trello_group_bind = trello_card_binds["groups"]["entire group"].get(group_id)
 
-            if parsed_args_group["type"] == "entire group":
+            if parsed_args_group["type"] == locale("commands.bind.entireGroup"):
                 if found_group:
                     if nickname and found_group["nickname"] != nickname:
                         group_ids[group_id] = {"nickname": nickname, "groupName": group.name}
@@ -206,7 +196,7 @@ class BindCommand(Bloxlink.Module):
 
                         ending_s = group.name.endswith("s") and "'" or "'s"
 
-                        await post_event(guild, guild_data, "bind", f"{author.mention} has **changed** ``{group.name}``{ending_s} nickname template.", BLURPLE_COLOR)
+                        await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **changed** ``{group.name}``{ending_s} nickname template.", BLURPLE_COLOR)
 
                         raise Message("Since your group is already linked, the nickname was updated.", type="success")
 
@@ -241,7 +231,7 @@ class BindCommand(Bloxlink.Module):
                     except (TrelloNotFound, TrelloBadRequest):
                         pass
 
-                await post_event(guild, guild_data, "bind", f"{author.mention} has **linked** group ``{group.name}``.", BLURPLE_COLOR)
+                await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **linked** group ``{group.name}``.", BLURPLE_COLOR)
                 raise Message("Success! Your group was successfully linked.", type="success")
 
             else:
@@ -551,7 +541,7 @@ class BindCommand(Bloxlink.Module):
 
             text = "".join(text)
 
-            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** group ``{group.name}``.", BLURPLE_COLOR)
+            await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **bound** group ``{group.name}``.", BLURPLE_COLOR)
 
             await response.success(text)
 
@@ -704,6 +694,6 @@ class BindCommand(Bloxlink.Module):
             }, conflict="update").run()
 
 
-            await post_event(guild, guild_data, "bind", f"{author.mention} has **bound** {bind_choice_title} ``{display_name}``.", BLURPLE_COLOR)
+            await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **bound** {bind_choice_title} ``{display_name}``.", BLURPLE_COLOR)
 
             await response.success(f"Successfully **bound** {bind_choice_title} ``{display_name}`` ({bind_id}) with Discord role **{discord_role}!**")

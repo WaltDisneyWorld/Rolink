@@ -1,10 +1,9 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed, Object
 from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted # pylint: disable=import-error
-from resources.constants import (NICKNAME_TEMPLATES, CACHE_CLEAR, TIP_CHANCES, GREEN_COLOR, ORANGE_COLOR, # pylint: disable=import-error
-                                BROWN_COLOR, ARROW, VERIFY_URL, ACCOUNT_SETTINGS_URL) # pylint: disable=import-error
+from resources.constants import (NICKNAME_TEMPLATES, GREEN_COLOR, BROWN_COLOR, ARROW, VERIFY_URL, # pylint: disable=import-error
+                                ACCOUNT_SETTINGS_URL, TRELLO)
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
-from resources.secrets import TRELLO # pylint: disable=import-error
 
 verify_as, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed, guild_obligations = Bloxlink.get_module("roblox", attrs=["verify_as", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed", "guild_obligations"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")

@@ -2,16 +2,15 @@ from os import getpid
 import json
 import uuid
 import asyncio
-from discord import Status, Game, Streaming, Object
+from discord import Status, Game, Streaming
 from discord.errors import NotFound, Forbidden
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..constants import CLUSTER_ID, SHARD_RANGE, STARTED, IS_DOCKER, PLAYING_STATUS, RELEASE, GREEN_COLOR # pylint: disable=import-error
-from ..exceptions import (BloxlinkBypass, Blacklisted, UserNotVerified, Blacklisted, PermissionError, # pylint: disable=import-error
+from ..exceptions import (BloxlinkBypass, Blacklisted, Blacklisted, PermissionError, # pylint: disable=import-error
                          RobloxAPIError, CancelCommand, RobloxDown) # pylint: disable=import-error
 from config import PROMPT, PREFIX # pylint: disable=import-error, no-name-in-module
 from time import time
 from math import floor
-from os import environ as env
 from psutil import Process
 import async_timeout
 

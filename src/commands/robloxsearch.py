@@ -1,6 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from resources.exceptions import UserNotVerified, Message, Error, RobloxNotFound # pylint: disable=import-error
-from discord import Embed
+from resources.exceptions import Error, RobloxNotFound, RobloxAPIError # pylint: disable=import-error
+from discord.errors import NotFound
 
 get_user, get_binds = Bloxlink.get_module("roblox", attrs=["get_user", "get_binds"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
@@ -64,6 +64,17 @@ class RobloxSearchCommand(Bloxlink.Module):
             role_binds, group_ids = {}, {}
 
         try:
-            account, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))
+            _, _ = await get_user(*flags.keys(), username=username and target, roblox_id=ID and target, group_ids=(group_ids, role_binds), send_embed=True, guild=guild, response=response, everything=not bool(flags), basic_details=not bool(flags))
         except RobloxNotFound:
             raise Error("This Roblox account doesn't exist.")
+        except RobloxAPIError:
+            if ID:
+                try:
+                    await Bloxlink.fetch_user(int(target))
+                except NotFound:
+                    raise Error("This Roblox account doesn't exist.")
+                else:
+                    message.content = f"{prefix}getinfo {target}"
+                    return await parse_message(message)
+            else:
+                raise Error("This Roblox account doesn't exist.")
