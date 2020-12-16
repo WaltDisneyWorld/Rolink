@@ -2,9 +2,12 @@
 Roblox Verification made easy! Features everything you need to integrate your Discord server with Roblox.
 
 ## Dependencies
-  - Python 3.5+
+  - Python 3.5+ (satisfied if using our Docker Compose file)
   - [Docker](https://www.docker.com/)
   - [Docker Compose](https://docs.docker.com/compose/)
+  - [RethinkDB](https://rethinkdb.com/docs/security/) (satisfied if using our Docker Compose file)
+  - [Redis](https://redis.io) (satisfied if using our Docker Compose file)
+  - [Requirements file](https://github.com/bloxlink/Bloxlink/blob/master/requirements.txt) (satisfied if using our Dockerfile)
 
 ## Configuration
   ### Configuration files
@@ -17,6 +20,8 @@ Roblox Verification made easy! Features everything you need to integrate your Di
   ### Constants
   Some options which aren't required to be changed are in the [constants.py](https://github.com/bloxlink/Bloxlink/blob/master/src/resources/constants.py) file.
 
+## Intents
+The **Members Privileged Intent** is required for the bot to function. This can be toggled on your [Developer Dashboard](https://discord.com/developers/applications) unless your bot reached over 100 servers.
 
 ## Quick Setup
 ```sh
