@@ -2,7 +2,7 @@ from importlib import import_module
 from os import environ as env
 from discord import AutoShardedClient, AllowedMentions, Intents
 from config import WEBHOOKS # pylint: disable=E0611
-from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE # pylint: disable=import-error
+from ..constants import SHARD_RANGE, CLUSTER_ID, SHARD_COUNT, IS_DOCKER, TABLE_STRUCTURE, RELEASE, SELF_HOST # pylint: disable=import-error
 from ..secrets import REDIS_PASSWORD, REDIS_PORT, REDIS_HOST, RETHINKDB_HOST, RETHINKDB_DB, RETHINKDB_PASSWORD, RETHINKDB_PORT # pylint: disable=import-error
 from . import Permissions # pylint: disable=import-error
 from async_timeout import timeout
@@ -28,6 +28,7 @@ finally:
 
 LOG_LEVEL = env.get("LOG_LEVEL", "INFO").upper()
 LABEL = env.get("LABEL", "Bloxlink")
+SHARD_SLEEP_TIME = int(env.get("SHARD_SLEEP_TIME", "5"))
 
 logger = logging.getLogger()
 
@@ -45,6 +46,12 @@ class BloxlinkStructure(AutoShardedClient):
         #loop.run_until_complete(self.get_session())
         loop.set_exception_handler(self._handle_async_error)
         loop.run_until_complete(self.load_database())
+
+
+    if not SELF_HOST:
+        async def before_identify_hook(self, shard_id, *, initial=False):
+            await asyncio.sleep(SHARD_SLEEP_TIME)
+
 
     async def get_session(self):
         self.session = aiohttp.ClientSession() # headers={"Connection": "close"}

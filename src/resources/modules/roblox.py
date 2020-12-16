@@ -6,11 +6,13 @@ from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from discord import Embed, Member, Object
 from datetime import datetime
+from ratelimit import limits, RateLimitException
+from backoff import on_exception, expo
 from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW,
                          SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, PARTNERS_COLOR, GREEN_COLOR,
-                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO)
+                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO, SELF_HOST)
 import json
 import random
 import re
@@ -893,7 +895,7 @@ class Roblox(Bloxlink.Module):
 
         #verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
         #unverified_dm = guild_data.get("unverifiedDM")
-        #age_limit     = guild_data.get("ageLimit")
+        #age_limit     = guild_data.get("ageLimit") # FIXME: next few lines need to be changed
         verified_dm   = await cache_get("verifiedDM", guild.id, primitives=True)
         unverified_dm = await cache_get("unverifiedDM", guild.id, primitives=True)
         age_limit     = await cache_get("ageLimit", guild.id, primitives=True)
@@ -1825,6 +1827,27 @@ class Roblox(Bloxlink.Module):
 
         raise RobloxNotFound
 
+    @on_exception(expo, RateLimitException, max_tries=8)
+    @limits(calls=60, period=60)
+    async def call_bloxlink_api(self, author, guild=None):
+        roblox_account = primary_account = None
+
+        bloxlink_api = guild and f"https://api.blox.link/v1/user/{author.id}?guild={guild.id}" or f"https://api.blox.link/user/{author.id}"
+        bloxlink_api_response, _ = await fetch(bloxlink_api)
+
+        try:
+            author_verified_data = json.loads(bloxlink_api_response)
+        except json.JSONDecodeError:
+            pass
+        else:
+            if not author_verified_data.get("error"):
+                roblox_account = author_verified_data.get("matchingAccount") or author_verified_data.get("primaryAccount")
+                primary_account = author_verified_data.get("primaryAccount")
+
+
+        return roblox_account, primary_account
+
+
     async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, group_ids=None, send_embed=False, response=None, cache=True) -> Tuple:
         guild = guild or getattr(author, "guild", False)
         guild_id = guild and str(guild.id)
@@ -1865,6 +1888,12 @@ class Roblox(Bloxlink.Module):
             roblox_account = guild and guilds.get(guild_id) or author_data.get("robloxID")
             primary_account = author_data.get("robloxID")
 
+            if SELF_HOST and not (roblox_account or primary_account):
+                try:
+                    roblox_account, primary_account = await self.call_bloxlink_api(author, guild)
+                except RateLimitException:
+                    pass
+
             if roblox_account:
                 if not discord_profile:
                     discord_profile = DiscordProfile(author_id)
@@ -1900,9 +1929,6 @@ class Roblox(Bloxlink.Module):
                     return None, accounts
                 else:
                     raise UserNotVerified
-
-            raise UserNotVerified
-
         else:
             if not (roblox_id or username):
                 raise BadUsage("Must supply a username or ID")
@@ -1923,9 +1949,6 @@ class Roblox(Bloxlink.Module):
                 return roblox_user, []
 
             raise BadUsage("Unable to resolve a user")
-
-
-        raise UserNotVerified
 
 
     async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None, dm=True, cache=True) -> bool:

@@ -4,7 +4,7 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.14.2"
+VERSION = "v3.14.3"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
@@ -31,6 +31,7 @@ for _ in range(SHARDS_PER_CLUSTER):
   SHARD_RANGE.append(shard)
   _to_add += 1
 
+SELF_HOST = True # changes bot behavior, such as using the Bloxlink API for requests
 
 STARTED = time()
 
