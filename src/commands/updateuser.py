@@ -134,7 +134,8 @@ class UpdateUserCommand(Bloxlink.Module):
                                 nickname          = True,
                                 dm                = False,
                                 exceptions        = ("BloxlinkBypass", "UserNotVerified", "Blacklisted"),
-                                cache             = not premium)
+                                cache             = False)
+                                #cache             = not premium)
                         except BloxlinkBypass:
                             if len_users <= 10:
                                 await response.info(f"{user.mention} **bypassed**")

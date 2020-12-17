@@ -52,12 +52,14 @@ class VerifyCommand(Bloxlink.Module):
         if CommandArgs.real_command_name in ("getrole", "getroles"):
             CommandArgs.string_args = []
 
+        """
         donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
         premium = donator_profile.features.get("premium")
 
         if not premium:
             donator_profile, _ = await get_features(author)
             premium = donator_profile.features.get("premium")
+        """
 
         trello_options = {}
 
@@ -76,7 +78,8 @@ class VerifyCommand(Bloxlink.Module):
                 nickname             = True,
                 trello_board         = CommandArgs.trello_board,
                 given_trello_options = True,
-                cache                = not premium,
+                #cache                = not premium,
+                cache                = False,
                 response             = response,
                 dm                   = False,
                 exceptions           = ("BloxlinkBypass", "Blacklisted", "UserNotVerified")
