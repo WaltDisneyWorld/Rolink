@@ -1828,7 +1828,7 @@ class Roblox(Bloxlink.Module):
         raise RobloxNotFound
 
     @on_exception(expo, RateLimitException, max_tries=8)
-    @limits(calls=60, period=60)
+    @limits(calls=30, period=30)
     async def call_bloxlink_api(self, author, guild=None):
         roblox_account = primary_account = None
 
