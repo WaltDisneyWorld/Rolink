@@ -2,6 +2,9 @@ from os import environ
 import asyncio
 import config
 import logging
+import signal
+import sys
+import os
 from resources.constants import RELEASE # pylint: disable=import-error
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.secrets import TOKEN # , SENTRY_URL, VALID_SECRETS # pylint: disable=import-error
@@ -10,7 +13,6 @@ logger = logging.getLogger()
 logging.basicConfig(level=getattr("logging", environ.get("DEBUG_MODE", "WARNING"), "WARNING"))
 
 loop = asyncio.get_event_loop()
-
 
 
 async def register_modules():
@@ -55,10 +57,37 @@ def load_sentry():
             print("sentry failed", flush=True)
 """
 
+
+async def handle_signal(sig):
+    """handle the Unix SIGINT and SIGTERM signals.
+       ``SystemExit``s are incorrectly caught, so we have to use
+       os._exit until this is fixed"""
+
+    Bloxlink.log(f"Handling signal {sig}")
+
+    await Bloxlink.close_db()
+    await Bloxlink.logout()
+
+    loop.stop()
+
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+
+    os._exit(0)
+    #sys.exit(0)
+
+async def signals_handler():
+    loop = asyncio.get_event_loop()
+
+    for signame in ("SIGINT", "SIGTERM"):
+        loop.add_signal_handler(getattr(signal, signame),
+                                lambda: asyncio.ensure_future(handle_signal(signame), loop=loop))
+
 async def main():
     #load_sentry()
-    await register_modules()
 
+    await signals_handler()
+    await register_modules()
 
 
 

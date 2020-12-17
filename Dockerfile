@@ -6,6 +6,7 @@ ADD . /usr/src/bloxlink
 
 RUN apt-get update
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
+RUN apt install dumb-init
 
 
-ENTRYPOINT ["python3", "src/bot.py"]
+ENTRYPOINT ["dumb-init", "-v", "--", "python3", "src/bot.py"]

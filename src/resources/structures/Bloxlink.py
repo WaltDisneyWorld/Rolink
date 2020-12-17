@@ -303,6 +303,10 @@ class BloxlinkStructure(AutoShardedClient):
                 except asyncio.TimeoutError:
                     pass
 
+    async def close_db(self):
+        if self.conn:
+            self.conn.close()
+
     @staticmethod
     def command(*args, **kwargs):
         return Bloxlink.get_module("commands", attrs="new_command")(*args, **kwargs)
