@@ -1,9 +1,7 @@
 import re
 import traceback
-import time
-import math
 import asyncio
-import sentry_sdk
+#import sentry_sdk
 from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
