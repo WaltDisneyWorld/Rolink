@@ -72,9 +72,11 @@ class Premium(Bloxlink.Module):
         if "premium" in features:
             user_data_premium["expiry"] = days # TODO: convert to -1
 
+        """
         if premium_anywhere:
             user_data["flags"] = user_data.get("flags") or {}
             user_data["flags"]["premiumAnywhere"] = True
+        """
 
         if "-" in features:
             if "premium" in features:
@@ -212,11 +214,12 @@ class Premium(Bloxlink.Module):
                     await self.r.db("bloxlink").table("users").insert(author_data, conflict="update").run()
                     await self.r.db("bloxlink").table("users").insert(transferee_data, conflict="update").run()
 
-
+        """
         if author_data.get("flags", {}).get("premiumAnywhere"):
             profile.attributes["PREMIUM_ANYWHERE"] = True
             profile.add_note("This user can use premium in _any_ server.")
             profile.add_features("premium", "pro")
+        """
 
         data_patreon = await self.has_patreon_premium(author, author_data)
 
