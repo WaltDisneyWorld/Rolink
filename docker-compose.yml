@@ -12,9 +12,11 @@ services:
     command: rethinkdb --bind all --initial-password 1
 
   redis:
-    image: redis
+    image: bitnami/redis:latest
     container_name: redis
-    restart: always
+    restart: on-failure
+    environment:
+      - REDIS_PASSWORD=1
     volumes:
       - redis-data:/data
 
