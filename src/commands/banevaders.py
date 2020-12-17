@@ -38,7 +38,7 @@ class BanEvadersCommand(Bloxlink.Module):
         if not guild.chunked:
             try:
                 await guild.chunk()
-            except:
+            except Exception:
                 pass
 
         await response.send(locale("scans.starting"))

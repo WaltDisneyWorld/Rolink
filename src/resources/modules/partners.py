@@ -34,7 +34,7 @@ class Partners(Bloxlink.Module):
     async def load_data(self):
         try:
             self.trello_board = await trello.get_board("https://trello.com/b/o9PkeQYF/partners-and-notable-groups")
-        except:
+        except Exception:
             pass
         else:
             await cache_pop("partners")

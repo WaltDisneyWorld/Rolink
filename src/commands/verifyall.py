@@ -46,7 +46,7 @@ class VerifyAllCommand(Bloxlink.Module):
         if not guild.chunked:
             try:
                 await guild.chunk()
-            except:
+            except Exception:
                 pass
 
         if response:
