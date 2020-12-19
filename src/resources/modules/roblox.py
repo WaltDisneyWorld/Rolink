@@ -34,7 +34,7 @@ get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 is_booster = Bloxlink.get_module("nitro_boosters", attrs=["is_booster"], name_override="NitroBoosters")
 is_partner = Bloxlink.get_module("partners", attrs=["is_partner"])
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
-cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
+cache_set, cache_get, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["set", "get", "pop", "get_guild_value"])
 
 
 API_URL = "https://api.roblox.com"
@@ -876,41 +876,18 @@ class Roblox(Bloxlink.Module):
         if not roblox_user:
             unverified = True
 
-        guild_data = guild_data or await cache_get("guild_data", guild.id)
+        options, guild_data = await get_guild_value(guild, ["verifiedDM", DEFAULTS.get("welcomeMessage")], ["unverifiedDM", DEFAULTS.get("unverifiedDM")], "ageLimit", ["disallowAlts", DEFAULTS.get("disallowAlts")], ["disallowBanEvaders", DEFAULTS.get("disallowBanEvaders")], "groupLock", return_guild_data=True)
 
-        if not guild_data:
-            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
-
-            trello_board = trello_board or await get_board(guild=guild, guild_data=guild_data)
-            trello_options = {}
-
-            if not given_trello_options and trello_board:
-                trello_options, _ = await get_options(trello_board)
-                guild_data.update(trello_options)
-
-            await cache_set("guild_data", guild.id, guild_data)
-            await cache_set("verifiedDM", guild.id, guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage")))
-            await cache_set("unverifiedDM", guild.id, guild_data.get("unverifiedDM"))
-            await cache_set("ageLimit", guild.id, guild_data.get("ageLimit"))
-
-        #verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
-        #unverified_dm = guild_data.get("unverifiedDM")
-        #age_limit     = guild_data.get("ageLimit") # FIXME: next few lines need to be changed
-        verified_dm   = await cache_get("verifiedDM", guild.id, primitives=True)
-        unverified_dm = await cache_get("unverifiedDM", guild.id, primitives=True)
-        age_limit     = await cache_get("ageLimit", guild.id, primitives=True)
-
-        verified_dm = verified_dm if verified_dm is not None else guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
-        unverified_dm = unverified_dm if unverified_dm is not None else guild_data.get("unverifiedDM")
-        age_limit = age_limit if age_limit is not None else guild_data.get("ageLimit")
+        verified_dm = options.get("verifiedDM")
+        unverified_dm = options.get("unverifiedDM")
+        age_limit = options.get("ageLimit")
+        disallow_alts = options.get("disallowAlts")
+        disallow_ban_evaders = options.get("disallowBanEvaders")
 
         try:
             age_limit = int(age_limit) #FIXME
         except TypeError:
             age_limit = None
-
-        disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
-        disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
 
         if disallow_alts or disallow_ban_evaders:
             if not donator_profile:
@@ -1001,7 +978,7 @@ class Roblox(Bloxlink.Module):
         except (PermissionError, UserNotVerified, BloxlinkBypass, HTTPException):
             pass
 
-        required_groups = guild_data.get("groupLock") # TODO: integrate with Trello
+        required_groups = options.get("groupLock") # TODO: integrate with Trello
 
         if roblox_user:
             if event:

@@ -2,6 +2,9 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from resources.constants import BROWN_COLOR # pylint: disable=import-error
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
+
+
 
 @Bloxlink.command
 class IgnoreChannelCommand(Bloxlink.Module):
@@ -31,6 +34,8 @@ class IgnoreChannelCommand(Bloxlink.Module):
             "id": str(guild.id),
             "ignoredChannels": ignored_channels
         }, conflict="update").run()
+
+        await set_guild_value(guild, "ignoredChannels", ignored_channels)
 
         if disabled:
             await response.success("Successfully **disabled** commands from this channel for non-admins.\n"

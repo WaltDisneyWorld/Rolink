@@ -2,11 +2,10 @@ from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-erro
 from resources.exceptions import PermissionError # pylint: disable=import-error
 from resources.constants import BROWN_COLOR, RELEASE, TRELLO # pylint: disable=import-error
 from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
-from os import environ as env
-
 
 
 get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
+set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 @Bloxlink.command
 class PrefixCommand(Bloxlink.Module):
@@ -76,6 +75,8 @@ class PrefixCommand(Bloxlink.Module):
             await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``prefix`` option.", BROWN_COLOR)
 
             await response.success("Your prefix was successfully changed!")
+
+            await set_guild_value(guild, "prefix", new_prefix)
 
         else:
             old_prefix = CommandArgs.prefix
