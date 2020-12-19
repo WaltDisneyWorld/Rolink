@@ -36,7 +36,7 @@ class TimedActions(Bloxlink.Module):
                 await load_blacklist() # redis
                 await load_boosters() # redis
                 await load_staff_members() # redis
-            except BaseException as e:
+            except Exception as e:
                 Bloxlink.error(e)
 
             await asyncio.sleep(CACHE_CLEAR * 60)

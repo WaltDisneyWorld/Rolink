@@ -11,8 +11,7 @@ import asyncio
 
 OPTION_NAMES_MAP = {k.lower(): k for k in OPTIONS.keys()}
 
-cache_get, cache_set = Bloxlink.get_module("cache", attrs=["get", "set"])
-
+cache_get, cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "get_guild_value"])
 
 @Bloxlink.module
 class Trello(Bloxlink.Module):
@@ -22,46 +21,48 @@ class Trello(Bloxlink.Module):
         self.trello = TrelloClient(
             key=TRELLO_KEY,
             token=TRELLO_TOKEN,
-            cache_mode="none",
-            session=None) # self.session)
+            cache_mode="none")
         self.option_regex = compile("(.+):(.+)")
 
 
-    async def get_board(self, guild_data, guild):
+    async def get_board(self, guild, guild_data=None):
         trello_board = None
 
-        if guild_data and guild:
+        if guild_data:
             trello_id = guild_data.get("trelloID")
+        else:
+            trello_id = await get_guild_value(guild, "trelloID")
 
-            if trello_id:
-                trello_board = await cache_get("trello_boards", guild.id)
+        if trello_id:
+            trello_board = await cache_get("trello_boards", guild.id)
 
-                try:
-                    if not trello_board:
-                        trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
-                        await cache_set("trello_boards", guild.id, trello_board)
+            try:
+                if not trello_board:
+                    trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
+                    await cache_set("trello_boards", guild.id, trello_board)
 
-                    if trello_board:
-                        t_now = time()
+                if trello_board:
+                    t_now = time()
 
-                        if hasattr(trello_board, "expiration"):
-                            if t_now > trello_board.expiration:
-                                await trello_board.sync(card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
-                                trello_board.expiration = t_now + TRELLO_["TRELLO_BOARD_CACHE_EXPIRATION"]
-
-                        else:
+                    if hasattr(trello_board, "expiration"):
+                        if t_now > trello_board.expiration:
+                            await trello_board.sync(card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
                             trello_board.expiration = t_now + TRELLO_["TRELLO_BOARD_CACHE_EXPIRATION"]
 
-                except (TrelloUnauthorized, ConnectionResetError):
-                    pass
+                    else:
+                        trello_board.expiration = t_now + TRELLO_["TRELLO_BOARD_CACHE_EXPIRATION"]
 
-                except (TrelloNotFound, TrelloBadRequest):
-                    guild_data.pop("trelloID")
+            except (TrelloUnauthorized, ConnectionResetError):
+                pass
 
-                    await self.r.table("guilds").get(str(guild.id)).update(guild_data).run()
+            except (TrelloNotFound, TrelloBadRequest):
+                guild_data = await self.r.db("bloxlink").table("guilds").get(str(guild.id)).run() or {}
+                guild_data.pop("trelloID")
 
-                except asyncio.TimeoutError:
-                    pass
+                await self.r.table("guilds").get(str(guild.id)).update(guild_data).run()
+
+            except asyncio.TimeoutError:
+                pass
 
 
         return trello_board

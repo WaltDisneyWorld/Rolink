@@ -12,7 +12,6 @@ class InviteCommand(Bloxlink.Module):
     @Bloxlink.flags
     async def __main__(self, CommandArgs):
         response = CommandArgs.response
-        prefix = CommandArgs.prefix
 
         embed = Embed(title="Invite Bloxlink")
         embed.description = "**To add Bloxlink to your server, click this link: https://blox.link/invite\n" \

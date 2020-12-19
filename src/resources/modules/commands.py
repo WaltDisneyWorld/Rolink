@@ -1,9 +1,7 @@
 import re
 import traceback
-import time
-import math
 import asyncio
-import sentry_sdk
+#import sentry_sdk
 from concurrent.futures._base import CancelledError
 from inspect import iscoroutinefunction
 from discord.errors import Forbidden, NotFound, HTTPException
@@ -11,14 +9,14 @@ from discord.utils import find
 from discord import Embed, Object, Member
 from ..exceptions import PermissionError, CancelledPrompt, Message, CancelCommand, RobloxAPIError, RobloxDown, Error # pylint: disable=redefined-builtin, import-error
 from ..structures import Bloxlink, Args, Permissions, Locale, Arguments, Response # pylint: disable=import-error
-from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE, SERVER_INVITE # pylint: disable=import-error
+from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE, CLUSTER_ID # pylint: disable=import-error
 
 
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
-cache_get, cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["get", "set", "pop"])
+cache_get, cache_set, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "pop", "get_guild_value"])
 
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
@@ -85,9 +83,8 @@ class Commands(Bloxlink.Module):
         channel_id = channel and str(channel.id)
         guild_id = guild and str(guild.id)
 
-        guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
-        trello_board = await get_board(guild_data=guild_data, guild=guild)
-        prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
+        trello_board = guild and await get_board(guild)
+        prefix, _ = await get_prefix(guild, trello_board)
 
         client_match = re.search(f"<@!?{self.client.user.id}>", content)
         check = (content[:len(prefix)].lower() == prefix.lower() and prefix) or client_match and client_match.group(0)
@@ -103,6 +100,7 @@ class Commands(Bloxlink.Module):
             del args[0]
 
             if command_name:
+                """
                 # TODO: merge commands from add-ons
                 guild_addons = guild_data.get("addons")
 
@@ -111,11 +109,13 @@ class Commands(Bloxlink.Module):
 
                     if addon_commands:
                         pass # TODO
+                """
 
                 for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
                         donator_profile = None
                         actually_dm = command.dm_allowed and not guild
+                        guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
 
                         fn = command.fn
                         subcommand_attrs = {}
@@ -156,7 +156,7 @@ class Commands(Bloxlink.Module):
 
                             if not donator_profile.features.get("pro"):
                                 await response.error(f"Server not authorized to use Pro. Please use the ``{prefix}donate`` command to see information on "
-                                                     "how to get Bloxlink Pro.")
+                                                      "how to get Bloxlink Pro.")
 
                                 return
 
@@ -297,8 +297,6 @@ class Commands(Bloxlink.Module):
                         except CancelledPrompt as e:
                             arguments.cancelled = True
 
-                            guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
-
                             if trello_board:
                                 trello_options, _ = await get_options(trello_board)
                                 guild_data.update(trello_options)
@@ -392,7 +390,7 @@ class Commands(Bloxlink.Module):
                 except NotFound:
                     return
 
-            verify_channel_id = guild_data.get("verifyChannel")
+            verify_channel_id = await get_guild_value(guild, "verifyChannel")
 
             if verify_channel_id and channel_id == verify_channel_id:
                 if not find(lambda r: r.name in MAGIC_ROLES, author.roles):
@@ -428,7 +426,8 @@ class Commands(Bloxlink.Module):
                 subcommand_description = subcommand.__doc__ or "N/A"
                 subcommands.append({"id": subcommand_name, "description": subcommand_description})
 
-        if RELEASE == "MAIN":
+        if RELEASE == "MAIN" and CLUSTER_ID == 0:
+            await self.r.db("bloxlink").table("commands").delete().run()
             await self.r.db("bloxlink").table("commands").insert({
                 "id": command.name,
                 "description": command.description,

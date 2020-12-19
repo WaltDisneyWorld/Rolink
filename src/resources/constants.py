@@ -4,7 +4,7 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.14.2"
+VERSION = "v3.14.3"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
@@ -31,6 +31,7 @@ for _ in range(SHARDS_PER_CLUSTER):
   SHARD_RANGE.append(shard)
   _to_add += 1
 
+SELF_HOST = True # changes bot behavior, such as using the Bloxlink API for requests
 
 STARTED = time()
 
@@ -72,6 +73,43 @@ else:
 VERIFY_URL = "https://blox.link/verify/"
 ACCOUNT_SETTINGS_URL = "https://blox.link/account/"
 
+VERIFYALL_MAX_SCAN = 5
+
+HTTP_RETRY_LIMIT = 5
+
+MODULE_DIR = [
+	"src/resources/modules",
+	"src/resources/events",
+	"src/commands"
+]
+
+WORDS = [
+	"bus",
+	"roblox",
+	"book",
+	"key",
+	"shirt",
+	"pants",
+	"battery",
+	"lamp",
+	"desk",
+	"water",
+	"soda",
+	"button",
+	"can",
+	"hello",
+	"mouse",
+	"vase",
+	"rug",
+	"blanket",
+	"pillow",
+	"music",
+	"lego",
+	"glasses",
+	"controller",
+	"pencil"
+]
+
 NICKNAME_TEMPLATES = (
     "{roblox-name} \u2192 changes to their Roblox username\n"
     "{roblox-id} \u2192 changes to their Roblox user ID\n"
@@ -97,7 +135,7 @@ UNVERIFIED_TEMPLATES = (
 ESCAPED_NICKNAME_TEMPLATES = NICKNAME_TEMPLATES.replace("{", "{{").replace("}", "}}")
 
 OPTIONS = {                # fn,  type, max length or choices, premium only, desc
-    "prefix":                (lambda g, gd: RELEASE == "PRO" and gd.get("proPrefix") or gd.get("prefix"), "string", 10,    False, "The prefix is used before commands to activate them"),
+    "prefix":                (lambda g, gd: RELEASE == "PRO" and gd.get("proPrefix") or gd.get("prefix") or DEFAULTS.get("prefix"), "string", 10,    False, "The prefix is used before commands to activate them"),
     "verifiedRoleName":      (None, "string", 20,    False, "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."),
     "verifiedRoleEnabled":   (None, "boolean", None, False, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."),
     "unverifiedRoleEnabled": (None, "boolean", None, False, "The Unverified role is given to people who aren't linked on Bloxlink. Enable/disable it here."),
@@ -125,6 +163,11 @@ OPTIONS = {                # fn,  type, max length or choices, premium only, des
     "whiteLabel":            (lambda g, gd: bool(gd.get("customBot")),  None, None, True,      "Modify the username and profile picture of __most__ Bloxlink responses."),
     "promptDelete":          (None, "boolean", None, False, "Toggle the deleting of prompt messages after it finishes."),
     "trelloBindMode":        (None, "choice", ("merge", "replace"), False, "Choose 'replace' if trello binds should replace the server binds, or 'merge' if trello binds should be merged with the server binds. Default = merge."),
+}
+
+PROMPT = {
+	"PROMPT_TIMEOUT": 300,
+	"PROMPT_ERROR_COUNT": 5
 }
 
 DEFAULTS = {

@@ -48,7 +48,7 @@ class GuildJoinEvent(Bloxlink.Module):
 
             guild_data = await self.r.table("guilds").get(guild_id).run() or {"id": guild_id}
             trello_board = await get_board(guild_data=guild_data, guild=guild)
-            prefix, _ = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
+            prefix, _ = await get_prefix(guild=guild, trello_board=trello_board)
 
             guild_data["hasBot"] = True
             await self.r.table("guilds").insert(guild_data, conflict="update").run()

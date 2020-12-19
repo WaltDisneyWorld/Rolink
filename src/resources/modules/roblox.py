@@ -6,11 +6,13 @@ from discord.errors import Forbidden, NotFound, HTTPException
 from discord.utils import find
 from discord import Embed, Member, Object
 from datetime import datetime
-from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
+from ratelimit import limits, RateLimitException
+from backoff import on_exception, expo
+from config import REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW,
                          SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, PARTNERS_COLOR, GREEN_COLOR,
-                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO)
+                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO, SELF_HOST, WORDS)
 import json
 import random
 import re
@@ -32,7 +34,7 @@ get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 is_booster = Bloxlink.get_module("nitro_boosters", attrs=["is_booster"], name_override="NitroBoosters")
 is_partner = Bloxlink.get_module("partners", attrs=["is_partner"])
 get_options, get_board = Bloxlink.get_module("trello", attrs=["get_options", "get_board"])
-cache_set, cache_get, cache_pop = Bloxlink.get_module("cache", attrs=["set", "get", "pop"])
+cache_set, cache_get, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["set", "get", "pop", "get_guild_value"])
 
 
 API_URL = "https://api.roblox.com"
@@ -361,7 +363,7 @@ class Roblox(Bloxlink.Module):
 
         return clan_tag
 
-    async def format_update_embed(self, roblox_user, author, added, removed, errors, *, nickname, prefix, guild_data, premium=False):
+    async def format_update_embed(self, roblox_user, author, added, removed, errors, *, nickname, prefix, guild_data):
         welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
         welcome_message = await self.get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False, prefix=prefix)
 
@@ -379,27 +381,6 @@ class Roblox(Bloxlink.Module):
                 embed.add_field(name="Removed Roles", value=", ".join(removed))
             if errors:
                 embed.add_field(name="Errors", value=", ".join(errors))
-
-            if not premium:
-                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-
-        """
-        if not premium:
-            show_donate_tip = random.randint(1, 100)
-
-            if show_donate_tip <= TIP_CHANCES["GETROLE_DONATE"]:
-                embed = embed or Embed()
-                embed.description = f"Did you know? **[Bloxlink Premium](https://www.patreon.com/join/bloxlink?)** subscribers are able to " \
-                                    "instantly _bypass_ the cache."
-
-                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-            else:
-                if embed:
-                    embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-                else:
-                    welcome_message = f"{welcome_message}\nPlease note that it may take up to **10 minutes** for Bloxlink to recognize a recent rank change " \
-                                      "due to caching."
-        """
 
         return welcome_message, embed
 
@@ -874,41 +855,18 @@ class Roblox(Bloxlink.Module):
         if not roblox_user:
             unverified = True
 
-        guild_data = guild_data or await cache_get("guild_data", guild.id)
+        options, guild_data = await get_guild_value(guild, ["verifiedDM", DEFAULTS.get("welcomeMessage")], ["unverifiedDM", DEFAULTS.get("unverifiedDM")], "ageLimit", ["disallowAlts", DEFAULTS.get("disallowAlts")], ["disallowBanEvaders", DEFAULTS.get("disallowBanEvaders")], "groupLock", return_guild_data=True)
 
-        if not guild_data:
-            guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
-
-            trello_board = trello_board or await get_board(guild=guild, guild_data=guild_data)
-            trello_options = {}
-
-            if not given_trello_options and trello_board:
-                trello_options, _ = await get_options(trello_board)
-                guild_data.update(trello_options)
-
-            await cache_set("guild_data", guild.id, guild_data)
-            await cache_set("verifiedDM", guild.id, guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage")))
-            await cache_set("unverifiedDM", guild.id, guild_data.get("unverifiedDM"))
-            await cache_set("ageLimit", guild.id, guild_data.get("ageLimit"))
-
-        #verified_dm   = guild_data.get("verifiedDM", DEFAULTS.get("welcomeMessage"))
-        #unverified_dm = guild_data.get("unverifiedDM")
-        #age_limit     = guild_data.get("ageLimit")
-        verified_dm   = await cache_get("verifiedDM", guild.id, primitives=True)
-        unverified_dm = await cache_get("unverifiedDM", guild.id, primitives=True)
-        age_limit     = await cache_get("ageLimit", guild.id, primitives=True)
-
-        verified_dm = verified_dm if verified_dm is not None else guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
-        unverified_dm = unverified_dm if unverified_dm is not None else guild_data.get("unverifiedDM")
-        age_limit = age_limit if age_limit is not None else guild_data.get("ageLimit")
+        verified_dm = options.get("verifiedDM")
+        unverified_dm = options.get("unverifiedDM")
+        age_limit = options.get("ageLimit")
+        disallow_alts = options.get("disallowAlts")
+        disallow_ban_evaders = options.get("disallowBanEvaders")
 
         try:
             age_limit = int(age_limit) #FIXME
         except TypeError:
             age_limit = None
-
-        disallow_alts        = guild_data.get("disallowAlts", DEFAULTS.get("disallowAlts"))
-        disallow_ban_evaders = guild_data.get("disallowBanEvaders", DEFAULTS.get("disallowBanEvaders"))
 
         if disallow_alts or disallow_ban_evaders:
             if not donator_profile:
@@ -999,7 +957,7 @@ class Roblox(Bloxlink.Module):
         except (PermissionError, UserNotVerified, BloxlinkBypass, HTTPException):
             pass
 
-        required_groups = guild_data.get("groupLock") # TODO: integrate with Trello
+        required_groups = options.get("groupLock") # TODO: integrate with Trello
 
         if roblox_user:
             if event:
@@ -1710,7 +1668,7 @@ class Roblox(Bloxlink.Module):
         try:
             json_data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            return RobloxAPIError
+            raise RobloxAPIError
         else:
             if json_data.get("AssetTypeId", 0) == 9:
                 game = Game(game_id, json_data)
@@ -1735,7 +1693,7 @@ class Roblox(Bloxlink.Module):
         try:
             json_data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            return RobloxAPIError
+            raise RobloxAPIError
         else:
             if json_data.get("AssetTypeId", 0) != 6:
                 item = RobloxItem(item_id, json_data)
@@ -1825,6 +1783,27 @@ class Roblox(Bloxlink.Module):
 
         raise RobloxNotFound
 
+    @on_exception(expo, RateLimitException, max_tries=8)
+    @limits(calls=30, period=30)
+    async def call_bloxlink_api(self, author, guild=None):
+        roblox_account = primary_account = None
+
+        bloxlink_api = guild and f"https://api.blox.link/v1/user/{author.id}?guild={guild.id}" or f"https://api.blox.link/user/{author.id}"
+        bloxlink_api_response, _ = await fetch(bloxlink_api)
+
+        try:
+            author_verified_data = json.loads(bloxlink_api_response)
+        except json.JSONDecodeError:
+            pass
+        else:
+            if not author_verified_data.get("error"):
+                roblox_account = author_verified_data.get("matchingAccount") or author_verified_data.get("primaryAccount")
+                primary_account = author_verified_data.get("primaryAccount")
+
+
+        return roblox_account, primary_account
+
+
     async def get_user(self, *args, author=None, guild=None, username=None, roblox_id=None, author_data=None, everything=False, basic_details=True, group_ids=None, send_embed=False, response=None, cache=True) -> Tuple:
         guild = guild or getattr(author, "guild", False)
         guild_id = guild and str(guild.id)
@@ -1865,6 +1844,12 @@ class Roblox(Bloxlink.Module):
             roblox_account = guild and guilds.get(guild_id) or author_data.get("robloxID")
             primary_account = author_data.get("robloxID")
 
+            if SELF_HOST and not (roblox_account or primary_account):
+                try:
+                    roblox_account, primary_account = await self.call_bloxlink_api(author, guild)
+                except RateLimitException:
+                    pass
+
             if roblox_account:
                 if not discord_profile:
                     discord_profile = DiscordProfile(author_id)
@@ -1900,9 +1885,6 @@ class Roblox(Bloxlink.Module):
                     return None, accounts
                 else:
                     raise UserNotVerified
-
-            raise UserNotVerified
-
         else:
             if not (roblox_id or username):
                 raise BadUsage("Must supply a username or ID")
@@ -1923,9 +1905,6 @@ class Roblox(Bloxlink.Module):
                 return roblox_user, []
 
             raise BadUsage("Unable to resolve a user")
-
-
-        raise UserNotVerified
 
 
     async def verify_as(self, author, guild=None, *, author_data=None, primary=False, trello_options=None, update_user=True, trello_board=None, response=None, guild_data=None, username=None, roblox_id=None, dm=True, cache=True) -> bool:

@@ -4,8 +4,8 @@ from discord import Embed
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..exceptions import CancelledPrompt, CancelCommand, Error # pylint: disable=import-error
 from ..constants import RED_COLOR, INVISIBLE_COLOR # pylint: disable=import-error
-from config import PROMPT, RELEASE # pylint: disable=no-name-in-module
-from ..constants import IS_DOCKER, TIP_CHANCES, SERVER_INVITE # pylint: disable=import-error
+from config import RELEASE # pylint: disable=no-name-in-module
+from ..constants import IS_DOCKER, TIP_CHANCES, SERVER_INVITE, PROMPT # pylint: disable=import-error
 import random
 
 get_resolver = Bloxlink.get_module("resolver", attrs="get_resolver")
