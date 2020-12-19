@@ -56,7 +56,7 @@ class PrefixCommand(Bloxlink.Module):
             trello_board = CommandArgs.trello_board
 
             if trello_board:
-                _, card = await get_prefix(guild=guild, guild_data=guild_data, trello_board=trello_board)
+                _, card = await get_prefix(guild=guild, trello_board=trello_board)
 
                 if card:
                     try:
