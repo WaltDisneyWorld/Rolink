@@ -1668,7 +1668,7 @@ class Roblox(Bloxlink.Module):
         try:
             json_data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            return RobloxAPIError
+            raise RobloxAPIError
         else:
             if json_data.get("AssetTypeId", 0) == 9:
                 game = Game(game_id, json_data)
@@ -1693,7 +1693,7 @@ class Roblox(Bloxlink.Module):
         try:
             json_data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            return RobloxAPIError
+            raise RobloxAPIError
         else:
             if json_data.get("AssetTypeId", 0) != 6:
                 item = RobloxItem(item_id, json_data)

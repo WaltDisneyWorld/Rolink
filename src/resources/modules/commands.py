@@ -83,7 +83,7 @@ class Commands(Bloxlink.Module):
         channel_id = channel and str(channel.id)
         guild_id = guild and str(guild.id)
 
-        trello_board = await get_board(guild)
+        trello_board = guild and await get_board(guild)
         prefix, _ = await get_prefix(guild, trello_board)
 
         client_match = re.search(f"<@!?{self.client.user.id}>", content)
