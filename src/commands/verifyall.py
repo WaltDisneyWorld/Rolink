@@ -1,8 +1,7 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.exceptions import (Error, UserNotVerified, Message, BloxlinkBypass, PermissionError, RobloxAPIError, # pylint: disable=import-error
                                   RobloxNotFound, CancelCommand, Blacklisted, RobloxDown)
-from config import VERIFYALL_MAX_SCAN # pylint: disable=no-name-in-module
-from resources.constants import RELEASE # pylint: disable=import-error
+from resources.constants import RELEASE, VERIFYALL_MAX_SCAN # pylint: disable=import-error
 from discord.errors import Forbidden, NotFound
 import heapq
 import asyncio

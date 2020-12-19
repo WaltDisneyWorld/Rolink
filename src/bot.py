@@ -1,11 +1,10 @@
 from os import environ
 import asyncio
-import config
 import logging
 import signal
 import sys
 import os
-from resources.constants import RELEASE # pylint: disable=import-error
+from resources.constants import MODULE_DIR # pylint: disable=import-error
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from resources.secrets import TOKEN # , SENTRY_URL, VALID_SECRETS # pylint: disable=import-error
 
@@ -18,7 +17,7 @@ loop = asyncio.get_event_loop()
 async def register_modules():
     get_files = Bloxlink.get_module("utils", attrs="get_files")
 
-    for directory in config.MODULE_DIR: # pylint: disable=E1101
+    for directory in MODULE_DIR: # pylint: disable=E1101
         files = get_files(directory)
 
         for filename in [f.replace(".py", "") for f in files]:

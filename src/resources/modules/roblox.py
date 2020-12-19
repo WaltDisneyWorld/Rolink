@@ -8,11 +8,11 @@ from discord import Embed, Member, Object
 from datetime import datetime
 from ratelimit import limits, RateLimitException
 from backoff import on_exception, expo
-from config import WORDS, REACTIONS, PREFIX # pylint: disable=no-name-in-module
+from config import REACTIONS, PREFIX # pylint: disable=no-name-in-module
 from ..constants import (RELEASE, DEFAULTS, STAFF_COLOR, DEV_COLOR, COMMUNITY_MANAGER_COLOR, # pylint: disable=no-name-in-module, import-error
                          VIP_MEMBER_COLOR, ORANGE_COLOR, PARTNERED_SERVER, ARROW,
                          SERVER_INVITE, PURPLE_COLOR, PINK_COLOR, PARTNERS_COLOR, GREEN_COLOR,
-                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO, SELF_HOST)
+                         RED_COLOR, ACCOUNT_SETTINGS_URL, TRELLO, SELF_HOST, WORDS)
 import json
 import random
 import re

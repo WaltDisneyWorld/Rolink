@@ -2,8 +2,8 @@ from os import listdir
 from re import compile
 from ..structures import Bloxlink # pylint: disable=import-error, no-name-in-module
 from ..exceptions import RobloxAPIError, RobloxDown, RobloxNotFound, CancelCommand # pylint: disable=import-error, no-name-in-module
-from config import PREFIX, HTTP_RETRY_LIMIT # pylint: disable=import-error, no-name-in-module
-from ..constants import RELEASE # pylint: disable=import-error, no-name-in-module
+from config import PREFIX # pylint: disable=import-error, no-name-in-module
+from ..constants import RELEASE, HTTP_RETRY_LIMIT # pylint: disable=import-error, no-name-in-module
 from discord.errors import NotFound, Forbidden
 from discord import Embed
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
@@ -112,7 +112,7 @@ class Utils(Bloxlink.Module):
 
 
     async def get_prefix(self, guild=None, trello_board=None):
-        if RELEASE == "PRO":
+        if RELEASE == "PRO" and guild:
             prefix = await get_guild_value(guild, "proPrefix")
 
             if prefix:
