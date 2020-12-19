@@ -8,7 +8,6 @@ from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRe
 verify_as, get_user, get_nickname, get_roblox_id, parse_accounts, unverify_member, format_update_embed, guild_obligations = Bloxlink.get_module("roblox", attrs=["verify_as", "get_user", "get_nickname", "get_roblox_id", "parse_accounts", "unverify_member", "format_update_embed", "guild_obligations"])
 get_options = Bloxlink.get_module("trello", attrs="get_options")
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
-get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
 @Bloxlink.command
@@ -52,15 +51,6 @@ class VerifyCommand(Bloxlink.Module):
         if CommandArgs.real_command_name in ("getrole", "getroles"):
             CommandArgs.string_args = []
 
-        """
-        donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
-        premium = donator_profile.features.get("premium")
-
-        if not premium:
-            donator_profile, _ = await get_features(author)
-            premium = donator_profile.features.get("premium")
-        """
-
         trello_options = {}
 
         if trello_board:
@@ -78,7 +68,6 @@ class VerifyCommand(Bloxlink.Module):
                 nickname             = True,
                 trello_board         = CommandArgs.trello_board,
                 given_trello_options = True,
-                #cache                = not premium,
                 cache                = False,
                 response             = response,
                 dm                   = False,
@@ -97,16 +86,12 @@ class VerifyCommand(Bloxlink.Module):
         except UserNotVerified:
             await self.add(CommandArgs)
         else:
-            welcome_message, embed = await format_update_embed(roblox_user, author, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != author.display_name else None, prefix=prefix, guild_data=guild_data, premium=premium)
+            welcome_message, embed = await format_update_embed(roblox_user, author, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != author.display_name else None, prefix=prefix, guild_data=guild_data)
 
             if embed:
                 await post_event(guild, guild_data, "verification", f"{author.mention} ({author.id}) has **verified** as ``{roblox_user.username}``.", GREEN_COLOR)
             else:
-                if premium:
-                    embed = Embed(description="This user is all up-to-date; no changes were made.")
-                else:
-                    embed = Embed(description="This user is all up-to-date; no changes were made.\n**Disclaimer:** it may take up to "
-                                              "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
+                embed = Embed(description="This user is all up-to-date; no changes were made.")
 
             await response.send(content=welcome_message, embed=embed)
 

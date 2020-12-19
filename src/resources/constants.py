@@ -98,7 +98,7 @@ UNVERIFIED_TEMPLATES = (
 ESCAPED_NICKNAME_TEMPLATES = NICKNAME_TEMPLATES.replace("{", "{{").replace("}", "}}")
 
 OPTIONS = {                # fn,  type, max length or choices, premium only, desc
-    "prefix":                (lambda g, gd: RELEASE == "PRO" and gd.get("proPrefix") or gd.get("prefix"), "string", 10,    False, "The prefix is used before commands to activate them"),
+    "prefix":                (lambda g, gd: RELEASE == "PRO" and gd.get("proPrefix") or gd.get("prefix") or DEFAULTS.get("prefix"), "string", 10,    False, "The prefix is used before commands to activate them"),
     "verifiedRoleName":      (None, "string", 20,    False, "The Verified role is given to people who are linked on Bloxlink. You can change the name of the role here."),
     "verifiedRoleEnabled":   (None, "boolean", None, False, "The Verified role is given to people who are linked on Bloxlink. Enable/disable it here."),
     "unverifiedRoleEnabled": (None, "boolean", None, False, "The Unverified role is given to people who aren't linked on Bloxlink. Enable/disable it here."),

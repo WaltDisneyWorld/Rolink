@@ -101,7 +101,6 @@ class UpdateUserCommand(Bloxlink.Module):
                 donator_profile, _ = await get_features(author)
                 premium = donator_profile.features.get("premium")
 
-
             cooldown = 0
 
             if len_users > 10:
@@ -135,7 +134,6 @@ class UpdateUserCommand(Bloxlink.Module):
                                 dm                = False,
                                 exceptions        = ("BloxlinkBypass", "UserNotVerified", "Blacklisted"),
                                 cache             = False)
-                                #cache             = not premium)
                         except BloxlinkBypass:
                             if len_users <= 10:
                                 await response.info(f"{user.mention} **bypassed**")
@@ -164,21 +162,17 @@ class UpdateUserCommand(Bloxlink.Module):
                         trello_board      = trello_board,
                         roles             = True,
                         nickname          = True,
-                        cache             = not premium,
+                        cache             = False,
                         dm                = False,
                         event             = True,
                         exceptions        = ("BloxlinkBypass", "Blacklisted", "CancelCommand", "UserNotVerified"))
 
-                    _, embed = await format_update_embed(roblox_user, user, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != user.display_name else None, prefix=prefix, guild_data=guild_data, premium=premium)
+                    _, embed = await format_update_embed(roblox_user, user, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != user.display_name else None, prefix=prefix, guild_data=guild_data)
 
                     if embed:
                         await response.send(embed=embed)
                     else:
-                        if premium:
-                            await response.success("This user is all up-to-date; no changes were made.")
-                        else:
-                            await response.success("This user is all up-to-date; no changes were made.\n**Disclaimer:** it may take up to "
-                                                   "__10 minutes__ for Bloxlink to recognize a __recent/new rank change__ due to caching.")
+                        await response.success("This user is all up-to-date; no changes were made.")
 
                 except BloxlinkBypass:
                     raise Message("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname.", type="info")

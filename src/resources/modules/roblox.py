@@ -363,7 +363,7 @@ class Roblox(Bloxlink.Module):
 
         return clan_tag
 
-    async def format_update_embed(self, roblox_user, author, added, removed, errors, *, nickname, prefix, guild_data, premium=False):
+    async def format_update_embed(self, roblox_user, author, added, removed, errors, *, nickname, prefix, guild_data):
         welcome_message = guild_data.get("welcomeMessage", DEFAULTS.get("welcomeMessage"))
         welcome_message = await self.get_nickname(author, welcome_message, guild_data=guild_data, roblox_user=roblox_user, is_nickname=False, prefix=prefix)
 
@@ -381,27 +381,6 @@ class Roblox(Bloxlink.Module):
                 embed.add_field(name="Removed Roles", value=", ".join(removed))
             if errors:
                 embed.add_field(name="Errors", value=", ".join(errors))
-
-            if not premium:
-                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-
-        """
-        if not premium:
-            show_donate_tip = random.randint(1, 100)
-
-            if show_donate_tip <= TIP_CHANCES["GETROLE_DONATE"]:
-                embed = embed or Embed()
-                embed.description = f"Did you know? **[Bloxlink Premium](https://www.patreon.com/join/bloxlink?)** subscribers are able to " \
-                                    "instantly _bypass_ the cache."
-
-                embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-            else:
-                if embed:
-                    embed.set_footer(text="Disclaimer: it may take up to 10 minutes for Bloxlink to recognize a recent rank change due to caching.", icon_url=Bloxlink.user.avatar_url)
-                else:
-                    welcome_message = f"{welcome_message}\nPlease note that it may take up to **10 minutes** for Bloxlink to recognize a recent rank change " \
-                                      "due to caching."
-        """
 
         return welcome_message, embed
 
