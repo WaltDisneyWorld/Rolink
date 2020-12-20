@@ -10,7 +10,7 @@ from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloBadRe
 get_prefix, post_event = Bloxlink.get_module("utils", attrs=["get_prefix", "post_event"])
 get_options = Bloxlink.get_module("trello", attrs=["get_options"])
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
-clear_guild_data, set_guild_value = Bloxlink.get_module("cache", attrs=["clear_guild_data", "set_guild_value"])
+cache_set, cache_pop = Bloxlink.get_module("cache", attrs=["set", "pop"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 
 
@@ -93,14 +93,13 @@ class SettingsCommand(Bloxlink.Module):
             value = None
 
             if option_data[0]:
-                value = str(option_data[0](guild, guild_data)) # pylint: disable=not-callable
+                value = option_data[0](guild, guild_data) # pylint: disable=not-callable
             else:
                 try:
-                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False")))
+                    value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False"))).replace("{prefix}", prefix)
                 except KeyError:
                     value = str(guild_data.get(option_name, DEFAULTS.get(option_name, "False")))
 
-            value = value.replace("{prefix}", prefix)
             text_buffer.append(f"**{option_name}** {ARROW} {value}")
 
         embed.description = "\n".join(text_buffer)
@@ -263,7 +262,7 @@ class SettingsCommand(Bloxlink.Module):
 
                 await self.r.table("guilds").insert({
                     "id": str(guild.id),
-                    choice: parsed_value
+                    choice: int(parsed_value)
                 }, conflict="update").run()
 
                 success_text = f"Successfully saved your new ``{choice}``!"
@@ -318,7 +317,9 @@ class SettingsCommand(Bloxlink.Module):
             except (TrelloNotFound, TrelloBadRequest):
                 pass
 
-        await set_guild_value(guild, choice, parsed_value)
+        await cache_set(choice, guild.id, parsed_value)
+
+        await cache_pop("guild_data", guild.id)
 
         await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``{choice}`` option.", BROWN_COLOR)
 
@@ -394,8 +395,6 @@ class SettingsCommand(Bloxlink.Module):
 
 
             await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **deleted** all server information.", BROWN_COLOR)
-
-            await clear_guild_data(guild)
 
             raise Message("Your server information was successfully cleared.", type="success")
 
@@ -485,8 +484,6 @@ class SettingsCommand(Bloxlink.Module):
 
 
             await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **deleted** all binds.", BROWN_COLOR)
-
-            await clear_guild_data(guild)
 
             raise Message("Successfully **cleared** all of your bound roles.", type="success")
 

@@ -13,7 +13,6 @@ VERIFIED_DEFAULT = "Verified"
 get_group, generate_code = Bloxlink.get_module("roblox", attrs=["get_group", "generate_code"])
 trello = Bloxlink.get_module("trello", attrs=["trello"])
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
-clear_guild_data = Bloxlink.get_module("cache", attrs=["clear_guild_data"])
 
 roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 
@@ -302,8 +301,6 @@ class SetupCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
         await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **set-up** the server.", BROWN_COLOR)
-
-        await clear_guild_data(guild)
 
         await response.success("Your server is now **configured** with Bloxlink!", dm=True, no_dm_post=True)
 

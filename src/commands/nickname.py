@@ -3,7 +3,6 @@ from resources.constants import ARROW, ESCAPED_NICKNAME_TEMPLATES, BROWN_COLOR #
 
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
-set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
 @Bloxlink.command
@@ -53,8 +52,6 @@ class NicknameCommand(Bloxlink.Module):
             await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
             await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``nicknameTemplate`` option.", BROWN_COLOR)
-
-            await set_guild_value(guild, "nicknameTemplate", global_nickname)
 
             await response.success("Successfully saved your new **Global Nickname!**")
         else:

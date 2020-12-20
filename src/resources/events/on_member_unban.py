@@ -1,10 +1,10 @@
-from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from ..exceptions import UserNotVerified # pylint: disable=import-error
-from ..constants import DEFAULTS, RED_COLOR # pylint: disable=import-error
+from ..structures.Bloxlink import Bloxlink
+from ..exceptions import UserNotVerified
+from ..constants import DEFAULTS, RED_COLOR
 from discord.errors import NotFound, Forbidden, HTTPException
 from discord import Object
 
-cache_get, cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "get_guild_value"])
+cache_get, cache_set = Bloxlink.get_module("cache", attrs=["get", "set"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_user = Bloxlink.get_module("roblox", attrs=["get_user"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
@@ -21,10 +21,25 @@ class MemberUnBanEvent(Bloxlink.Module):
         async def on_member_unban(guild, user):
             if self.redis:
                 donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
-                unban_related_accounts = await get_guild_value(guild, ["unbanRelatedAccounts", DEFAULTS.get("unbanRelatedAccounts")])
+
+                guild_data = await cache_get("guild_data", guild.id)
+
+                if not guild_data:
+                    guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
+
+                    trello_board = await get_board(guild=guild, guild_data=guild_data)
+                    trello_options = {}
+
+                    if trello_board:
+                        trello_options, _ = await get_options(trello_board)
+                        guild_data.update(trello_options)
 
                 if donator_profile.features.get("premium"):
-                    if unban_related_accounts:
+                    if await cache_get("unbanRelatedAccounts", guild.id, primitives=True) is None:
+                        await cache_set("guild_data", guild.id, guild_data)
+                        await cache_set("unbanRelatedAccounts", guild.id, bool(guild_data.get("unbanRelatedAccounts", DEFAULTS.get("unbanRelatedAccounts"))))
+
+                    if await cache_get("unbanRelatedAccounts", guild.id, primitives=True):
                         try:
                             account, accounts = await get_user(author=user, guild=guild)
                         except UserNotVerified:
@@ -52,4 +67,4 @@ class MemberUnBanEvent(Bloxlink.Module):
                                             except (Forbidden, HTTPException):
                                                 pass
                                             else:
-                                                await post_event(guild, None, "moderation", f"{ban_entry.user.mention} is an alt of {user.mention} and has been ``unbanned``.", RED_COLOR)
+                                                await post_event(guild, guild_data, "moderation", f"{ban_entry.user.mention} is an alt of {user.mention} and has been ``unbanned``.", RED_COLOR)

@@ -6,7 +6,6 @@ from discord import Embed, Object
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
-set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
 @Bloxlink.command
@@ -47,6 +46,7 @@ class LogChannelCommand(Bloxlink.Module):
         guild_data = CommandArgs.guild_data
 
         author = CommandArgs.message.author
+
         guild = CommandArgs.message.guild
 
         log_channels = guild_data.get("logChannels") or {}
@@ -110,10 +110,7 @@ class LogChannelCommand(Bloxlink.Module):
         else:
             guild_data["logChannels"] = log_channels
 
-
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
-
-        await set_guild_value(guild, "logChannels", log_channels)
 
         await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **changed** the ``log channels``.", BROWN_COLOR)
 

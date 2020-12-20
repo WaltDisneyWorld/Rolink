@@ -6,7 +6,6 @@ from resources.constants import BROWN_COLOR # pylint: disable=import-error
 from discord import TextChannel
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
-set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
 @Bloxlink.command
@@ -79,8 +78,6 @@ class DisableCommand(Bloxlink.Module):
 
         guild_data["disabledCommands"] = disabled_commands
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
-
-        await set_guild_value(guild, "disabledCommands", disabled_commands)
 
         await response.success(f"Successfully **{enable}** command ``{command_name}`` {disable_where} for non-admins.\n"
                                 "If you would like to grant a certain person access to use this command, give them a role called ``Bloxlink Bypass``.")

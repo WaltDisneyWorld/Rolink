@@ -5,7 +5,6 @@ from discord import Object
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
-set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
 @Bloxlink.command
@@ -85,18 +84,13 @@ class WhiteLabelCommand(Bloxlink.Module):
         if bot_avatar == "pride":
             bot_avatar = AVATARS["PRIDE"]
 
-        custom_bot = {
+        guild_data["customBot"] = {
             "name": bot_name,
             "avatar": bot_avatar
         }
-
-        guild_data["customBot"] = custom_bot
-
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **enabled** the ``white-label`` configuration.", BROWN_COLOR)
-
-        await set_guild_value(guild, "customBot", custom_bot)
 
         await response.success("Successfully saved your new **white-label** configuration!")
 
@@ -119,7 +113,5 @@ class WhiteLabelCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
         await post_event(guild, guild_data, "configuration", f"{author.mention} ({author.id}) has **disabled** the ``white-label`` configuration.", BROWN_COLOR)
-
-        await set_guild_value(guild, "customBot", None)
 
         await response.success("Successfully disabled your **white-label** configuration!")

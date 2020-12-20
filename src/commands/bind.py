@@ -13,7 +13,6 @@ roblox_group_regex = re.compile(r"roblox.com/groups/(\d+)/")
 get_group, parse_trello_binds, count_binds, get_binds = Bloxlink.get_module("roblox", attrs=["get_group", "parse_trello_binds", "count_binds", "get_binds"])
 fetch, post_event = Bloxlink.get_module("utils", attrs=["fetch", "post_event"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
-clear_guild_data = Bloxlink.get_module("cache", attrs=["clear_guild_data"])
 
 API_URL = "https://api.roblox.com"
 FREE_BIND_COUNT, PREM_BIND_COUNT = LIMITS["BINDS"]["FREE"], LIMITS["BINDS"]["PREMIUM"]
@@ -199,8 +198,6 @@ class BindCommand(Bloxlink.Module):
 
                         await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **changed** ``{group.name}``{ending_s} nickname template.", BLURPLE_COLOR)
 
-                        await clear_guild_data(guild)
-
                         raise Message("Since your group is already linked, the nickname was updated.", type="success")
 
                     else:
@@ -235,8 +232,6 @@ class BindCommand(Bloxlink.Module):
                         pass
 
                 await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **linked** group ``{group.name}``.", BLURPLE_COLOR)
-                await clear_guild_data(guild)
-
                 raise Message("Success! Your group was successfully linked.", type="success")
 
             else:
@@ -548,8 +543,6 @@ class BindCommand(Bloxlink.Module):
 
             await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **bound** group ``{group.name}``.", BLURPLE_COLOR)
 
-            await clear_guild_data(guild)
-
             await response.success(text)
 
         elif bind_choice in ("asset", "badge", "gamepass"):
@@ -702,7 +695,5 @@ class BindCommand(Bloxlink.Module):
 
 
             await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **bound** {bind_choice_title} ``{display_name}``.", BLURPLE_COLOR)
-
-            await clear_guild_data(guild)
 
             await response.success(f"Successfully **bound** {bind_choice_title} ``{display_name}`` ({bind_id}) with Discord role **{discord_role}!**")
