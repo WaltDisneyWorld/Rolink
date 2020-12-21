@@ -55,7 +55,7 @@ class Trello(Bloxlink.Module):
             except (TrelloUnauthorized, ConnectionResetError):
                 pass
 
-            except (TrelloNotFound, TrelloBadRequest):
+            except TrelloNotFound:
                 guild_data = await self.r.db("bloxlink").table("guilds").get(str(guild.id)).run() or {}
                 guild_data.pop("trelloID")
 
