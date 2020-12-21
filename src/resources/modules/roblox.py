@@ -53,7 +53,7 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_roblox_id(username) -> Tuple[str, str]:
         username_lower = username.lower()
-        roblox_cached_data = await cache_get("usernames_to_ids", username_lower)
+        roblox_cached_data = await cache_get(f"usernames_to_ids:{username_lower}")
 
         if roblox_cached_data:
             return roblox_cached_data
@@ -70,13 +70,13 @@ class Roblox(Bloxlink.Module):
         data = (roblox_id, correct_username)
 
         if correct_username:
-            await cache_set("usernames_to_ids", username_lower, data)
+            await cache_set(f"usernames_to_ids:{username_lower}", data)
 
         return data
 
     @staticmethod
     async def get_roblox_username(roblox_id) -> Tuple[str, str]:
-        roblox_user = await cache_get("roblox_users", roblox_id)
+        roblox_user = await cache_get(f"roblox_users:{roblox_id}")
 
         if roblox_user and roblox_user.verified:
             return roblox_user.id, roblox_user.username
@@ -264,12 +264,12 @@ class Roblox(Bloxlink.Module):
         else:
             roblox_id = str(roblox)
 
-        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+        blacklisted_discord = await cache_get(f"blacklist:discord_ids:{author.id}", primitives=True)
 
         if blacklisted_discord is not None:
             raise Blacklisted(blacklisted_discord)
 
-        blacklisted_roblox = await cache_get("blacklist:roblox_ids", roblox_id, primitives=True)
+        blacklisted_roblox = await cache_get(f"blacklist:roblox_ids:{roblox_id}", primitives=True)
 
         if blacklisted_roblox is not None:
             raise Blacklisted(blacklisted_roblox)
@@ -1081,7 +1081,7 @@ class Roblox(Bloxlink.Module):
 
 
     async def update_member(self, author, guild, *, nickname=True, roles=True, group_roles=True, roblox_user=None, author_data=None, binds=None, guild_data=None, trello_board=None, given_trello_options=False, response=None, dm=False, cache=True):
-        blacklisted = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+        blacklisted = await cache_get(f"blacklist:discord_ids:{author.id}", primitives=True)
 
         if blacklisted is not None:
             raise Blacklisted(blacklisted)
@@ -1184,7 +1184,7 @@ class Roblox(Bloxlink.Module):
             unverified = True
 
         else:
-            blacklisted = await cache_get("blacklist:roblox_ids", roblox_user.id, primitives=True)
+            blacklisted = await cache_get(f"blacklist:roblox_ids:{roblox_user.id}", primitives=True)
 
             if blacklisted is not None:
                 raise Blacklisted(blacklisted)
@@ -1658,7 +1658,7 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_game(game_id):
         game_id = str(game_id)
-        game = await cache_get("games", game_id)
+        game = await cache_get(f"games:{game_id}")
 
         if game:
             return game
@@ -1673,7 +1673,7 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) == 9:
                 game = Game(game_id, json_data)
 
-                await cache_set("games", game_id, game)
+                await cache_set(f"games:{game_id}", game)
 
                 return game
 
@@ -1683,7 +1683,7 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_catalog_item(item_id):
         item_id = str(item_id)
-        item = await cache_get("catalog_items", item_id)
+        item = await cache_get(f"catalog_items:{item_id}")
 
         if item:
             return item
@@ -1698,7 +1698,7 @@ class Roblox(Bloxlink.Module):
             if json_data.get("AssetTypeId", 0) != 6:
                 item = RobloxItem(item_id, json_data)
 
-                await cache_set("catalog_items", item_id, item)
+                await cache_set(f"catalog_items:{item_id}", item)
 
                 return item
 
@@ -1708,7 +1708,7 @@ class Roblox(Bloxlink.Module):
     @staticmethod
     async def get_group(group_id, with_shout=False, rolesets=False):
         group_id = str(group_id)
-        group = await cache_get("groups", group_id)
+        group = await cache_get(f"groups:{group_id}")
         shout = None
 
         if group and group.rolesets:
@@ -1746,7 +1746,7 @@ class Roblox(Bloxlink.Module):
                 else:
                     group.load_json(json_data)
 
-                await cache_set("groups", group_id, group)
+                await cache_set(f"groups:{group_id}", group)
 
                 return group
 
@@ -1823,7 +1823,7 @@ class Roblox(Bloxlink.Module):
             author_data = author_data or await self.r.db("bloxlink").table("users").get(author_id).run() or {}
 
             if cache:
-                discord_profile = await cache_get("discord_profiles", author_id)
+                discord_profile = await cache_get(f"discord_profiles:{author_id}")
 
                 if discord_profile:
                     if guild:
@@ -1866,7 +1866,7 @@ class Roblox(Bloxlink.Module):
                 roblox_user = None
 
                 if cache:
-                    roblox_user = await cache_get("roblox_users", roblox_account)
+                    roblox_user = await cache_get(f"roblox_users:{roblox_account}")
 
                 roblox_user = roblox_user or RobloxUser(roblox_id=roblox_account)
                 await roblox_user.sync(*args, author=author, group_ids=group_ids, embed=embed, response=response, guild=guild, everything=everything, basic_details=basic_details)
@@ -1875,8 +1875,8 @@ class Roblox(Bloxlink.Module):
                     discord_profile.guilds[guild_id] = roblox_user
 
                 if cache:
-                    await cache_set("discord_profiles", author_id, discord_profile)
-                    await cache_set("roblox_users", roblox_account, roblox_user)
+                    await cache_set(f"discord_profiles:{author_id}", discord_profile)
+                    await cache_set(f"roblox_users:{roblox_account}", roblox_user)
 
                 return roblox_user, accounts
 
@@ -1893,13 +1893,13 @@ class Roblox(Bloxlink.Module):
                 roblox_id, username = await self.get_roblox_id(username)
 
             if roblox_id:
-                roblox_user = await cache_get("roblox_users", roblox_id)
+                roblox_user = await cache_get(f"roblox_users:{roblox_id}")
 
                 if not roblox_user:
                     roblox_user = RobloxUser(roblox_id=roblox_id)
 
                     if cache:
-                        await cache_set("roblox_users", roblox_account, roblox_user)
+                        await cache_set(f"roblox_users:{roblox_account}", roblox_user)
 
                 await roblox_user.sync(*args, author=author, group_ids=group_ids, response=response, embed=embed, guild=guild, everything=everything, basic_details=basic_details)
                 return roblox_user, []
@@ -2132,7 +2132,7 @@ class Roblox(Bloxlink.Module):
                     embed.colour = VIP_MEMBER_COLOR
 
             if groups:
-                partners = await cache_get("partners:guilds")
+                partners = await cache_get("partners:guilds") or {}
                 notable_groups = set()
 
                 for partner_server_id, partner_group in partners.items():
@@ -2143,7 +2143,7 @@ class Roblox(Bloxlink.Module):
                             notable_groups.add(f"[{partner.name}]({partner.url}) {ARROW} {partner.user_rank_name}")
 
         if guild and embed:
-            cache_partner = await cache_get("partners:guilds", guild.id)
+            cache_partner = await cache_get(f"partners:guilds:{guild.id}")
             verified_reaction = guild.default_role.permissions.external_emojis and REACTIONS["VERIFIED"] or ":white_check_mark:"
 
             if cache_partner:
@@ -2539,13 +2539,13 @@ class RobloxUser(Bloxlink.Module):
         roblox_user_from_cache = None
 
         if username:
-            cache_find = await cache_get("usernames_to_ids", username)
+            cache_find = await cache_get(f"usernames_to_ids:{username}")
 
             if cache_find:
                 roblox_id, username = cache_find
 
             if roblox_id:
-                roblox_user_from_cache = await cache_get("roblox_users", roblox_id)
+                roblox_user_from_cache = await cache_get(f"roblox_users:{roblox_id}")
 
         if roblox_user_from_cache and roblox_user_from_cache.verified:
             roblox_data["id"] = roblox_id or roblox_user_from_cache.id

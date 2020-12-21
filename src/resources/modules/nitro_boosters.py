@@ -12,7 +12,7 @@ class NitroBoosters(Bloxlink.Module):
         pass
 
     async def is_booster(self, author):
-        return await cache_get("nitro_boosters", author.id, primitives=True)
+        return await cache_get(f"nitro_boosters:{author.id}", primitives=True)
 
     async def load_boosters(self):
         if RELEASE in ("CANARY", "LOCAL"):
@@ -35,4 +35,4 @@ class NitroBoosters(Bloxlink.Module):
 
             if booster_role:
                 for member in booster_role.members:
-                    await cache_set("nitro_boosters", member.id, "true")
+                    await cache_set(f"nitro_boosters:{member.id}", "true")

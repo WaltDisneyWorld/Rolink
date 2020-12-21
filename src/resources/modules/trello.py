@@ -1,5 +1,5 @@
 from aiotrello import Trello as TrelloClient
-from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
+from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..constants import OPTIONS # pylint: disable=import-error
 from ..constants import TRELLO as TRELLO_ # pylint: disable=import-error
@@ -34,12 +34,12 @@ class Trello(Bloxlink.Module):
             trello_id = await get_guild_value(guild, "trelloID")
 
         if trello_id:
-            trello_board = await cache_get("trello_boards", guild.id)
+            trello_board = await cache_get(f"trello_boards:{guild.id}")
 
             try:
                 if not trello_board:
                     trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
-                    await cache_set("trello_boards", guild.id, trello_board)
+                    await cache_set(f"trello_boards:{guild.id}", trello_board)
 
                 if trello_board:
                     t_now = time()
@@ -55,7 +55,7 @@ class Trello(Bloxlink.Module):
             except (TrelloUnauthorized, ConnectionResetError):
                 pass
 
-            except (TrelloNotFound, TrelloBadRequest):
+            except TrelloNotFound:
                 guild_data = await self.r.db("bloxlink").table("guilds").get(str(guild.id)).run() or {}
                 guild_data.pop("trelloID")
 

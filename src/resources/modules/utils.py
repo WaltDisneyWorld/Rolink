@@ -11,7 +11,7 @@ import asyncio
 import aiohttp
 
 is_patron = Bloxlink.get_module("patreon", attrs="is_patron")
-cache_set, cache_get, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["set", "get", "pop", "get_guild_value"])
+cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["pop", "get_guild_value"])
 
 @Bloxlink.module
 class Utils(Bloxlink.Module):

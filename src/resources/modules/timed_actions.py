@@ -8,7 +8,7 @@ from discord import Embed, AllowedMentions
 
 coro_async = Bloxlink.get_module("utils", attrs=["coro_async"])
 get_group, get_user = Bloxlink.get_module("roblox", attrs=["get_group", "get_user"])
-cache_clear, cache_get = Bloxlink.get_module("cache", attrs=["clear", "get"])
+cache_clear = Bloxlink.get_module("cache", attrs=["clear"])
 load_partners = Bloxlink.get_module("partners", attrs=["load_data"])
 load_blacklist = Bloxlink.get_module("blacklist", attrs=["load_blacklist"])
 load_boosters = Bloxlink.get_module("nitro_boosters", attrs=["load_boosters"], name_override="NitroBoosters")

@@ -16,7 +16,7 @@ get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
-cache_get, cache_set, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "pop", "get_guild_value"])
+cache_get, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "pop", "get_guild_value"])
 
 
 flag_pattern = re.compile(r"--?(.+?)(?: ([^-]*)|$)")
@@ -185,7 +185,7 @@ class Commands(Bloxlink.Module):
                                 except NotFound:
                                     return
 
-                        blacklisted_discord = await cache_get("blacklist:discord_ids", author.id, primitives=True)
+                        blacklisted_discord = await cache_get(f"blacklist:discord_ids:{author.id}", primitives=True)
 
                         if blacklisted_discord is not None:
                             blacklist_text = blacklisted_discord and f"has an active restriction for: ``{blacklisted_discord}``" or "has an active restriction from Bloxlink."

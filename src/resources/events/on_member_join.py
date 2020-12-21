@@ -2,7 +2,7 @@ from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..exceptions import RobloxDown, CancelCommand # pylint: disable=import-error
 from ..constants import DEFAULTS # pylint: disable=import-error
 
-cache_get, cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "get_guild_value"])
+cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["set", "get_guild_value"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
 guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 
