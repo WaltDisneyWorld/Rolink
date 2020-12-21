@@ -34,12 +34,12 @@ class Trello(Bloxlink.Module):
             trello_id = await get_guild_value(guild, "trelloID")
 
         if trello_id:
-            trello_board = await cache_get("trello_boards", guild.id)
+            trello_board = await cache_get(f"trello_boards:{guild.id}")
 
             try:
                 if not trello_board:
                     trello_board = await self.trello.get_board(trello_id, card_limit=TRELLO_["CARD_LIMIT"], list_limit=TRELLO_["LIST_LIMIT"])
-                    await cache_set("trello_boards", guild.id, trello_board)
+                    await cache_set(f"trello_boards:{guild.id}", trello_board)
 
                 if trello_board:
                     t_now = time()

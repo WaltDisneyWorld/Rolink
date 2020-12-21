@@ -5,6 +5,7 @@ from discord.errors import NotFound, HTTPException, Forbidden
 
 
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
 @Bloxlink.command
@@ -63,11 +64,13 @@ class JoinDMCommand(Bloxlink.Module):
             }]))["text"]
 
             guild_data["verifiedDM"] = parsed_args_2
+            await set_guild_value(guild, "verifiedDM", parsed_args_2)
 
             await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         elif parsed_args_1 == "disable":
             guild_data["verifiedDM"] = None
+            await set_guild_value(guild, "verifiedDM", None)
 
             await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 
@@ -79,6 +82,7 @@ class JoinDMCommand(Bloxlink.Module):
     async def unverified(self, CommandArgs):
         """set the DM message of people who are UNVERIFIED on Bloxlink"""
 
+        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
         unverifiedDM = guild_data.get("unverifiedDM")
 
@@ -107,11 +111,13 @@ class JoinDMCommand(Bloxlink.Module):
             }]))["text"]
 
             guild_data["unverifiedDM"] = parsed_args_2
+            await set_guild_value(guild, "unverifiedDM", parsed_args_2)
 
             await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         elif parsed_args_1 == "disable":
             guild_data["unverifiedDM"] = None
+            await set_guild_value(guild, "unverifiedDM", None)
 
             await self.r.table("guilds").insert(guild_data, conflict="replace").run()
 

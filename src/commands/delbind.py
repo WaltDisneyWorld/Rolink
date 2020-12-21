@@ -7,6 +7,7 @@ import asyncio
 
 get_binds, get_group, count_binds = Bloxlink.get_module("roblox", attrs=["get_binds", "get_group", "count_binds"])
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
+clear_guild_data = Bloxlink.get_module("cache", attrs=["clear_guild_data"])
 
 
 BIND_TYPES = ("asset", "badge", "gamepass")
@@ -291,6 +292,8 @@ class UnBindCommand(Bloxlink.Module):
 
             await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **removed** some ``binds``.", BLURPLE_COLOR)
 
+            await clear_guild_data(guild)
+
             raise Message("All bind removals were successful.", type="success")
 
         else:
@@ -342,6 +345,8 @@ class UnBindCommand(Bloxlink.Module):
 
 
                 await post_event(guild, guild_data, "bind", f"{author.mention} ({author.id}) has **removed** some ``binds``.", BLURPLE_COLOR)
+
+                await clear_guild_data(guild)
 
                 raise Message("All bind removals were successful.", type="success")
 
