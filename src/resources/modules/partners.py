@@ -28,6 +28,7 @@ class Partners(Bloxlink.Module):
             if match:
                 group_name = match.group(1)
                 group_id = match.group(2)
+
                 await cache_set(f"partners:guilds:{card.desc.isdigit() and int(card.desc) or group_id}", (directory, group_id, group_name, card.desc.isdigit() and int(card.desc)))
 
 

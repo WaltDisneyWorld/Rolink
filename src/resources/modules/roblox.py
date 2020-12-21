@@ -2132,7 +2132,7 @@ class Roblox(Bloxlink.Module):
                     embed.colour = VIP_MEMBER_COLOR
 
             if groups:
-                partners = await cache_get("partners:guilds")
+                partners = await cache_get("partners:guilds") or {}
                 notable_groups = set()
 
                 for partner_server_id, partner_group in partners.items():

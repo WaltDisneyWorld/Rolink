@@ -38,7 +38,7 @@ class Cache(Bloxlink.Module):
 
     async def clear(self, *exceptions):
         if exceptions:
-            cache = benedict()
+            cache = benedict(keypath_separator=":")
 
             for exception in exceptions:
                 cache_find = self._cache.get(exception)
@@ -48,7 +48,7 @@ class Cache(Bloxlink.Module):
 
             self._cache = cache
         else:
-            self._cache = benedict()
+            self._cache = benedict(keypath_separator=":")
 
 
     async def get_guild_value(self, guild, *items, return_guild_data=False):
