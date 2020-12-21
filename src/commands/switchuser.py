@@ -149,8 +149,8 @@ class SwitchUserCommand(Bloxlink.Module):
                                 guild        = guild,
                                 roles        = True,
                                 nickname     = True,
-                                author_data  = await self.r.db("bloxlink").table("users").get(str(author.id)).run(),
-                                response     = response)
+                                response     = response,
+                                cache        = False)
 
                         except BloxlinkBypass:
                             await response.info("Since you have the ``Bloxlink Bypass`` role, I was unable to update your roles/nickname; however, your account was still changed.")
