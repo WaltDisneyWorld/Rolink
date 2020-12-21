@@ -1,5 +1,5 @@
 from aiotrello import Trello as TrelloClient
-from aiotrello.exceptions import TrelloBadRequest, TrelloUnauthorized, TrelloNotFound, TrelloBadRequest
+from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..constants import OPTIONS # pylint: disable=import-error
 from ..constants import TRELLO as TRELLO_ # pylint: disable=import-error

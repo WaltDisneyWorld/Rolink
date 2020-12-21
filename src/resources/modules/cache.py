@@ -57,7 +57,6 @@ class Cache(Bloxlink.Module):
 
         if guild_data is None:
             guild_data = await self.r.table("guilds").get(str(guild.id)).run() or {"id": str(guild.id)}
-            print("getting new data", flush=True)
 
             trello_board = await self.get_board(guild=guild, guild_data=guild_data)
             trello_options = {}
