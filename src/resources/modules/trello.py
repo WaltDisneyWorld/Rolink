@@ -1,5 +1,5 @@
 from aiotrello import Trello as TrelloClient
-from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound
+from aiotrello.exceptions import TrelloUnauthorized, TrelloNotFound, TrelloHttpError
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..constants import OPTIONS # pylint: disable=import-error
 from ..constants import TRELLO as TRELLO_ # pylint: disable=import-error
@@ -54,6 +54,9 @@ class Trello(Bloxlink.Module):
 
             except (TrelloUnauthorized, ConnectionResetError):
                 pass
+
+            except TrelloHttpError as e:
+                print(e, flush=True)
 
             except TrelloNotFound:
                 guild_data = await self.r.db("bloxlink").table("guilds").get(str(guild.id)).run() or {}
