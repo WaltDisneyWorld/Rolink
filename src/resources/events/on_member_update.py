@@ -8,20 +8,20 @@ guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 
 
 @Bloxlink.module
-class MemberJoinEvent(Bloxlink.Module):
+class MemberUpdateEvent(Bloxlink.Module):
     def __init__(self):
         pass
 
     async def __setup__(self):
 
         @Bloxlink.event
-        async def on_member_join(member):
-            guild = member.guild
-
-            if member.bot or member.pending:
+        async def on_member_update(before, after):
+            if before.bot:
                 return
 
-            if self.redis:
+            guild = before.guild
+
+            if self.redis and before.pending and not after.pending:
                 options = await get_guild_value(guild, ["autoRoles", DEFAULTS.get("autoRoles")], ["autoVerification", DEFAULTS.get("autoVerification")])
 
                 auto_roles = options.get("autoRoles")
@@ -29,6 +29,6 @@ class MemberJoinEvent(Bloxlink.Module):
 
                 if auto_verification or auto_roles:
                     try:
-                        await guild_obligations(member, guild, cache=False, dm=True, event=True)
+                        await guild_obligations(after, guild, cache=False, dm=True, event=True)
                     except (RobloxDown, CancelCommand):
                         pass
