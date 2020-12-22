@@ -1,4 +1,4 @@
-from ..structures import Bloxlink, Blank # pylint: disable=import-error, no-name-in-module
+from ..structures import Bloxlink # pylint: disable=import-error, no-name-in-module
 from ..constants import CACHE_CLEAR # pylint: disable=import-error, no-name-in-module
 from benedict import benedict
 
@@ -77,10 +77,7 @@ class Cache(Bloxlink.Module):
             data = await self.get(f"guild_data:{guild.id}:{item_name}", primitives=False)
 
             if data is not None:
-                if isinstance(data, Blank.Blank):
-                    item_values[item_name] = None
-                else:
-                    item_values[item_name] = data
+                item_values[item_name] = data
 
                 continue
 
@@ -103,13 +100,10 @@ class Cache(Bloxlink.Module):
 
 
     async def set_guild_value(self, guild, item_name, value, guild_data=None):
-        if value is None:
-            value = Blank.Blank()
+        if guild_data:
+            await self.set(f"guild_data:{guild.id}", guild_data, check_primitives=False)
 
         await self.set(f"guild_data:{guild.id}:{item_name}", value, check_primitives=False)
-
-        if guild_data:
-            await self.set(f"guild_data:{guild.id}:{guild.id}", guild_data, check_primitives=False)
 
 
     async def clear_guild_data(self, guild):

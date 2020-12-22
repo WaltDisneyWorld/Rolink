@@ -1,5 +1,5 @@
-discord.py==1.5.1
-#git+https://github.com/Rapptz/discord.py
+#discord.py==1.5.1
+git+https://github.com/Rapptz/discord.py
 rethinkdb==2.4.7
 aiodns==2.0.0
 cchardet==2.1.6
@@ -16,4 +16,4 @@ hiredis==1.1.0
 sentry-sdk==0.18.0
 ratelimit==2.2.1
 backoff==1.10.0
-python-benedict
+python-benedict==0.22.2
