@@ -2,8 +2,7 @@ from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from ..exceptions import RobloxDown, CancelCommand # pylint: disable=import-error
 from ..constants import DEFAULTS # pylint: disable=import-error
 
-cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["set", "get_guild_value"])
-get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
+get_guild_value = Bloxlink.get_module("cache", attrs=["get_guild_value"])
 guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
 
 
@@ -16,12 +15,9 @@ class MemberUpdateEvent(Bloxlink.Module):
 
         @Bloxlink.event
         async def on_member_update(before, after):
-            if before.bot:
-                return
-
             guild = before.guild
 
-            if self.redis and before.pending and not after.pending:
+            if self.redis and not before.bot and (before.pending and not after.pending):
                 options = await get_guild_value(guild, ["autoRoles", DEFAULTS.get("autoRoles")], ["autoVerification", DEFAULTS.get("autoVerification")])
 
                 auto_roles = options.get("autoRoles")
