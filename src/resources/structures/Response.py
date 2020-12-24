@@ -116,7 +116,7 @@ class Response(Bloxlink.Module):
     def delete(self, *messages):
         for message in messages:
             if message:
-                self.delete_message_queue.append(message)
+                self.delete_message_queue.append(message.id)
 
     async def send(self, content=None, embed=None, on_error=None, dm=False, no_dm_post=False, strict_post=False, files=None, ignore_http_check=False, paginate_field_limit=None, channel_override=None, allowed_mentions=None):
         if dm and not IS_DOCKER:
