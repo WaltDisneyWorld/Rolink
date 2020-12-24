@@ -42,8 +42,7 @@ class DonateCommand(Bloxlink.Module):
                                                                  "minutes and your perks should be activated. Feel free to ask "
                                                                  "in our support server if you need more help: <https://blox.link/support>.", inline=False)
 
-        embed.add_field(name="Premium Monthly (**$5**)", value="[click here](https://www.patreon.com/join/bloxlink?)")
-        embed.add_field(name="Premium Lifetime", value="no longer offered")
+        embed.add_field(name="Premium Monthly/Annual", value="[click here](https://www.patreon.com/join/bloxlink?)")
 
         embed.set_footer(text="Powered by Bloxlink", icon_url=Bloxlink.user.avatar_url)
 
