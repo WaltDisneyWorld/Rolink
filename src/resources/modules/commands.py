@@ -151,7 +151,7 @@ class Commands(Bloxlink.Module):
                         locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
                         response = Response(CommandArgs)
 
-                        if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
+                        if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status", "prefix"):
                             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                             if not donator_profile.features.get("pro"):
