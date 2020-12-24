@@ -44,9 +44,9 @@ class Utils(Bloxlink.Module):
         if guild_data:
             log_channels = guild_data.get("logChannels", {})
         else:
-            log_channels = await get_guild_value(guild, "logChannels")
+            log_channels = await get_guild_value(guild, "logChannels") or {}
 
-        log_channel  = log_channels.get(event_name) or log_channels.get("all")
+        log_channel = log_channels.get(event_name) or log_channels.get("all")
 
         if log_channel:
             text_channel = guild.get_channel(int(log_channel))

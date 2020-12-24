@@ -151,7 +151,7 @@ class Commands(Bloxlink.Module):
                         locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
                         response = Response(CommandArgs)
 
-                        if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status"):
+                        if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status", "prefix"):
                             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
                             if not donator_profile.features.get("pro"):
@@ -290,6 +290,8 @@ class Commands(Bloxlink.Module):
                                 await response.error(e)
                             else:
                                 await response.error(locale("permissions.genericError"))
+                        except NotFound:
+                            await response.error("A channel or message which was vital to this command was deleted before the command could finish.")
                         except RobloxAPIError:
                             await response.error("The Roblox API returned an error; are you supplying the correct ID to this command?")
                         except RobloxDown:
