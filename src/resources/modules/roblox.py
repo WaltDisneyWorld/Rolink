@@ -938,23 +938,29 @@ class Roblox(Bloxlink.Module):
                 dm                      = dm,
                 response                = response)
 
-        except (NotFound, RobloxAPIError, Error, CancelCommand, RobloxDown, Blacklisted) as e:
+        except NotFound as e:
             if "NotFound" in exceptions:
                 raise NotFound from e
-            elif "RobloxAPIError" in exceptions:
+        except RobloxAPIError as e:
+            if "RobloxAPIError" in exceptions:
                 raise RobloxAPIError from e
-            elif "Error" in exceptions:
+        except Error as e:
+            if "Error" in exceptions:
                 raise Error from e
-            elif "CancelCommand" in exceptions:
+        except CancelCommand as e:
+            if "CancelCommand" in exceptions:
                 raise CancelCommand from e
-            elif "RobloxDown" in exceptions:
+        except RobloxDown as e:
+            if "RobloxDown" in exceptions:
                 raise RobloxDown from e
-            elif "Blacklisted" in exceptions:
+        except Blacklisted as e:
+            if "Blacklisted" in exceptions:
                 raise Blacklisted from e
+        except BloxlinkBypass as e:
+            if "BloxlinkBypass" in exceptions:
+                raise BloxlinkBypass from e
 
-            return added, removed, chosen_nickname, errored, roblox_user
-
-        except (PermissionError, UserNotVerified, BloxlinkBypass, HTTPException):
+        except (PermissionError, UserNotVerified, HTTPException):
             pass
 
         required_groups = options.get("groupLock") # TODO: integrate with Trello
