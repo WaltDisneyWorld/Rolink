@@ -15,7 +15,7 @@ from ..constants import MAGIC_ROLES, OWNER, DEFAULTS, RELEASE, CLUSTER_ID # pyli
 get_prefix = Bloxlink.get_module("utils", attrs=["get_prefix"])
 get_features = Bloxlink.get_module("premium", attrs=["get_features"])
 get_board, get_options = Bloxlink.get_module("trello", attrs=["get_board", "get_options"])
-get_addon_commands = Bloxlink.get_module("addonsm", attrs="get_addon_commands")
+get_enabled_addons = Bloxlink.get_module("addonsm", attrs="get_enabled_addons")
 cache_get, cache_pop, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "pop", "get_guild_value"])
 
 
@@ -100,19 +100,14 @@ class Commands(Bloxlink.Module):
             del args[0]
 
             if command_name:
-                """
-                # TODO: merge commands from add-ons
-                guild_addons = guild_data.get("addons")
-
-                if guild_addons:
-                    addon_commands = get_addon_commands(guild_data)
-
-                    if addon_commands:
-                        pass # TODO
-                """
+                enabled_addons = guild and await get_enabled_addons(guild) or {}
 
                 for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
+                        if command.addon:
+                            if str(command.addon) not in enabled_addons:
+                                return
+
                         donator_profile = None
                         actually_dm = command.dm_allowed and not guild
                         guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
@@ -402,7 +397,7 @@ class Commands(Bloxlink.Module):
                         pass
 
 
-    def new_command(self, command_structure):
+    def new_command(self, command_structure, addon=None):
         c = command_structure()
         command = Command(c)
 
@@ -415,6 +410,7 @@ class Commands(Bloxlink.Module):
                 command.subcommands[attr_name] = attr
 
         commands[command.name] = command
+        command.addon = addon
 
         self.loop.create_task(self.inject_command(command))
 
@@ -435,6 +431,7 @@ class Commands(Bloxlink.Module):
                 "description": command.description,
                 #"usage": command.usage,
                 "category": command.category,
+                "addon": command.addon and str(command.addon),
                 "hidden": command.hidden,
                 "subcommands": subcommands
             }, conflict="replace").run()
@@ -457,6 +454,7 @@ class Command:
         self.cooldown = getattr(command, "cooldown", 0)
         self.premium = self.permissions.premium or self.category == "Premium"
         self.developer_only = self.permissions.developer_only or self.category == "Developer" or getattr(command, "developer_only", False) or getattr(command, "developer", False)
+        self.addon = getattr(command, "addon", None)
 
         self.usage = []
         command_args = self.arguments
@@ -477,7 +475,7 @@ class Command:
         return self.name
 
     def __repr__(self):
-        return str(self)
+        return self.__str__()
 
     async def check_permissions(self, author, guild, locale, dm=False, permissions=None, **kwargs):
         permissions = permissions or self.permissions
@@ -532,7 +530,7 @@ class Command:
                                 pass
                             else:
                                 raise PermissionError("You either need: a role called ``Bloxlink Updater``, the ``Manage Roles`` "
-                                                    "role permission, or the ``Manage Server`` role permission.")
+                                                      "role permission, or the ``Manage Server`` role permission.")
 
                         elif role_name == "Bloxlink Admin":
                             if author_perms.administrator:

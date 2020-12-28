@@ -1,8 +1,9 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed
-from importlib import import_module
 
-get_files = Bloxlink.get_module("utils", attrs="get_files")
+
+set_guild_value = Bloxlink.get_module("cache", attrs="set_guild_value")
+addons, get_enabled_addons = Bloxlink.get_module("addonsm", attrs=["addons", "get_enabled_addons"])
 
 
 @Bloxlink.command
@@ -14,37 +15,43 @@ class AddonsCommand(Bloxlink.Module):
         self.category = "Administration"
         self.aliases = ["addon"]
         self.hidden = True
+        self.developer = True
 
-        self.addons = {}
-
-        self.load_addons()
+        self.arguments = [
+            {
+                "prompt": "Would you like to **view** the available add-ons, or **change** (enable/disable) an add-on?",
+                "name": "subcommand",
+                "type": "choice",
+                "choices": ["view", "change", "enable", "disable"]
+            }
+        ]
 
     async def __main__(self, CommandArgs):
-        pass
+        subcommand_choice = CommandArgs.parsed_args["subcommand"]
+
+        if subcommand_choice in ("change", "enable", "disable"):
+            await self.change(CommandArgs)
+        else:
+            await self.view(CommandArgs)
 
     @Bloxlink.subcommand()
     async def view(self, CommandArgs):
         """view your available server add-ons"""
 
-        response = CommandArgs.response
-        prefix = CommandArgs.prefix
-        guild_data = CommandArgs.guild_data
+        response   = CommandArgs.response
+        prefix     = CommandArgs.prefix
+        guild      = CommandArgs.message.guild
 
         embed = Embed(title="Bloxlink Server Add-ons")
         embed.description = f"Use ``{prefix}addon change`` to enable/disable an add-on."
 
-        guild_addons = guild_data.get("addons", {})
-
         available_addons = set()
-        enabled_addons = set()
+        enabled_addons   = set()
 
-        for addon, val in guild_addons.items():
-            if val:
-                enabled_addons.add(self.addons.get(addon))
+        enabled_addons = (await get_enabled_addons(guild)).values()
 
-        available_addons = [str(x) for x in set(self.addons.values()).difference(enabled_addons)]
-        enabled_addons = [str(x) for x in enabled_addons]
-
+        available_addons = [repr(x) for x in set(addons.values()).difference(enabled_addons)]
+        enabled_addons   = [repr(x) for x in enabled_addons]
 
         if available_addons:
             embed.add_field(name="Available Add-ons", value="\n".join(available_addons), inline=False)
@@ -64,15 +71,18 @@ class AddonsCommand(Bloxlink.Module):
 
         response = CommandArgs.response
 
+        guild = CommandArgs.message.guild
         guild_data = CommandArgs.guild_data
-        addons = guild_data.get("addons", {})
+        guild_addons = guild_data.get("addons", {})
+
+        toggleable_addons = [str(x) for x in filter(lambda x: getattr(x, 'toggleable', True), addons.values())]
 
         parsed_args = await CommandArgs.prompt([
             {
-                "prompt": f"Please choose the add-on you would like to change: ``{list(self.addons.keys())}``",
+                "prompt": f"Please choose the add-on you would like to change: ``{toggleable_addons}``",
                 "name": "addon_choice",
                 "type": "choice",
-                "choices": self.addons.keys(),
+                "choices": toggleable_addons,
                 "formatting": False
             },
             {
@@ -86,25 +96,11 @@ class AddonsCommand(Bloxlink.Module):
         addon_choice = parsed_args["addon_choice"]
         enable = parsed_args["enable"] == "enable"
 
-        addons[addon_choice] = enable
-        guild_data["addons"] = addons
+        guild_addons[addon_choice] = enable
+        guild_data["addons"] = guild_addons
 
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
+        await set_guild_value(guild, "addons", guild_addons)
+
         await response.success(f"Successfully **{parsed_args['enable']}d** the add-on **{addon_choice}!**")
-
-
-    def load_addons(self):
-        addon_files = [f.replace(".py", "") for f in get_files("src/addons/")]
-
-        for addon in addon_files:
-            import_name = f"addons.{addon}"
-
-            addon_mod = import_module(import_name)
-
-            for attr in dir(addon_mod):
-                if "Addon" in attr:
-                    mod = getattr(addon_mod, attr)
-
-                    if callable(mod):
-                        self.addons[addon] = mod()
