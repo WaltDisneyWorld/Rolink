@@ -9,11 +9,9 @@ class AddonsM(Bloxlink.Module):
     def __init__(self):
         self.addons = {}
 
-
     async def __setup__(self):
         self.new_command = Bloxlink.get_module("commands", attrs=["new_command"])
         self.load_addons()
-
 
     def load_addons(self):
         addon_categories = [f.replace(".py", "") for f in get_files("src/addons/")]
@@ -39,7 +37,6 @@ class AddonsM(Bloxlink.Module):
 
                                 self.addons[str(addon_category_structure)] = addon_category_structure
                                 self.new_command(command_structure, addon=addon_category_structure)
-
 
     async def get_addons(self, guild):
         guild_addons = await get_guild_value(guild, "addons")
