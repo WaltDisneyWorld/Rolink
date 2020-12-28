@@ -164,14 +164,32 @@ class Commands(Bloxlink.Module):
                             if guild.owner != author and not (find(lambda r: r.name in MAGIC_ROLES, author.roles) or author_perms.manage_guild or author_perms.administrator):
                                 if ignored_channels.get(channel_id):
                                     await response.send(f"The server admins have **disabled** all commands in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
+
+                                    try:
+                                        await message.delete()
+                                    except Forbidden:
+                                        pass
+
                                     return
 
                                 if command.name in disabled_commands.get("global", []):
                                     await response.send(f"The server admins have **disabled** the command ``{command_name}`` globally.", dm=True, strict_post=True, no_dm_post=True)
+
+                                    try:
+                                        await message.delete()
+                                    except Forbidden:
+                                        pass
+
                                     return
 
                                 elif disabled_commands.get("channels", {}).get(channel_id) == command.name:
                                     await response.send(f"The server admins have **disabled** the command ``{command_name}`` in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
+
+                                    try:
+                                        await message.delete()
+                                    except Forbidden:
+                                        pass
+
                                     return
 
                             if not isinstance(author, Member):
