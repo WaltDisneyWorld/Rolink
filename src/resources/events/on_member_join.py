@@ -1,5 +1,4 @@
 from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
-from ..exceptions import RobloxDown, CancelCommand # pylint: disable=import-error
 from ..constants import DEFAULTS # pylint: disable=import-error
 
 get_guild_value = Bloxlink.get_module("cache", attrs=["get_guild_value"])
@@ -24,7 +23,4 @@ class MemberJoinEvent(Bloxlink.Module):
                 auto_verification = options.get("autoVerification")
 
                 if auto_verification or auto_roles:
-                    try:
-                        await guild_obligations(member, guild, cache=False, dm=True, event=True)
-                    except (RobloxDown, CancelCommand):
-                        pass
+                    await guild_obligations(member, guild, cache=False, dm=True, event=True)

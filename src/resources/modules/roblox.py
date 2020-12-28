@@ -940,27 +940,30 @@ class Roblox(Bloxlink.Module):
 
         except NotFound as e:
             if "NotFound" in exceptions:
-                raise NotFound from e
+                raise NotFound(e) from e
         except RobloxAPIError as e:
             if "RobloxAPIError" in exceptions:
-                raise RobloxAPIError from e
+                raise RobloxAPIError(e) from e
         except Error as e:
             if "Error" in exceptions:
-                raise Error from e
+                raise Error(e) from e
         except CancelCommand as e:
             if "CancelCommand" in exceptions:
-                raise CancelCommand from e
+                raise CancelCommand(e) from e
         except RobloxDown as e:
             if "RobloxDown" in exceptions:
-                raise RobloxDown from e
+                raise RobloxDown(e) from e
         except Blacklisted as e:
             if "Blacklisted" in exceptions:
-                raise Blacklisted from e
+                raise Blacklisted(e) from e
         except BloxlinkBypass as e:
             if "BloxlinkBypass" in exceptions:
-                raise BloxlinkBypass from e
+                raise BloxlinkBypass(e) from e
+        except PermissionError as e:
+            if "PermissionError" in exceptions:
+                raise PermissionError(e) from e
 
-        except (PermissionError, UserNotVerified, HTTPException):
+        except (UserNotVerified, HTTPException):
             pass
 
         required_groups = options.get("groupLock") # TODO: integrate with Trello
@@ -1415,8 +1418,6 @@ class Roblox(Bloxlink.Module):
                                                     remove_roles.add(role)
 
 
-
-
                                 for bind_range in data.get("ranges", []):
                                     bind_nickname = bind_range.get("nickname")
                                     bound_roles = bind_range.get("roles", set())
@@ -1468,12 +1469,8 @@ class Roblox(Bloxlink.Module):
                                             if not allow_old_roles and role and role in author.roles:
                                                 remove_roles.add(role)
 
-
-
+                print("aaa", flush=True)
                 if group_roles and group_ids:
-                    #author_groups = author_data and author_data.get("groups", {})
-                    #updated_info = False
-
                     for group_id, group_data in group_ids.items():
                         if group_id != "0":
                             group = roblox_user.groups.get(str(group_id))
@@ -1493,7 +1490,6 @@ class Roblox(Bloxlink.Module):
                                         except HTTPException:
                                             raise Error("Unable to create role: this server has reached the max amount of roles!")
 
-
                                 for roleset in group.rolesets:
                                     roleset_name = roleset["name"]
                                     has_role = find(lambda r: r.name == roleset_name and not r.managed, author.roles)
@@ -1501,42 +1497,6 @@ class Roblox(Bloxlink.Module):
                                     if has_role:
                                         if not allow_old_roles and group.user_rank_name != roleset_name:
                                             remove_roles.add(has_role)
-
-                                """
-                                if author_data:
-                                    if author_groups:
-                                        author_groups[roblox_user.id] = author_groups.get(roblox_user.id) or {}
-                                        roblox_user_groups = author_groups[roblox_user.id]
-                                        matching_group = roblox_user_groups.get(group_id)
-
-                                        if matching_group:
-                                            rank_name = matching_group["rankName"]
-
-                                            if rank_name != group.user_rank_name:
-                                                has_role = find(lambda r: r.name == rank_name, author.roles)
-
-                                                if not allow_old_roles and has_role:
-                                                    remove_roles.add(has_role)
-
-                                                matching_group["rankName"] = group.user_rank_name
-                                                matching_group["rankID"] = group.user_rank_id
-
-                                                author_groups[roblox_user.id][group_id] = matching_group
-                                                author_data["groups"] = author_groups
-                                                updated_info = True
-                                        else:
-                                            author_groups[roblox_user.id] = author_groups.get(roblox_user.id) or {}
-                                            author_groups[roblox_user.id][group_id] = {"rankName": group.user_rank_name, "rankID": group.user_rank_id}
-                                            author_data["groups"] = author_groups
-                                            updated_info = True
-                                    else:
-                                        author_data["groups"] = author_data.get("groups", {})
-                                        author_data["groups"][roblox_user.id] = author_data["groups"].get(roblox_user.id) or {}
-                                        author_data["groups"][roblox_user.id][group_id] = {"rankName": group.user_rank_name, "rankID": group.user_rank_id}
-                                        author_groups = author_data["groups"]
-                                        author_data["groups"] = author_groups
-                                        updated_info = True
-                                """
 
                                 if group_role:
                                     add_roles.add(group_role)
@@ -1553,29 +1513,6 @@ class Roblox(Bloxlink.Module):
                                         if resolved_nickname and not resolved_nickname in possible_nicknames:
                                             possible_nicknames.append([group_role, resolved_nickname])
                             else:
-                                # remove old group role
-                                """
-                                if author_data and author_groups:
-                                    author_groups[roblox_user.id] = author_groups.get(roblox_user.id) or {}
-                                    roblox_user_groups = author_groups[roblox_user.id]
-                                    matching_group = roblox_user_groups.get(group_id)
-
-                                    if matching_group:
-                                        rank_name = matching_group["rankName"]
-                                        has_role = find(lambda r: r.name == rank_name, author.roles)
-
-                                        if not allow_old_roles and has_role:
-                                            remove_roles.add(has_role)
-
-                                        matching_group["rankName"] = "Guest"
-                                        matching_group["rankID"] = 0
-                                        author_groups[roblox_user.id].pop(group_id, None)
-
-                                        author_groups[roblox_user.id][group_id] = matching_group
-                                        author_data["groups"] = author_groups
-                                        updated_info = True
-                                """
-
                                 try:
                                     group = await self.get_group(group_id, rolesets=True)
                                 except RobloxNotFound:
@@ -1586,9 +1523,6 @@ class Roblox(Bloxlink.Module):
 
                                     if not allow_old_roles and group_role:
                                         remove_roles.add(group_role)
-
-                    #if updated_info:
-                    #    await self.r.db("bloxlink").table("users").get(str(author.id)).replace(author_data).run()
 
         if roles:
             remove_roles = remove_roles.difference(add_roles)
