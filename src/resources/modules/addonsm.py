@@ -44,7 +44,7 @@ class AddonsM(Bloxlink.Module):
         return guild_addons and {x:y for x,y in guild_addons.items() if x in self.addons}
 
     async def get_enabled_addons(self, guild):
-        guild_addons   = await get_guild_value(guild, "addons")
+        guild_addons   = await get_guild_value(guild, "addons") or {}
         enabled_addons = {}
 
         for addon, val in guild_addons.items():
