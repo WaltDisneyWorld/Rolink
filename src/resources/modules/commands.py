@@ -166,11 +166,11 @@ class Commands(Bloxlink.Module):
                                     await response.send(f"The server admins have **disabled** all commands in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 
-                                if command_name in disabled_commands.get("global", []):
+                                if command.name in disabled_commands.get("global", []):
                                     await response.send(f"The server admins have **disabled** the command ``{command_name}`` globally.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 
-                                elif disabled_commands.get("channels", {}).get(channel_id):
+                                elif disabled_commands.get("channels", {}).get(channel_id) == command.name:
                                     await response.send(f"The server admins have **disabled** the command ``{command_name}`` in channel {channel.mention}.", dm=True, strict_post=True, no_dm_post=True)
                                     return
 

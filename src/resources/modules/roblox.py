@@ -849,6 +849,11 @@ class Roblox(Bloxlink.Module):
         except RobloxAPIError as e:
             if "RobloxAPIError" in exceptions:
                 raise RobloxAPIError from e
+        except RobloxDown:
+            if "RobloxDown" in exceptions:
+                raise RobloxDown
+            else:
+                raise CancelCommand
 
             return added, removed, chosen_nickname, errored, roblox_user
 
@@ -940,7 +945,7 @@ class Roblox(Bloxlink.Module):
 
         except NotFound as e:
             if "NotFound" in exceptions:
-                raise NotFound(e) from e
+                raise NotFound from e
         except RobloxAPIError as e:
             if "RobloxAPIError" in exceptions:
                 raise RobloxAPIError(e) from e
@@ -953,6 +958,8 @@ class Roblox(Bloxlink.Module):
         except RobloxDown as e:
             if "RobloxDown" in exceptions:
                 raise RobloxDown(e) from e
+            else:
+                raise CancelCommand
         except Blacklisted as e:
             if "Blacklisted" in exceptions:
                 raise Blacklisted(e) from e
