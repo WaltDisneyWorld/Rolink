@@ -47,8 +47,6 @@ class Resolver(Bloxlink.Module):
             else:
                 return int(content), None
 
-            return int(content), None
-
         return False, "You must pass a number"
 
     async def choice_resolver(self, message, arg, content=None):
@@ -57,6 +55,11 @@ class Resolver(Bloxlink.Module):
 
         content = content.lower()
         content = content.strip(string.punctuation)
+
+        choice_dict = {x:True for x in arg["choices"]}
+
+        if content in choice_dict:
+            return content, None
 
         for choice in arg["choices"]:
             choice_lower = choice.lower()

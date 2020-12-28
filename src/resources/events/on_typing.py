@@ -2,6 +2,7 @@ from ..structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Member, Object
 from discord.utils import find
 from ..constants import DEFAULTS, RELEASE # pylint: disable=import-error
+from ..exceptions import CancelCommand # pylint: disable=import-error
 
 cache_get, cache_set, get_guild_value = Bloxlink.get_module("cache", attrs=["get", "set", "get_guild_value"])
 guild_obligations = Bloxlink.get_module("roblox", attrs=["guild_obligations"])
@@ -35,4 +36,7 @@ class ChannelTypingEvent(Bloxlink.Module):
                                 await cache_set(f"channel_typing:{guild.id}:{user.id}", True, expire=7200)
 
                                 if not find(lambda r: r.name == "Bloxlink Bypass", user.roles):
-                                    await guild_obligations(user, guild, dm=False, event=False)
+                                    try:
+                                        await guild_obligations(user, guild, dm=False, event=False)
+                                    except CancelCommand:
+                                        pass
