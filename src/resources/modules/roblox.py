@@ -1469,7 +1469,6 @@ class Roblox(Bloxlink.Module):
                                             if not allow_old_roles and role and role in author.roles:
                                                 remove_roles.add(role)
 
-                print("aaa", flush=True)
                 if group_roles and group_ids:
                     for group_id, group_data in group_ids.items():
                         if group_id != "0":
