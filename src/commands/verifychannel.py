@@ -21,7 +21,6 @@ class VerifyChannelCommand(Bloxlink.Module):
         guild = CommandArgs.message.guild
 
         async with response.loading():
-
             try:
                 category = find(lambda c: c.name == "Verification", guild.categories) or \
                         await guild.create_category("Verification")
