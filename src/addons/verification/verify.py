@@ -1,6 +1,6 @@
 from resources.structures.Bloxlink import Bloxlink # pylint: disable=import-error
 from discord import Embed, Object
-from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted # pylint: disable=import-error
+from resources.exceptions import Message, UserNotVerified, Error, RobloxNotFound, BloxlinkBypass, Blacklisted, PermissionError # pylint: disable=import-error
 from resources.constants import (NICKNAME_TEMPLATES, GREEN_COLOR, BROWN_COLOR, ARROW, VERIFY_URL, # pylint: disable=import-error
                                 ACCOUNT_SETTINGS_URL, TRELLO)
 from aiotrello.exceptions import TrelloNotFound, TrelloUnauthorized, TrelloBadRequest
@@ -71,7 +71,7 @@ class VerifyCommand(Bloxlink.Module):
                 cache                = False,
                 response             = response,
                 dm                   = False,
-                exceptions           = ("BloxlinkBypass", "Blacklisted", "UserNotVerified")
+                exceptions           = ("BloxlinkBypass", "Blacklisted", "UserNotVerified", "PermissionError")
             )
 
         except BloxlinkBypass:
@@ -85,6 +85,10 @@ class VerifyCommand(Bloxlink.Module):
 
         except UserNotVerified:
             await self.add(CommandArgs)
+
+        except PermissionError as e:
+            raise Error(e)
+
         else:
             welcome_message, embed = await format_update_embed(roblox_user, author, added=added, removed=removed, errors=errors, nickname=nickname if old_nickname != author.display_name else None, prefix=prefix, guild_data=guild_data)
 

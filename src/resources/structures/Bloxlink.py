@@ -115,23 +115,11 @@ class BloxlinkStructure(AutoShardedClient):
             pass
 
     def _handle_async_error(self, loop, context):
-        exception = context.get("exception")
-        future_info = context.get("future")
-        title = None
+        exception = context["exception"]
+        title = exception.__class__.__name__
+        tb_str = "".join(traceback.format_exception(etype=type(exception), value=exception, tb=exception.__traceback__))
 
-        if exception:
-            title = exception.__class__.__name__
-
-        if future_info:
-            msg = str(future_info)
-        else:
-            if exception:
-                msg = str(exception)
-            else:
-                msg = str(context["message"])
-
-
-        self.error(future_info or str(context["message"]), title=title)
+        self.error(tb_str, title=title)
 
     @staticmethod
     def module(module):

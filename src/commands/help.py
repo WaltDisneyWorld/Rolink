@@ -4,6 +4,8 @@ from resources.exceptions import CancelCommand, Error # pylint: disable=import-e
 from resources.constants import ARROW, OWNER, HELP_DESCRIPTION # pylint: disable=import-error
 from discord import Embed
 
+get_enabled_addons = Bloxlink.get_module("addonsm", attrs=["get_enabled_addons"])
+
 
 @Bloxlink.command
 class HelpCommand(Bloxlink.Module):
@@ -24,6 +26,7 @@ class HelpCommand(Bloxlink.Module):
         command_name = CommandArgs.parsed_args.get("command_name")
         prefix = CommandArgs.prefix
         response = CommandArgs.response
+        guild = CommandArgs.message.guild
 
         if command_name:
             command_name = command_name.lower()
@@ -104,8 +107,10 @@ class HelpCommand(Bloxlink.Module):
             embed = Embed(description=HELP_DESCRIPTION.format(prefix=prefix))
             categories = {}
 
+            enabled_addons = guild and await get_enabled_addons(guild) or {}
+
             for name, command in commands.items():
-                if command.hidden and CommandArgs.message.author.id != OWNER:
+                if (command.addon and str(command.addon) not in enabled_addons) or (command.hidden and CommandArgs.message.author.id != OWNER):
                     continue
 
                 category = categories.get(command.category, [])
