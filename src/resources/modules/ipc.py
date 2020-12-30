@@ -75,7 +75,15 @@ class IPC(Bloxlink.Module):
                     except NotFound:
                         return
 
-                roblox_user, _ = await get_user(roblox_id=roblox_id)
+                try:
+                    roblox_user, _ = await get_user(roblox_id=roblox_id)
+                except RobloxDown:
+                    try:
+                        await member.send("Roblox appears to be down, so I was unable to retrieve your Roblox information. Please try again later.")
+                    except Forbidden:
+                        pass
+
+                    return
 
                 try:
                     added, removed, nickname, errors, roblox_user = await guild_obligations(

@@ -6,7 +6,6 @@ post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 set_guild_value = Bloxlink.get_module("cache", attrs=["set_guild_value"])
 
 
-@Bloxlink.command
 class NicknameCommand(Bloxlink.Module):
     """manage the nickname users are given by Bloxlink"""
 

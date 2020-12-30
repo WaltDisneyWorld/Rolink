@@ -28,14 +28,15 @@ class AddonsM(Bloxlink.Module):
                 if "Addon" in attr_name and not "Command" in attr_name:
                     addon_category_structure = getattr(addon_category_module, attr_name)()
 
+                    self.addons[str(addon_category_structure)] = addon_category_structure
+
                     for command in addon_commands:
                         addon_command_module = import_module(f"addons.{addon_category}.{command}")
 
                         for attr_name in dir(addon_command_module):
-                            if "Command" in attr_name and hasattr(addon_command_module, "__main__"): # it's probably a command tbh, should have a better system to check tho
+                            if "Command" in attr_name and hasattr(getattr(addon_command_module, attr_name), "__main__"): # it's probably a command tbh, should have a better system to check tho
                                 command_structure = getattr(addon_command_module, attr_name)
 
-                                self.addons[str(addon_category_structure)] = addon_category_structure
                                 self.new_command(command_structure, addon=addon_category_structure)
 
     async def get_addons(self, guild):
@@ -52,7 +53,7 @@ class AddonsM(Bloxlink.Module):
                 enabled_addons[addon] = self.addons.get(addon)
 
         for addon in self.addons.values():
-            if getattr(addon, "default_enabled", True) and not getattr(addon, "toggleable", True):
+            if getattr(addon, "default_enabled", False) and not getattr(addon, "toggleable", True):
                 enabled_addons[str(addon)] = addon
 
         return enabled_addons

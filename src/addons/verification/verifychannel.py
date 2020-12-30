@@ -4,7 +4,7 @@ from resources.constants import DEFAULTS # pylint: disable=import-error
 from discord.utils import find
 from discord.errors import Forbidden, NotFound, HTTPException
 
-@Bloxlink.command
+
 class VerifyChannelCommand(Bloxlink.Module):
     """create a special channel where messages are deleted"""
 

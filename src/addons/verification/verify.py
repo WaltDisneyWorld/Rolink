@@ -10,7 +10,7 @@ get_options = Bloxlink.get_module("trello", attrs="get_options")
 post_event = Bloxlink.get_module("utils", attrs=["post_event"])
 
 
-@Bloxlink.command
+
 class VerifyCommand(Bloxlink.Module):
     """link your Roblox account to your Discord account and get your server roles"""
 

@@ -5,7 +5,6 @@ from discord import Embed
 get_user, get_binds = Bloxlink.get_module("roblox", attrs=["get_user", "get_binds"])
 
 
-@Bloxlink.command
 class GetinfoCommand(Bloxlink.Module):
     """retrieve the Roblox information from a member"""
 

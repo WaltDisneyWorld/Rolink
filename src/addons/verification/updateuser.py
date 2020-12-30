@@ -9,7 +9,7 @@ guild_obligations, format_update_embed = Bloxlink.get_module("roblox", attrs=["g
 parse_message = Bloxlink.get_module("commands", attrs=["parse_message"])
 get_features = Bloxlink.get_module("premium", attrs="get_features")
 
-@Bloxlink.command
+
 class UpdateUserCommand(Bloxlink.Module):
     """force update user(s) with roles and nicknames"""
 
