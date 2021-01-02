@@ -31,6 +31,7 @@ class Resolver(Bloxlink.Module):
 
         return str(content), None
 
+
     async def number_resolver(self, message, arg, content=None):
         if not content:
             content = message.content
@@ -175,6 +176,7 @@ class Resolver(Bloxlink.Module):
 
             return users, None
 
+
     async def channel_resolver(self, message, arg, content=None):
         if not content:
             content = message.content
@@ -204,6 +206,36 @@ class Resolver(Bloxlink.Module):
                     return channel, None
 
         return False, "Invalid channel"
+
+
+    async def category_resolver(self, message, arg, content=None):
+        if not content:
+            content = message.content
+
+        guild = message.guild
+
+        is_int, is_id = None, None
+
+        try:
+            is_int = int(content)
+            is_id = is_int > 15
+        except ValueError:
+            pass
+
+        if is_id:
+            category = guild.get_category(is_int)
+
+            if category:
+                return category, None
+        else:
+            content = content.lower()
+
+            category = find(lambda c: c.name.lower() == content, guild.categories)
+
+            if category:
+                return category, None
+
+        return False, "Invalid category"
 
 
     async def role_resolver(self, message, arg, content=None):
@@ -304,6 +336,7 @@ class Resolver(Bloxlink.Module):
 
         return False, "Invalid role"
 
+
     async def image_resolver(self, message, arg, content=None):
         if not content:
             content = message.content
@@ -318,6 +351,7 @@ class Resolver(Bloxlink.Module):
             return content, None
         else:
             return False, "This doesn't appear to be a valid https URL."
+
 
     async def list_resolver(self, message, arg, content=None):
         if not content:
