@@ -292,51 +292,6 @@ class Resolver(Bloxlink.Module):
             else:
                 return roles[0], None
 
-
-    async def role_resolver2(self, message, arg, content=None):
-        if not content:
-            content = message.content
-
-        guild = message.guild
-
-        roles = []
-
-        if message and message.role_mentions:
-            for role in message.role_mentions:
-                if role != guild.default_role:
-                    roles.append(role)
-
-                    if not arg.get("multiple"):
-                        break
-        else:
-            is_int, is_id = None, None
-            role = None
-
-            try:
-                is_int = int(content)
-                is_id = is_int > 15
-            except ValueError:
-                pass
-
-            if is_id:
-                role = find(lambda r: r.id == is_int, guild.roles)
-            else:
-                role = find(lambda r: r.name == content, guild.roles)
-
-            if role and role != guild.default_role:
-                return role, None
-
-            if arg.get("create_missing_role", True):
-                try:
-                    role = await guild.create_role(name=content, reason="Creating missing role")
-                except Forbidden:
-                    raise PermissionError(f"Failed to create role {content}, please ensure I have the ``Manage Roles`` permission.")
-                else:
-                    return role, None
-
-        return False, "Invalid role"
-
-
     async def image_resolver(self, message, arg, content=None):
         if not content:
             content = message.content
