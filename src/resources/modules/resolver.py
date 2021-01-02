@@ -319,6 +319,15 @@ class Resolver(Bloxlink.Module):
         else:
             return False, "This doesn't appear to be a valid https URL."
 
+    async def list_resolver(self, message, arg, content=None):
+        if not content:
+            content = message.content
+
+        items = content.split(",")
+        items = [x.strip() for x in items]
+
+        return items, None
+
 
     def get_resolver(self, name):
         for method_name in dir(self):
