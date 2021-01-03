@@ -26,7 +26,7 @@ class CourtSetupCommand(Bloxlink.Module):
             {
                 "prompt": "**Thank you for choosing Bloxlink!** In a few simple prompts, **we'll configure this add-on "
                           "for your server.**\n\n**The Court Add-on**\nThis add-on allows you to assign judges which have "
-                          "the power create cases within your Discord server. Created cases reside in Discord channels where "
+                          "the power to create cases within your Discord server. Created cases reside in Discord channels where "
                           "the messages are all saved and can be exported later.",
                 "name": "_",
                 "footer": "Say **next** to continue.",

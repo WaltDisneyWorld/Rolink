@@ -137,7 +137,7 @@ class CaseCommand(Bloxlink.Module):
                 if log_channel:
                     await response.send(f"Case **{case_name}** has been opened by {author.mention} and being served in {case_channel.mention}.", channel_override=log_channel, allowed_mentions=AllowedMentions(users=False))
 
-            await response.send(embed=embed)
+            await response.send(embed=embed, dm=True, no_dm_post=True)
 
 
     @Bloxlink.subcommand()
@@ -338,14 +338,16 @@ class CaseCommand(Bloxlink.Module):
                 await response.send(f"Case **{case_name}** has been closed by {author.mention}.", channel_override=log_channel, allowed_mentions=AllowedMentions(users=False))
 
 
-    @Bloxlink.subcommand(arguments=[{
-        "prompt": "Please provide a Case ID.",
-        "name": "case_id"
-    }])
+    @Bloxlink.subcommand()
     async def lookup(self, CommandArgs):
         """lookup a case by its ID"""
 
-        case_id = CommandArgs.parsed_args["case_id"]
+        case_id = (await CommandArgs.prompt([
+            {
+                "prompt": "Please provide a Case ID.",
+                "name": "case_id"
+            }
+        ]))["case_id"]
 
         response = CommandArgs.response
         prefix   = CommandArgs.prefix
@@ -494,7 +496,7 @@ class CaseCommand(Bloxlink.Module):
             member = guild.get_member(int(member_id))
 
             if member:
-                await channel.set_permissions(member, send_messages=False)
+                await channel.set_permissions(member, send_messages=False, read_messages=True)
 
 
         await response.success(f"Successfully **muted** the members from group ``{group}``!")
@@ -549,7 +551,7 @@ class CaseCommand(Bloxlink.Module):
             member = guild.get_member(int(member_id))
 
             if member:
-                await channel.set_permissions(member, overwrite=None)
+                await channel.set_permissions(member, read_messages=True)
 
 
         await response.success(f"Successfully **unmuted** the members from group ``{group}``!")

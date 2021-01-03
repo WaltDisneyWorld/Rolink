@@ -187,31 +187,38 @@ class Resolver(Bloxlink.Module):
         max = arg.get("max")
         multiple = arg.get("multiple")
 
-        lookup_strings = content.split(",")
+        if message.channel_mentions:
+            for channel in message.channel_mentions:
+                channels.append(channel)
 
-        for lookup_string in lookup_strings:
-            if lookup_string:
-                lookup_string = lookup_string.strip()
-                channel = None
+                if not multiple:
+                    break
+        else:
+            lookup_strings = content.split(",")
 
-                if lookup_string.isdigit():
-                    channel = guild.get_text_channel(int(lookup_string))
-                else:
-                    channel = find(lambda c: c.name == lookup_string, guild.text_channels)
+            for lookup_string in lookup_strings:
+                if lookup_string:
+                    lookup_string = lookup_string.strip()
+                    channel = None
 
-                if not channel:
-                    if create_missing_channel:
-                        try:
-                            channel = await guild.create_text_channel(name=lookup_string.replace(" ", "-"))
-                        except Forbidden:
-                            return None, "I was unable to create the channel. Please ensure I have the ``Manage Channels`` permission."
-                        else:
-                            channels.append(channel)
+                    if lookup_string.isdigit():
+                        channel = guild.get_text_channel(int(lookup_string))
                     else:
-                        return None, "Invalid channel"
-                else:
-                    if channel not in channels:
-                        channels.append(channel)
+                        channel = find(lambda c: c.name == lookup_string, guild.text_channels)
+
+                    if not channel:
+                        if create_missing_channel:
+                            try:
+                                channel = await guild.create_text_channel(name=lookup_string.replace(" ", "-"))
+                            except Forbidden:
+                                return None, "I was unable to create the channel. Please ensure I have the ``Manage Channels`` permission."
+                            else:
+                                channels.append(channel)
+                        else:
+                            return None, "Invalid channel"
+                    else:
+                        if channel not in channels:
+                            channels.append(channel)
 
         if not channels:
             return None, "Invalid channel(s)"

@@ -138,12 +138,12 @@ class Response(Bloxlink.Module):
 
                     if not webhook:
                         try:
-                            for webhook in await self.channel.webhooks():
+                            for webhook in await channel.webhooks():
                                 if webhook.token:
                                     await cache_set(f"webhooks:{channel.id}", webhook)
                                     break
                             else:
-                                webhook = await self.channel.create_webhook(name="Bloxlink Webhooks")
+                                webhook = await channel.create_webhook(name="Bloxlink Webhooks")
                                 await cache_set(f"webhooks:{channel.id}", webhook)
 
                         except (Forbidden, NotFound):
@@ -212,14 +212,14 @@ class Response(Bloxlink.Module):
                             return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files, allowed_mentions=allowed_mentions)
                     else:
                         try:
-                            await self.channel.send(self.author.mention + ", **check your DMs!**", allowed_mentions=allowed_mentions)
+                            await channel.send(self.author.mention + ", **check your DMs!**", allowed_mentions=allowed_mentions)
                         except asyncio.TimeoutError:
                             return None
 
                 return msg
 
             except (Forbidden, NotFound):
-                channel = not strict_post and (dm and self.channel or self.author) or channel # opposite channel
+                channel = channel_override or (not strict_post and (dm and self.channel or self.author) or channel) # opposite channel
 
                 try:
                     if webhook and not dm:
