@@ -183,7 +183,7 @@ class Response(Bloxlink.Module):
                     try:
                         msg = await webhook.send(embed=embed, content=content,
                                                  wait=True, username=self.bot_name,
-                                                 avatar_url=self.bot_avatar)
+                                                 avatar_url=self.bot_avatar, allowed_mentions=allowed_mentions)
                     except asyncio.TimeoutError:
                         return None
 
@@ -193,7 +193,7 @@ class Response(Bloxlink.Module):
                         return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files, allowed_mentions=allowed_mentions)
                 else:
                     try:
-                        msg = await channel.send(embed=embed, content=content, files=files)
+                        msg = await channel.send(embed=embed, content=content, files=files, allowed_mentions=allowed_mentions)
 
                     except asyncio.TimeoutError:
                         return None
@@ -202,7 +202,7 @@ class Response(Bloxlink.Module):
                     if webhook:
                         try:
                             await webhook.send(content=self.author.mention + ", **check your DMs!**",
-                                               username=self.bot_name, avatar_url=self.bot_avatar)
+                                               username=self.bot_name, avatar_url=self.bot_avatar, allowed_mentions=allowed_mentions)
                         except asyncio.TimeoutError:
                             return None
 
@@ -212,7 +212,7 @@ class Response(Bloxlink.Module):
                             return await self.send(content=content, embed=embed, on_error=on_error, dm=dm, no_dm_post=no_dm_post, strict_post=strict_post, files=files, allowed_mentions=allowed_mentions)
                     else:
                         try:
-                            await self.channel.send(self.author.mention + ", **check your DMs!**")
+                            await self.channel.send(self.author.mention + ", **check your DMs!**", allowed_mentions=allowed_mentions)
                         except asyncio.TimeoutError:
                             return None
 
@@ -244,7 +244,7 @@ class Response(Bloxlink.Module):
                                 try:
                                     await webhook.send(f"{self.author.mention}, I was unable to DM you. "
                                                         "Please check your privacy settings and try again.",
-                                                        username=self.bot_name, avatar_url=self.bot_avatar)
+                                                        username=self.bot_name, avatar_url=self.bot_avatar, allowed_mentions=allowed_mentions)
                                 except asyncio.TimeoutError:
                                     return None
 
@@ -256,14 +256,14 @@ class Response(Bloxlink.Module):
                             else:
                                 try:
                                     await self.channel.send(f"{self.author.mention}, I was unable to DM you. "
-                                                            "Please check your privacy settings and try again.")
+                                                            "Please check your privacy settings and try again.", allowed_mentions=allowed_mentions)
                                 except asyncio.TimeoutError:
                                     return None
                         else:
                             try:
                                 await self.author.send(f"You attempted to use command {self.args.command_name} in "
                                                        f"{self.channel.mention}, but I was unable to post there. "
-                                                        "You may need to grant me the ``Embed Links`` permission.", files=files)
+                                                        "You may need to grant me the ``Embed Links`` permission.", files=files, allowed_mentions=allowed_mentions)
                             except asyncio.TimeoutError:
                                 return None
 
