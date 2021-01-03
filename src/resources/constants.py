@@ -4,7 +4,7 @@ from re import search
 from discord import Game
 from discord.utils import find
 
-VERSION = "v3.14.4"
+VERSION = "v3.15"
 
 RELEASE = env.get("RELEASE", "LOCAL")
 IS_DOCKER = bool(env.get("RELEASE"))
@@ -227,7 +227,8 @@ TABLE_STRUCTURE = {
         "robloxAccounts",
         "commands",
         "miscellaneous",
-        "restrictedUsers"
+        "restrictedUsers",
+        "addonData"
     ],
     "canary": [
         "guilds",
