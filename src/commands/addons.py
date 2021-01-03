@@ -15,7 +15,6 @@ class AddonsCommand(Bloxlink.Module):
         self.category = "Administration"
         self.aliases = ["addon"]
         self.hidden = True
-        self.developer = True
 
         self.arguments = [
             {
