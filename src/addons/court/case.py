@@ -10,7 +10,6 @@ class CaseCommand(Bloxlink.Module):
     """manage your cases"""
 
     def __init__(self):
-        self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Court Addon"
 
     async def __main__(self, CommandArgs):
@@ -54,7 +53,7 @@ class CaseCommand(Bloxlink.Module):
                         "to begin the set-up.")
 
         for judge_role_id in court_data.get("judgeRoles", []):
-            if find(lambda r: r.id == int(judge_role_id), guild.roles):
+            if find(lambda r: r.id == int(judge_role_id), author.roles):
                 break
         else:
             raise Error("You must have a Judge role in order to create cases!")
@@ -398,6 +397,7 @@ class CaseCommand(Bloxlink.Module):
         """free old cases from the database"""
 
         guild    = CommandArgs.message.guild
+        author   = CommandArgs.message.author
         prefix   = CommandArgs.prefix
         response = CommandArgs.response
 
@@ -421,7 +421,7 @@ class CaseCommand(Bloxlink.Module):
 
 
         for judge_role_id in court_data.get("judgeRoles", []):
-            if find(lambda r: r.id == int(judge_role_id), guild.roles):
+            if find(lambda r: r.id == int(judge_role_id), author.roles):
                 break
         else:
             raise Error("You must have a Judge role in order to run this command!")
