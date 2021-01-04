@@ -86,8 +86,9 @@ class StatsCommand(Bloxlink.Module):
         embed.add_field(name="Uptime", value=uptime)
         embed.add_field(name="Memory Usage", value=f"{mem} MB")
 
-        embed.add_field(name="Invite **Bloxlink**", value=f"https://blox.link/invite")
-        embed.add_field(name="Website", value=f"https://blox.link")
+        embed.add_field(name="Invite **Bloxlink**", value="https://blox.link/invite")
+        embed.add_field(name="Website", value="https://blox.link")
+        embed.add_field(name="Repository", value="https://github.com/bloxlink/Bloxlink")
 
         await response.send(embed=embed)
 
