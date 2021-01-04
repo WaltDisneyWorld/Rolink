@@ -69,7 +69,10 @@ class Commands(Bloxlink.Module):
         if len(skipped_args) > 1:
             arguments.skipped_args = skipped_args
         else:
-            arguments.skipped_args = [content_modified]
+            if content_modified:
+                arguments.skipped_args = [content_modified]
+            else:
+                arguments.skipped_args = []
 
         if command_args:
             parsed_args = await arguments.prompt(command_args)
