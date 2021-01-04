@@ -94,20 +94,31 @@ class ResponseLoading:
 
 class Response(Bloxlink.Module):
     def __init__(self, CommandArgs):
-        self.webhook_only = CommandArgs.guild_data.get("customBot", {})
-
         self.message = CommandArgs.message
         self.guild = CommandArgs.message.guild
         self.author = CommandArgs.message.author
         self.channel = CommandArgs.message.channel
         self.prompt = None # filled in on commands.py
         self.args = CommandArgs
+        self.command = CommandArgs.command
 
         self.delete_message_queue = []
 
+        if self.command.addon:
+            if hasattr(self.command.addon, "whitelabel"):
+                self.webhook_only = getattr(self.command.addon, "whitelabel")
+            else:
+                self.webhook_only = bool(CommandArgs.guild_data.get("customBot", {}))
+        else:
+            self.webhook_only = bool(CommandArgs.guild_data.get("customBot", {}))
+
         if self.webhook_only:
-            self.bot_name = self.args.guild_data["customBot"].get("name", "Bloxlink")
-            self.bot_avatar = self.args.guild_data["customBot"].get("avatar", "")
+            if isinstance(self.webhook_only, bool):
+                self.bot_name   = self.args.guild_data["customBot"].get("name", "Bloxlink")
+                self.bot_avatar = self.args.guild_data["customBot"].get("avatar", "")
+            else:
+                self.bot_name   = self.webhook_only[0]
+                self.bot_avatar = self.webhook_only[1]
         else:
             self.bot_name = self.bot_avatar = None
 

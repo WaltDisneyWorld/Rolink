@@ -130,6 +130,7 @@ class Commands(Bloxlink.Module):
                             flags = {},
                             prefix = prefix,
                             has_permission = False,
+                            command = command
                         )
 
                         if getattr(fn, "__flags__", False):
