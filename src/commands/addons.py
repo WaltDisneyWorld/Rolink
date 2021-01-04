@@ -98,13 +98,19 @@ class AddonsCommand(Bloxlink.Module):
         addon_choice = parsed_args["addon_choice"]
         enable = parsed_args["enable"] == "enable"
 
-        if enable and getattr(addons[addon_choice], "premium", False):
-            donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
+        if enable:
+            if getattr(addons[addon_choice], "premium", False):
+                donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
 
-            if not donator_profile.features.get("premium"):
-                raise Error(f"You must have premium in order to enable this add-on. Please use ``{prefix}donate`` "
-                            "for instructions on donating.")
+                if not donator_profile.features.get("premium"):
+                    raise Error(f"You must have premium in order to enable this add-on. Please use ``{prefix}donate`` "
+                                "for instructions on donating.")
 
+            await response.success(f"Successfully **{parsed_args['enable']}d** the **{addon_choice.title()}** add-on! You should "
+                                   f"now see additional commands if you run ``{prefix}help``.")
+        else:
+            await response.success(f"Successfully **{parsed_args['enable']}d** the **{addon_choice.title()}** add-on! These "
+                                   f"commands have been removed from your ``{prefix}help`` menu.")
 
         guild_addons[addon_choice] = enable
         guild_data["addons"] = guild_addons
@@ -112,5 +118,3 @@ class AddonsCommand(Bloxlink.Module):
         await self.r.table("guilds").insert(guild_data, conflict="update").run()
 
         await set_guild_value(guild, "addons", guild_addons)
-
-        await response.success(f"Successfully **{parsed_args['enable']}d** the add-on **{addon_choice}!**")
