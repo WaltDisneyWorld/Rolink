@@ -5,7 +5,8 @@ class CourtAddon:
 
     def __init__(self):
         self.default_enabled = False
-        self.toggleable = True
+        self.toggleable      = True
+        self.premium         = True
 
     def __str__(self):
         return self.__class__.__name__.replace("Addon", "").lower()

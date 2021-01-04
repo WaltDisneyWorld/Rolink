@@ -104,10 +104,6 @@ class Commands(Bloxlink.Module):
 
                 for index, command in commands.items():
                     if index == command_name or command_name in command.aliases:
-                        if command.addon:
-                            if str(command.addon) not in enabled_addons:
-                                return
-
                         donator_profile = None
                         actually_dm = command.dm_allowed and not guild
                         guild_data = guild_data or (guild and (await self.r.table("guilds").get(guild_id).run() or {"id": guild_id})) or {}
@@ -145,6 +141,19 @@ class Commands(Bloxlink.Module):
 
                         locale = Locale(guild_data and guild_data.get("locale", "en") or "en")
                         response = Response(CommandArgs)
+
+                        if command.addon:
+                            if str(command.addon) not in enabled_addons:
+                                return
+
+                            if getattr(command.addon, "premium", False):
+                                donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
+
+                                if not donator_profile.features.get("premium"):
+                                    await response.error(f"This add-on requires premium! You may use ``{prefix}donate`` for instructions on donating.\n"
+                                                         f"You may also disable this add-on with ``{prefix}addon change``.")
+
+                                    return
 
                         if guild and RELEASE == "PRO" and command_name not in ("donate", "transfer", "eval", "status", "prefix"):
                             donator_profile, _ = await get_features(Object(id=guild.owner_id), guild=guild)
