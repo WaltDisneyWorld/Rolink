@@ -28,50 +28,55 @@ class Commands(Bloxlink.Module):
     def __init__(self):
         pass
 
+
     async def more_args(self, content_modified, CommandArgs, command_args, arguments):
         parsed_args = {}
 
+        arg_len = len(command_args) if command_args else 0
+        skipped_args = []
+        split = content_modified.split(" ")
+        temp = []
+
+        for arg in split:
+            if arg:
+                if arg.startswith('"') and arg.endswith('"'):
+                    arg = arg.replace('"', "")
+
+                if len(skipped_args) + 1 == arg_len:
+                    t = content_modified.replace('"', "")
+                    toremove = " ".join(skipped_args)
+
+                    if t.startswith(toremove):
+                        t = t[len(toremove):]
+
+                    t = t.strip()
+
+                    skipped_args.append(t)
+
+                    break
+
+                if arg.startswith('"') or (temp and not arg.endswith('"')):
+                    temp.append(arg.replace('"', ""))
+
+                elif arg.endswith('"'):
+                    temp.append(arg.replace('"', ""))
+                    skipped_args.append(" ".join(temp))
+                    temp.clear()
+
+                else:
+                    skipped_args.append(arg)
+
+        if len(skipped_args) > 1:
+            arguments.skipped_args = skipped_args
+        else:
+            arguments.skipped_args = [content_modified]
+
         if command_args:
-            arg_len = len(command_args)
-            skipped_args = []
-            split = content_modified.split(" ")
-            temp = []
-
-            for arg in split:
-                if arg:
-                    if arg.startswith('"') and arg.endswith('"'):
-                        arg = arg.replace('"', "")
-
-                    if len(skipped_args) + 1 == arg_len:
-                        # t = content_modified.replace('"', "").replace(" ".join(skipped_args), "").strip() # PROBLEM HERE
-                        t = content_modified.replace('"', "")
-                        toremove = " ".join(skipped_args)
-
-                        if t.startswith(toremove):
-                            t = t[len(toremove):]
-
-                        t = t.strip()
-
-                        skipped_args.append(t)
-
-                        break
-
-                    if arg.startswith('"') or (temp and not arg.endswith('"')):
-                        temp.append(arg.replace('"', ""))
-
-                    elif arg.endswith('"'):
-                        temp.append(arg.replace('"', ""))
-                        skipped_args.append(" ".join(temp))
-                        temp.clear()
-
-                    else:
-                        skipped_args.append(arg)
-
-            parsed_args = await arguments.prompt(command_args, skipped_args=skipped_args)
-            # TODO: catch PermissionError from resolver and post the event
+            parsed_args = await arguments.prompt(command_args)
 
 
         return parsed_args, content_modified and content_modified.split(" ") or []
+
 
 
     async def parse_message(self, message, guild_data=None):

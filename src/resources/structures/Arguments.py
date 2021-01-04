@@ -29,6 +29,7 @@ class Arguments:
 		self.dm_post = None
 		self.cancelled = False
 		self.dm_false_override = False
+		self.skipped_args = []
 
 
 	async def say(self, text, type=None, footer=None, embed_title=None, is_prompt=True, embed_color=INVISIBLE_COLOR, embed=True, dm=False):
@@ -84,15 +85,13 @@ class Arguments:
 	def in_prompt(author):
 		return prompts.get(author.id)
 
-	async def prompt(self, arguments, skipped_args=None, error=False, embed=True, dm=False, no_dm_post=False):
+	async def prompt(self, arguments, error=False, embed=True, dm=False, no_dm_post=False):
 		prompts[self.author.id] = True
-
-		skipped_args = skipped_args or []
 
 		checked_args = 0
 		err_count = 0
 		resolved_args = {}
-		had_args = {x:True for x, y in enumerate(skipped_args)}
+		had_args = {x:True for x, y in enumerate(self.skipped_args)}
 
 		if dm:
 			if IS_DOCKER:
@@ -117,9 +116,7 @@ class Arguments:
 					raise CancelledPrompt("Too many failed attempts.", type="delete")
 
 				prompt = arguments[checked_args]
-				skipped_arg = skipped_args[checked_args:checked_args+1]
-				skipped_arg = skipped_arg and skipped_arg[0] or None
-				my_arg = skipped_arg
+				skipped_arg = self.skipped_args and self.skipped_args[0]
 				message = self.message
 
 				if prompt.get("optional") and not had_args.get(checked_args):
@@ -140,45 +137,45 @@ class Arguments:
 
 						if dm and IS_DOCKER:
 							message_content = await broadcast(self.author.id, type="DM", send_to=f"{RELEASE}:CLUSTER_0", waiting_for=1, timeout=PROMPT["PROMPT_TIMEOUT"])
-							my_arg = message_content[0]
+							skipped_arg = message_content[0]
 
-							if not my_arg:
+							if not skipped_arg:
 								await self.say("Cluster which handles DMs is temporarily unavailable. Please say your message in the server instead of DMs.", type="error", embed=embed, dm=dm)
 								self.dm_false_override = True
 								dm = False
 
 								message = await Bloxlink.wait_for("message", check=self._check_prompt(), timeout=PROMPT["PROMPT_TIMEOUT"])
 
-								my_arg = message.content
+								skipped_arg = message.content
 
 								if prompt.get("delete_original", True):
 									self.messages.append(message.id)
 
-							if my_arg == "cluster timeout":
-								my_arg = "cancel (timeout)"
+							if skipped_arg == "cluster timeout":
+								skipped_arg = "cancel (timeout)"
 
 						else:
 							message = await Bloxlink.wait_for("message", check=self._check_prompt(dm), timeout=PROMPT["PROMPT_TIMEOUT"])
 
-							my_arg = message.content
+							skipped_arg = message.content
 
 							if prompt.get("delete_original", True):
 								self.messages.append(message.id)
 
-						my_arg_lower = my_arg.lower()
-						if my_arg_lower == "cancel":
+						skipped_arg_lower = skipped_arg.lower()
+						if skipped_arg_lower == "cancel":
 							raise CancelledPrompt(type="delete", dm=dm)
-						elif my_arg_lower == "cancel (timeout)":
+						elif skipped_arg_lower == "cancel (timeout)":
 							raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)", dm=dm)
 
 					except TimeoutError:
 						raise CancelledPrompt(f"timeout ({PROMPT['PROMPT_TIMEOUT']}s)", dm=dm)
 
-				my_arg_lower = my_arg.lower()
+				skipped_arg_lower = skipped_arg.lower()
 
-				if my_arg_lower in prompt.get("exceptions", []):
+				if skipped_arg_lower in prompt.get("exceptions", []):
 					checked_args += 1
-					resolved_args[prompt["name"]] = my_arg_lower
+					resolved_args[prompt["name"]] = skipped_arg_lower
 
 					continue
 
@@ -193,11 +190,11 @@ class Arguments:
 
 				for resolver_type in resolver_types:
 					resolver = get_resolver(resolver_type)
-					resolved, error_message = await resolver(message, prompt, my_arg)
+					resolved, error_message = await resolver(message, prompt, skipped_arg)
 
 					if resolved:
 						if prompt.get("validation"):
-							res = [await prompt["validation"](content=my_arg, message=not dm and message)]
+							res = [await prompt["validation"](content=skipped_arg, message=not dm and message)]
 
 							if isinstance(res[0], tuple):
 								if not res[0][0]:
@@ -226,12 +223,15 @@ class Arguments:
 					await self.say("\n".join(resolve_errors), type="error", embed=embed, dm=dm)
 
 					try:
-						skipped_args[checked_args] = None
+						self.skipped_args[checked_args] = None
 						had_args[checked_args] = True
 					except IndexError:
 						pass
 
 					err_count += 1
+
+				if self.skipped_args:
+					self.skipped_args.pop(0)
 
 
 			return resolved_args
