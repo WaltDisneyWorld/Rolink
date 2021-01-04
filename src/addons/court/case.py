@@ -41,7 +41,7 @@ class CaseCommand(Bloxlink.Module):
         response = CommandArgs.response
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
-        court_data = addon_data.get("court")
+        court_data = addon_data.get("court") or {}
 
         my_permissions = guild.me.guild_permissions
 
@@ -152,7 +152,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        groups     = court_data.get("groups", [])
+        groups     = court_data.get("groups") or []
 
         current_case = court_data.get("cases", {}).get(str(channel.id))
 
@@ -218,7 +218,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        groups     = court_data.get("groups", [])
+        groups     = court_data.get("groups") or []
 
         current_case = court_data.get("cases", {}).get(str(channel.id)) or {}
         group_members = current_case.get("groupMembers")
@@ -284,7 +284,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        cases = court_data.get("cases", {})
+        cases = court_data.get("cases") or {}
 
         archive_category = court_data.get("archiveCategory")
 
@@ -356,7 +356,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        cases = court_data.get("cases", {})
+        cases = court_data.get("cases") or {}
 
 
         if not court_data:
@@ -404,8 +404,8 @@ class CaseCommand(Bloxlink.Module):
         response = CommandArgs.response
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
-        court_data = addon_data.get("court")
-        cases = court_data.get("cases", {})
+        court_data = addon_data.get("court") or {}
+        cases = court_data.get("cases") or {}
 
         removed = 0
 
@@ -460,7 +460,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        groups     = court_data.get("groups", [])
+        groups     = court_data.get("groups") or []
 
         current_case = court_data.get("cases", {}).get(str(channel.id))
 
@@ -515,7 +515,7 @@ class CaseCommand(Bloxlink.Module):
 
         addon_data = await self.r.db("bloxlink").table("addonData").get(str(guild.id)).run() or {"id": str(guild.id)}
         court_data = addon_data.get("court") or {}
-        groups     = court_data.get("groups", [])
+        groups     = court_data.get("groups") or []
 
         current_case = court_data.get("cases", {}).get(str(channel.id))
 
