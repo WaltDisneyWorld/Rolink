@@ -16,7 +16,6 @@ class AddonsCommand(Bloxlink.Module):
         self.permissions = Bloxlink.Permissions().build("BLOXLINK_MANAGER")
         self.category = "Administration"
         self.aliases = ["addon"]
-        self.hidden = True
 
         self.arguments = [
             {
