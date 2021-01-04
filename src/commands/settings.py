@@ -367,6 +367,7 @@ class SettingsCommand(Bloxlink.Module):
                 raise CancelledPrompt
 
             await self.r.table("guilds").get(str(guild.id)).delete().run()
+            await self.r.table("addonData").get(str(guild.id)).delete().run()
 
             if trello_board:
                 trello_options, _ = await get_options(trello_board, return_cards=True)
