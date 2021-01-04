@@ -138,7 +138,7 @@ class Response(Bloxlink.Module):
         channel = channel_override or (dm and self.author or self.channel)
         webhook = None
 
-        if self.webhook_only and self.guild:
+        if self.webhook_only and self.guild and hasattr(channel, "webhooks"):
             my_permissions = self.guild.me.guild_permissions
 
             if my_permissions.manage_webhooks:
