@@ -13,7 +13,7 @@ aiotrello==0.0.7.6
 aredis==1.1.8
 async-timeout==3.0.1
 hiredis==1.1.0
-sentry-sdk==0.18.0
+sentry-sdk==1.14.0
 ratelimit==2.2.1
 backoff==1.10.0
 python-benedict==0.22.2
